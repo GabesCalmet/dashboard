@@ -1,0 +1,431 @@
+// Upfront Portal — data model
+// Postgres via Supabase. Auth is handled by Supabase Auth; `User.id` mirrors
+// the `auth.users.id` UUID so the app schema can stay in the `public` schema
+// while Supabase owns credentials/sessions.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  COORDINATOR
+  TEACHER
+  STUDENT
+}
+
+enum CourseLevel {
+  A1
+  A2
+  B1
+  B2
+  C1
+  C2
+}
+
+enum StudentStatus {
+  ACTIVE
+  PAUSED
+  CANCELED
+}
+
+enum LessonStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELED_BY_STUDENT // CA
+  NO_SHOW // NC
+  CANCELED_BY_TEACHER // CP
+  CANCELED_HOLIDAY // CF
+  MAKEUP // R - reposição
+  POWER_OUTAGE // Faltou energia
+  TECH_ISSUE // Problema técnico
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  LATE
+}
+
+enum NotificationType {
+  LESSON_REMINDER
+  HOMEWORK_AVAILABLE
+  PAYMENT_DUE
+  TEACHER_OBSERVATION
+  GENERAL
+}
+
+enum LeadStage {
+  LEAD
+  TRIAL_CLASS
+  ENROLLED
+  ACTIVE_STUDENT
+  FORMER_STUDENT
+  LOST
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  PROMOTE
+  STATUS_CHANGE
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id          String    @id @default(uuid()) // == auth.users.id in Supabase
+  email       String    @unique
+  name        String
+  role        Role
+  avatarUrl   String?
+  phone       String?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+
+  teacherProfile   TeacherProfile?
+  studentProfile   StudentProfile?
+  notifications    Notification[]
+  leadInteractions LeadInteraction[] @relation("InteractionAuthor")
+
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Academic structure
+// ---------------------------------------------------------------------------
+
+model Course {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  students  StudentProfile[]
+  materials Material[]
+
+  @@map("courses")
+}
+
+model Plan {
+  id              String  @id @default(uuid())
+  name            String
+  price           Decimal @db.Decimal(10, 2)
+  lessonsPerMonth Int
+  description     String?
+  active          Boolean @default(true)
+
+  students StudentProfile[]
+
+  @@map("plans")
+}
+
+model TeacherProfile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialties   String[]
+  availability  Json? // { mon: ["09:00-12:00"], tue: [...] }
+  hourlyRate    Decimal  @db.Decimal(10, 2)
+  weeklyHours   Int
+  admissionDate DateTime
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  students StudentProfile[] @relation("StudentProfile_teacher")
+  lessons  Lesson[]
+
+  @@map("teacher_profiles")
+}
+
+model StudentProfile {
+  id                String          @id @default(uuid())
+  userId            String          @unique
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cpf               String?         @unique
+  birthDate         DateTime?
+  address           String?
+  teacherId         String?
+  teacher           TeacherProfile? @relation("StudentProfile_teacher", fields: [teacherId], references: [id])
+  courseId          String?
+  course            Course?         @relation(fields: [courseId], references: [id])
+  planId            String?
+  plan              Plan?           @relation(fields: [planId], references: [id])
+  monthlyValue      Decimal         @db.Decimal(10, 2)
+  lessonsPerMonth   Int             @default(4)
+  lessonWeekday     Int? // 0=Sun .. 6=Sat
+  lessonTime        String? // "18:00"
+  level             CourseLevel     @default(A1)
+  levelProgress     Int             @default(0) // 0-100
+  lessonsContracted Int             @default(0)
+  startDate         DateTime        @default(now())
+  objective         String?
+  notes             String?
+  status            StudentStatus   @default(ACTIVE)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  lessons          Lesson[]
+  payments         Payment[]
+  levelHistory     LevelHistory[]
+  certificates     Certificate[]
+  quizAttempts     QuizAttempt[]
+  achievements     StudentAchievement[]
+  leadInteractions LeadInteraction[]
+
+  @@map("student_profiles")
+}
+
+model LevelHistory {
+  id         String         @id @default(uuid())
+  studentId  String
+  student    StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  fromLevel  CourseLevel
+  toLevel    CourseLevel
+  promotedBy String // userId
+  notes      String?
+  createdAt  DateTime       @default(now())
+
+  @@map("level_history")
+}
+
+// ---------------------------------------------------------------------------
+// Lessons / agenda / reports
+// ---------------------------------------------------------------------------
+
+model Lesson {
+  id        String         @id @default(uuid())
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacherId String
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  scheduledAt DateTime
+  durationMin Int          @default(50)
+  status      LessonStatus @default(SCHEDULED)
+
+  // post-lesson report (filled by teacher)
+  contentTaught String?
+  vocabulary    String?
+  grammar       String?
+  speaking      String?
+  listening     String?
+  homework      String?
+  observations  String?
+  difficulties  String?
+  nextTopics    String?
+  materialUsed  String?
+  recordingUrl  String?
+  reportedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([teacherId])
+  @@index([scheduledAt])
+  @@map("lessons")
+}
+
+// ---------------------------------------------------------------------------
+// Financial
+// ---------------------------------------------------------------------------
+
+model Payment {
+  id             String         @id @default(uuid())
+  studentId      String
+  student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  referenceMonth DateTime // first day of the reference month
+  amount         Decimal        @db.Decimal(10, 2)
+  dueDate        DateTime
+  paidAt         DateTime?
+  status         PaymentStatus  @default(PENDING)
+  method         String? // pix, boleto, card... (prepared for gateway integration)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([studentId])
+  @@index([status])
+  @@map("payments")
+}
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+// ---------------------------------------------------------------------------
+// Audit log (append-only, never delete)
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id         String      @id @default(uuid())
+  entityType String // "StudentProfile", "TeacherProfile", "Lesson", ...
+  entityId   String
+  action     AuditAction
+  // Actor is denormalized (no FK) on purpose: audit rows must never
+  // disappear or become unwritable even after the acting user's account
+  // is deleted, so we snapshot their identity instead of joining live.
+  actorId    String
+  actorName  String
+  actorEmail String
+  actorRole  Role
+  changes    Json? // diff snapshot { field: [old, new] }
+  createdAt  DateTime    @default(now())
+
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// CRM educacional (funil de vendas) — prepared for the sales/retention flow
+// ---------------------------------------------------------------------------
+
+model Lead {
+  id                 String    @id @default(uuid())
+  name               String
+  email              String?
+  phone              String?
+  stage              LeadStage @default(LEAD)
+  source             String?
+  notes              String?
+  convertedStudentId String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  interactions LeadInteraction[]
+
+  @@map("leads")
+}
+
+model LeadInteraction {
+  id        String          @id @default(uuid())
+  leadId    String
+  lead      Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  studentId String?
+  student   StudentProfile? @relation(fields: [studentId], references: [id])
+  authorId  String
+  author    User            @relation("InteractionAuthor", fields: [authorId], references: [id])
+  channel   String // call, whatsapp, email, in-person
+  summary   String
+  createdAt DateTime        @default(now())
+
+  @@map("lead_interactions")
+}
+
+// ---------------------------------------------------------------------------
+// Prepared for future modules (materials library, quizzes, certificates,
+// gamification) — schemas ready so these can be built without migrations.
+// ---------------------------------------------------------------------------
+
+model Material {
+  id        String       @id @default(uuid())
+  title     String
+  type      String // pdf, video, audio
+  url       String
+  level     CourseLevel?
+  courseId  String?
+  course    Course?      @relation(fields: [courseId], references: [id])
+  createdAt DateTime     @default(now())
+
+  @@map("materials")
+}
+
+model Quiz {
+  id        String       @id @default(uuid())
+  title     String
+  level     CourseLevel?
+  createdAt DateTime     @default(now())
+
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id      String @id @default(uuid())
+  quizId  String
+  quiz    Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  prompt  String
+  options Json // string[]
+  answer  Int // index into options
+
+  @@map("quiz_questions")
+}
+
+model QuizAttempt {
+  id        String         @id @default(uuid())
+  quizId    String
+  quiz      Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  score     Int
+  takenAt   DateTime       @default(now())
+
+  @@map("quiz_attempts")
+}
+
+model Certificate {
+  id        String         @id @default(uuid())
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  level     CourseLevel
+  issuedAt  DateTime       @default(now())
+  fileUrl   String?
+
+  @@map("certificates")
+}
+
+model Achievement {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  icon        String?
+  points      Int     @default(0)
+
+  students StudentAchievement[]
+
+  @@map("achievements")
+}
+
+model StudentAchievement {
+  id            String         @id @default(uuid())
+  studentId     String
+  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement    @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  earnedAt      DateTime       @default(now())
+
+  @@map("student_achievements")
+}

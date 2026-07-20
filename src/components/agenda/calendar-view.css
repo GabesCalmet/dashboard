@@ -1,0 +1,53 @@
+.upfront-calendar {
+  --fc-border-color: var(--border);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: var(--secondary);
+  --fc-list-event-hover-bg-color: var(--secondary);
+  --fc-today-bg-color: color-mix(in oklch, var(--accent) 8%, transparent);
+  font-family: var(--font-sans), sans-serif;
+  font-size: 0.875rem;
+}
+
+.upfront-calendar .fc {
+  color: var(--foreground);
+}
+
+.upfront-calendar .fc-toolbar-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.upfront-calendar .fc-button {
+  background: var(--secondary);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  box-shadow: none !important;
+  text-transform: capitalize;
+}
+
+.upfront-calendar .fc-button:hover {
+  background: var(--border);
+}
+
+.upfront-calendar .fc-button-primary:not(:disabled).fc-button-active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+.upfront-calendar .fc-daygrid-day-number,
+.upfront-calendar .fc-col-header-cell-cushion {
+  color: var(--foreground);
+}
+
+.upfront-calendar .fc-event {
+  border: none;
+  border-radius: 6px;
+  padding: 1px 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.upfront-calendar .fc-daygrid-event-dot {
+  display: none;
+}
