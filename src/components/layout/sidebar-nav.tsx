@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { navByRole } from "@/components/layout/nav-config";
 import type { Role } from "@prisma/client";
@@ -24,9 +24,13 @@ export function SidebarNav({
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex items-center gap-2.5 px-5 py-5">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-          <GraduationCap className="size-4.5" />
-        </div>
+        <Image
+          src="/brand/upfront-logo.png"
+          alt="Upfront Idiomas"
+          width={32}
+          height={32}
+          className="size-8 shrink-0"
+        />
         <span className="text-sm font-semibold tracking-tight">Upfront Portal</span>
       </div>
 

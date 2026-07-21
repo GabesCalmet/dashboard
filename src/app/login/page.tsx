@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
+import Image from "next/image";
 import { getCurrentUser, roleHome } from "@/lib/auth";
 import { LoginForm } from "./login-form";
-import { GraduationCap } from "lucide-react";
 
 export default async function LoginPage({
   searchParams,
@@ -18,9 +18,14 @@ export default async function LoginPage({
       <div className="flex w-full flex-col justify-center px-6 py-12 sm:px-10 lg:w-[440px] lg:flex-none">
         <div className="mx-auto w-full max-w-sm">
           <div className="mb-10 flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <GraduationCap className="size-5" />
-            </div>
+            <Image
+              src="/brand/upfront-logo.png"
+              alt="Upfront Idiomas"
+              width={40}
+              height={40}
+              className="size-10 shrink-0"
+              priority
+            />
             <span className="text-lg font-semibold tracking-tight">
               Upfront Portal
             </span>
