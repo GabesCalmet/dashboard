@@ -20,9 +20,15 @@ import {
   paymentStatusVariant,
 } from "@/lib/labels";
 import { markPaymentPaid } from "@/server/actions/payments";
-import type { Payment, StudentProfile, User } from "@prisma/client";
+import type { PaymentStatus } from "@prisma/client";
 
-type Row = Payment & { student: StudentProfile & { user: User } };
+type Row = {
+  id: string;
+  amount: number;
+  dueDate: Date;
+  status: PaymentStatus;
+  studentName: string;
+};
 
 export function PaymentsTable({ payments }: { payments: Row[] }) {
   const [isPending, startTransition] = useTransition();
@@ -42,8 +48,8 @@ export function PaymentsTable({ payments }: { payments: Row[] }) {
         <TableBody>
           {payments.map((p) => (
             <TableRow key={p.id}>
-              <TableCell>{p.student.user.name}</TableCell>
-              <TableCell>{formatCurrency(p.amount.toString())}</TableCell>
+              <TableCell>{p.studentName}</TableCell>
+              <TableCell>{formatCurrency(p.amount)}</TableCell>
               <TableCell>{formatDate(p.dueDate)}</TableCell>
               <TableCell>
                 <Badge variant={paymentStatusVariant[p.status]}>

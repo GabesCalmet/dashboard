@@ -4,16 +4,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { NavItem } from "@/components/layout/nav-config";
+import { navByRole } from "@/components/layout/nav-config";
+import type { Role } from "@prisma/client";
 
 export function SidebarNav({
-  items,
+  role,
   onNavigate,
 }: {
-  items: NavItem[];
+  role: Role;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  // Icon components can't cross the server/client boundary as props (RSC
+  // serialization forbids function values in plain data), so the nav data
+  // is looked up here on the client instead of being passed down from
+  // AppShell — the caller only passes the plain `role` string.
+  const items = navByRole[role];
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">

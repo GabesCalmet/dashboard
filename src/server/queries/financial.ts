@@ -62,7 +62,16 @@ export async function getFinancialOverview() {
     pendingCount,
     lateCount,
     delinquencyRate,
-    payments,
+    // Prisma's Decimal is a class instance, not a plain object — it can't
+    // cross the server/client boundary as a prop, so plain numbers are
+    // handed to the (client-side) PaymentsTable instead of raw rows.
+    payments: payments.map((p) => ({
+      id: p.id,
+      amount: Number(p.amount),
+      dueDate: p.dueDate,
+      status: p.status,
+      studentName: p.student.user.name,
+    })),
     cashFlow,
   };
 }

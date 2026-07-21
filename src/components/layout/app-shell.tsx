@@ -28,13 +28,13 @@ export function AppShell({
     <div className="flex min-h-screen">
       <aside className="hidden w-64 shrink-0 border-r border-sidebar-border lg:block">
         <div className="fixed h-screen w-64">
-          <SidebarNav items={items} />
+          <SidebarNav role={user.role} />
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-6">
-          <MobileSidebar items={items} />
+          <MobileSidebar role={user.role} />
           <GlobalSearch />
           <div className="ml-auto flex items-center gap-1.5">
             <NotificationsBell notifications={notifications} />

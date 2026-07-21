@@ -5,9 +5,9 @@ import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
-import type { NavItem } from "@/components/layout/nav-config";
+import type { Role } from "@prisma/client";
 
-export function MobileSidebar({ items }: { items: NavItem[] }) {
+export function MobileSidebar({ role }: { role: Role }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -27,7 +27,7 @@ export function MobileSidebar({ items }: { items: NavItem[] }) {
           className="left-0 top-0 h-full w-64 max-w-[80vw] translate-x-0 translate-y-0 rounded-none border-0 border-r p-0 sm:rounded-none"
         >
           <DialogTitle className="sr-only">Menu de navegação</DialogTitle>
-          <SidebarNav items={items} onNavigate={() => setOpen(false)} />
+          <SidebarNav role={role} onNavigate={() => setOpen(false)} />
         </DialogContent>
       </Dialog>
     </>
