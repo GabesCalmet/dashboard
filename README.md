@@ -118,8 +118,10 @@ de nivelamento (`Quiz`/`QuizQuestion`/`QuizAttempt`), gamificação
 (`Achievement`/`StudentAchievement`), CRM educacional / funil de vendas
 (`Lead`/`LeadInteraction`), app mobile e API REST pública.
 
-Lembretes de aula (`/api/cron/lesson-reminders`) e geração mensal de
-cobranças (`generateMonthlyPayments`) existem como rotinas prontas, mas
-precisam de um agendador externo (Vercel Cron, Supabase `pg_cron`, GitHub
-Actions) para rodar automaticamente — não há worker de cron dentro do Next.js
+Lembretes de aula (`/api/cron/lesson-reminders`), geração das próximas
+semanas de aulas recorrentes (`/api/cron/generate-recurring-lessons`) e
+geração mensal de cobranças (`generateMonthlyPayments`) existem como
+rotinas prontas, mas precisam de um agendador externo (Vercel Cron,
+Supabase `pg_cron`, GitHub Actions) para rodar automaticamente — não há
+worker de cron dentro do Next.js
 em si.
