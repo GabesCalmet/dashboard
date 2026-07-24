@@ -222,6 +222,10 @@ model Lesson {
   scheduledAt DateTime
   durationMin Int          @default(50)
   status      LessonStatus @default(SCHEDULED)
+  // True for lessons auto-generated from the student's weekly schedule, so
+  // regenerating that schedule never touches manually-booked lessons
+  // (makeups, one-off extra classes, etc).
+  isRecurring Boolean      @default(false)
 
   // post-lesson report (filled by teacher)
   contentTaught String?

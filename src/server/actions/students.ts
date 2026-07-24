@@ -7,6 +7,7 @@ import { provisionUserAccount, deactivateUserAccount } from "@/server/accounts";
 import { recordAudit } from "@/server/audit";
 import { studentFormSchema } from "@/lib/validation/student";
 import { levelOrder } from "@/lib/labels";
+import { syncRecurringLessons } from "@/server/lessons/recurring";
 
 export type ActionState = { error?: string; success?: string; tempPassword?: string } | undefined;
 
@@ -60,8 +61,12 @@ export async function createStudent(
       changes: { name: data.name, email: data.email },
     });
 
+    await syncRecurringLessons(student.id);
+
     revalidatePath("/admin/students");
     revalidatePath("/coordinator/students");
+    revalidatePath("/admin/agenda");
+    revalidatePath("/coordinator/agenda");
     return { success: "Aluno cadastrado com sucesso.", tempPassword };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Erro ao cadastrar aluno." };
@@ -119,10 +124,15 @@ export async function updateStudent(
     changes: { before: { status: before.status, level: before.level }, after: { status: data.status, level: data.level } },
   });
 
+  await syncRecurringLessons(studentId);
+
   revalidatePath("/admin/students");
   revalidatePath("/coordinator/students");
   revalidatePath(`/admin/students/${studentId}`);
   revalidatePath(`/coordinator/students/${studentId}`);
+  revalidatePath("/admin/agenda");
+  revalidatePath("/coordinator/agenda");
+  revalidatePath("/teacher/agenda");
   return { success: "Aluno atualizado." };
 }
 
