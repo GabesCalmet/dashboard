@@ -171,9 +171,9 @@ model StudentProfile {
   monthlyValue      Decimal         @db.Decimal(10, 2)
   dueDay            Int             @default(10) // day of the month the invoice ("boleto") is due, 1-31
   lessonsPerMonth   Int             @default(4)
-  lessonWeekdays    Int[]           @default([]) // 0=Sun .. 6=Sat, one or more days
-  lessonTime        String? // start time, e.g. "18:00"
-  lessonEndTime     String? // end time, e.g. "19:00"
+  // One entry per scheduled day, each with its own time:
+  // [{ "weekday": 2, "start": "19:00", "end": "19:50" }, ...] (weekday 0=Sun..6=Sat)
+  lessonSchedule    Json            @default("[]")
   level             CourseLevel     @default(A1)
   levelProgress     Int             @default(0) // 0-100
   lessonsContracted Int             @default(0)

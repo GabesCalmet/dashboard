@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { createStudent, updateStudent } from "@/server/actions/students";
 import { useActionToast } from "@/hooks/use-action-toast";
-import { WeekdayPicker } from "@/components/students/weekday-picker";
+import { LessonScheduleEditor, type ScheduleEntry } from "@/components/students/lesson-schedule-editor";
 import { levelLabel } from "@/lib/labels";
 import type { CourseLevel, StudentStatus } from "@prisma/client";
 
@@ -43,9 +43,7 @@ type StudentDefaults = {
   monthlyValue: number;
   dueDay?: number;
   lessonsPerMonth: number;
-  lessonWeekdays?: number[];
-  lessonTime?: string | null;
-  lessonEndTime?: string | null;
+  lessonSchedule?: ScheduleEntry[];
   level: CourseLevel;
   startDate?: string;
   objective?: string | null;
@@ -209,28 +207,8 @@ export function StudentFormDialog({
           </div>
 
           <div className="space-y-1.5 sm:col-span-2">
-            <Label>Dia(s) da(s) aula(s)</Label>
-            <WeekdayPicker name="lessonWeekdays" defaultValue={student?.lessonWeekdays ?? []} />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="lessonTime">Horário de início</Label>
-            <Input
-              id="lessonTime"
-              name="lessonTime"
-              type="time"
-              defaultValue={student?.lessonTime ?? ""}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="lessonEndTime">Horário de término</Label>
-            <Input
-              id="lessonEndTime"
-              name="lessonEndTime"
-              type="time"
-              defaultValue={student?.lessonEndTime ?? ""}
-            />
+            <Label>Dia(s) e horário(s) da(s) aula(s)</Label>
+            <LessonScheduleEditor name="lessonSchedule" defaultValue={student?.lessonSchedule ?? []} />
           </div>
 
           <div className="space-y-1.5">

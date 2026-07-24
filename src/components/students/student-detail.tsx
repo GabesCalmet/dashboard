@@ -15,6 +15,7 @@ import { LevelProgressCard } from "@/components/students/level-progress-card";
 import { LessonHistoryTable } from "@/components/students/lesson-history-table";
 import { StudentPaymentsTable } from "@/components/students/student-payments-table";
 import { StudentFormDialog } from "@/components/students/student-form-dialog";
+import type { ScheduleEntry } from "@/components/students/lesson-schedule-editor";
 import { DeleteStudentButton } from "@/components/students/delete-student-button";
 import { AuditTrail } from "@/components/shared/audit-trail";
 import { studentStatusLabel, studentStatusVariant, formatDate, formatDateTime } from "@/lib/labels";
@@ -102,9 +103,7 @@ export function StudentDetailView({
                   monthlyValue: Number(student.monthlyValue),
                   dueDay: student.dueDay,
                   lessonsPerMonth: student.lessonsPerMonth,
-                  lessonWeekdays: student.lessonWeekdays,
-                  lessonTime: student.lessonTime,
-                  lessonEndTime: student.lessonEndTime,
+                  lessonSchedule: parseLessonSchedule(student.lessonSchedule),
                   level: student.level,
                   startDate: student.startDate.toISOString().slice(0, 10),
                   objective: student.objective,
@@ -162,11 +161,7 @@ export function StudentDetailView({
                   <InfoRow label="Plano" value={student.plan?.name ?? "—"} />
                   <InfoRow
                     label="Dia(s)/horário da aula"
-                    value={formatLessonSchedule(
-                      student.lessonWeekdays,
-                      student.lessonTime,
-                      student.lessonEndTime
-                    )}
+                    value={formatLessonSchedule(parseLessonSchedule(student.lessonSchedule))}
                   />
                   <InfoRow label="Vencimento do boleto" value={`Dia ${student.dueDay}`} />
                 </CardContent>
@@ -240,16 +235,33 @@ export function StudentDetailView({
 
 const WEEKDAY_ABBR = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-function formatLessonSchedule(
-  weekdays: number[],
-  startTime: string | null,
-  endTime: string | null
-) {
-  if (weekdays.length === 0) return "—";
-  const days = weekdays.map((d) => WEEKDAY_ABBR[d]).join(", ");
-  if (!startTime) return days;
-  const time = endTime ? `${startTime}–${endTime}` : startTime;
-  return `${days} às ${time}`;
+function parseLessonSchedule(value: unknown): ScheduleEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (e): e is { weekday: number; start: string; end: string } =>
+        typeof e === "object" &&
+        e !== null &&
+        typeof (e as Record<string, unknown>).weekday === "number"
+    )
+    .map((e) => ({
+      weekday: e.weekday,
+      start: typeof e.start === "string" ? e.start : "",
+      end: typeof e.end === "string" ? e.end : "",
+    }))
+    .sort((a, b) => a.weekday - b.weekday);
+}
+
+function formatLessonSchedule(schedule: ScheduleEntry[]) {
+  if (schedule.length === 0) return "—";
+  return schedule
+    .map((e) => {
+      const day = WEEKDAY_ABBR[e.weekday];
+      if (!e.start) return day;
+      const time = e.end ? `${e.start}–${e.end}` : e.start;
+      return `${day} ${time}`;
+    })
+    .join(", ");
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {

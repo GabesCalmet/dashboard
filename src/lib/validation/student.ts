@@ -13,20 +13,33 @@ export const studentFormSchema = z.object({
   monthlyValue: z.coerce.number().min(0, "Valor inválido"),
   dueDay: z.coerce.number().int().min(1).max(31).default(10),
   lessonsPerMonth: z.coerce.number().int().min(1).max(60),
-  // Submitted by WeekdayPicker as a comma-separated string, e.g. "1,3,5".
-  lessonWeekdays: z
+  // Submitted by LessonScheduleEditor as a JSON string, e.g.
+  // '[{"weekday":2,"start":"19:00","end":"19:50"}]'.
+  lessonSchedule: z
     .string()
     .optional()
-    .transform((val) =>
-      val
-        ? val
-            .split(",")
-            .filter(Boolean)
-            .map((v) => Number(v))
-        : []
-    ),
-  lessonTime: z.string().optional(),
-  lessonEndTime: z.string().optional(),
+    .transform((val) => {
+      if (!val) return [];
+      try {
+        const parsed = JSON.parse(val);
+        if (!Array.isArray(parsed)) return [];
+        return parsed
+          .filter(
+            (e) =>
+              e &&
+              typeof e.weekday === "number" &&
+              e.weekday >= 0 &&
+              e.weekday <= 6
+          )
+          .map((e) => ({
+            weekday: e.weekday,
+            start: typeof e.start === "string" ? e.start : "",
+            end: typeof e.end === "string" ? e.end : "",
+          }));
+      } catch {
+        return [];
+      }
+    }),
   level: z.enum(["A1", "A2", "B1", "B2", "C1", "C2"]),
   startDate: z.string().optional(),
   objective: z.string().optional(),
