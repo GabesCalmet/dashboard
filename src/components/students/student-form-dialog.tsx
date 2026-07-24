@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { createStudent, updateStudent } from "@/server/actions/students";
 import { useActionToast } from "@/hooks/use-action-toast";
+import { WeekdayPicker } from "@/components/students/weekday-picker";
 import { levelLabel } from "@/lib/labels";
 import type { CourseLevel, StudentStatus } from "@prisma/client";
 
@@ -41,24 +42,15 @@ type StudentDefaults = {
   planId?: string | null;
   monthlyValue: number;
   lessonsPerMonth: number;
-  lessonWeekday?: number | null;
+  lessonWeekdays?: number[];
   lessonTime?: string | null;
+  lessonEndTime?: string | null;
   level: CourseLevel;
   startDate?: string;
   objective?: string | null;
   notes?: string | null;
   status: StudentStatus;
 };
-
-const weekdays = [
-  "Domingo",
-  "Segunda",
-  "Terça",
-  "Quarta",
-  "Quinta",
-  "Sexta",
-  "Sábado",
-];
 
 export function StudentFormDialog({
   teachers,
@@ -202,32 +194,28 @@ export function StudentFormDialog({
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Dia da aula</Label>
-            <Select
-              name="lessonWeekday"
-              defaultValue={student?.lessonWeekday?.toString() ?? undefined}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {weekdays.map((w, i) => (
-                  <SelectItem key={w} value={String(i)}>
-                    {w}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Dia(s) da(s) aula(s)</Label>
+            <WeekdayPicker name="lessonWeekdays" defaultValue={student?.lessonWeekdays ?? []} />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="lessonTime">Horário</Label>
+            <Label htmlFor="lessonTime">Horário de início</Label>
             <Input
               id="lessonTime"
               name="lessonTime"
               type="time"
               defaultValue={student?.lessonTime ?? ""}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="lessonEndTime">Horário de término</Label>
+            <Input
+              id="lessonEndTime"
+              name="lessonEndTime"
+              type="time"
+              defaultValue={student?.lessonEndTime ?? ""}
             />
           </div>
 

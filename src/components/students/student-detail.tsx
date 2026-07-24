@@ -101,8 +101,9 @@ export function StudentDetailView({
                   planId: student.planId,
                   monthlyValue: Number(student.monthlyValue),
                   lessonsPerMonth: student.lessonsPerMonth,
-                  lessonWeekday: student.lessonWeekday,
+                  lessonWeekdays: student.lessonWeekdays,
                   lessonTime: student.lessonTime,
+                  lessonEndTime: student.lessonEndTime,
                   level: student.level,
                   startDate: student.startDate.toISOString().slice(0, 10),
                   objective: student.objective,
@@ -159,14 +160,12 @@ export function StudentDetailView({
                   <InfoRow label="Início do curso" value={formatDate(student.startDate)} />
                   <InfoRow label="Plano" value={student.plan?.name ?? "—"} />
                   <InfoRow
-                    label="Dia/horário da aula"
-                    value={
-                      student.lessonWeekday != null
-                        ? `${["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][student.lessonWeekday]} às ${
-                            student.lessonTime ?? "—"
-                          }`
-                        : "—"
-                    }
+                    label="Dia(s)/horário da aula"
+                    value={formatLessonSchedule(
+                      student.lessonWeekdays,
+                      student.lessonTime,
+                      student.lessonEndTime
+                    )}
                   />
                 </CardContent>
               </Card>
@@ -235,6 +234,20 @@ export function StudentDetailView({
       </div>
     </div>
   );
+}
+
+const WEEKDAY_ABBR = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+function formatLessonSchedule(
+  weekdays: number[],
+  startTime: string | null,
+  endTime: string | null
+) {
+  if (weekdays.length === 0) return "—";
+  const days = weekdays.map((d) => WEEKDAY_ABBR[d]).join(", ");
+  if (!startTime) return days;
+  const time = endTime ? `${startTime}–${endTime}` : startTime;
+  return `${days} às ${time}`;
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
