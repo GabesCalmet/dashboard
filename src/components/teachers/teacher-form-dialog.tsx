@@ -88,7 +88,7 @@ export function TeacherFormDialog({ teacher }: { teacher?: TeacherDefaults }) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="weeklyHours">Carga horária semanal</Label>
+            <Label htmlFor="weeklyHours">Carga horária mensal</Label>
             <Input id="weeklyHours" name="weeklyHours" type="number" defaultValue={teacher?.weeklyHours} required />
           </div>
 

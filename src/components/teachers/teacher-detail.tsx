@@ -106,7 +106,7 @@ export function TeacherDetailView({
             <CardTitle>Dados profissionais</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Row label="Carga horária" value={`${teacher.weeklyHours}h/semana`} />
+            <Row label="Carga horária" value={`${teacher.weeklyHours}h/mês`} />
             <Row label="Admissão" value={formatDate(teacher.admissionDate)} />
             <Row label="Observações" value={teacher.notes || "—"} />
           </CardContent>
