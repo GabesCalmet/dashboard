@@ -41,6 +41,7 @@ type StudentDefaults = {
   courseId?: string | null;
   planId?: string | null;
   monthlyValue: number;
+  dueDay?: number;
   lessonsPerMonth: number;
   lessonWeekdays?: number[];
   lessonTime?: string | null;
@@ -179,6 +180,19 @@ export function StudentFormDialog({
               type="number"
               step="0.01"
               defaultValue={student?.monthlyValue}
+              required
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="dueDay">Dia de vencimento do boleto</Label>
+            <Input
+              id="dueDay"
+              name="dueDay"
+              type="number"
+              min={1}
+              max={31}
+              defaultValue={student?.dueDay ?? 10}
               required
             />
           </div>

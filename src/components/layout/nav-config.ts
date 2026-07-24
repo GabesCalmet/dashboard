@@ -11,6 +11,7 @@ import {
   BookOpenCheck,
   LineChart,
   History,
+  Library,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,6 +28,7 @@ export const navByRole: Record<Role, NavItem[]> = {
     { label: "Professores", href: "/admin/teachers", icon: Users },
     { label: "Agenda", href: "/admin/agenda", icon: CalendarDays },
     { label: "Financeiro", href: "/admin/financial", icon: Wallet },
+    { label: "Cursos & Planos", href: "/admin/catalog", icon: Library },
     { label: "Relatórios", href: "/admin/reports", icon: FileBarChart },
     { label: "Usuários & Permissões", href: "/admin/users", icon: ShieldCheck },
     { label: "Configurações", href: "/admin/settings", icon: Settings },

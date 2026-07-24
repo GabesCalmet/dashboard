@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
           Professor: s.teacher?.user.name ?? "",
           Curso: s.course?.name ?? "",
           "Valor mensal": s.monthlyValue.toString(),
+          "Dia vencimento": s.dueDay,
           "Aulas/mes": s.lessonsPerMonth,
           "Data inicio": s.startDate.toISOString().slice(0, 10),
         }))

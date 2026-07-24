@@ -100,6 +100,7 @@ export function StudentDetailView({
                   courseId: student.courseId,
                   planId: student.planId,
                   monthlyValue: Number(student.monthlyValue),
+                  dueDay: student.dueDay,
                   lessonsPerMonth: student.lessonsPerMonth,
                   lessonWeekdays: student.lessonWeekdays,
                   lessonTime: student.lessonTime,
@@ -167,6 +168,7 @@ export function StudentDetailView({
                       student.lessonEndTime
                     )}
                   />
+                  <InfoRow label="Vencimento do boleto" value={`Dia ${student.dueDay}`} />
                 </CardContent>
               </Card>
 

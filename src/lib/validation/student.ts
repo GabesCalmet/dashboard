@@ -11,6 +11,7 @@ export const studentFormSchema = z.object({
   courseId: z.string().optional(),
   planId: z.string().optional(),
   monthlyValue: z.coerce.number().min(0, "Valor inválido"),
+  dueDay: z.coerce.number().int().min(1).max(31).default(10),
   lessonsPerMonth: z.coerce.number().int().min(1).max(60),
   // Submitted by WeekdayPicker as a comma-separated string, e.g. "1,3,5".
   lessonWeekdays: z

@@ -35,12 +35,19 @@ export async function generateMonthlyPayments(referenceMonth: Date) {
     });
     if (existing) continue;
 
+    const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
+    const dueDate = new Date(
+      monthStart.getFullYear(),
+      monthStart.getMonth(),
+      Math.min(student.dueDay, daysInMonth)
+    );
+
     await prisma.payment.create({
       data: {
         studentId: student.id,
         referenceMonth: monthStart,
         amount: student.monthlyValue,
-        dueDate: new Date(monthStart.getFullYear(), monthStart.getMonth(), 10),
+        dueDate,
       },
     });
 
