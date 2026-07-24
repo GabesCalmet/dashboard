@@ -54,7 +54,10 @@ export async function syncRecurringLessons(studentId: string) {
   if (schedule.length === 0) return;
 
   const now = new Date();
-  const horizonEnd = new Date(now.getTime() + HORIZON_WEEKS * 7 * 24 * 60 * 60 * 1000);
+  // Never generate lessons before the student's own enrollment start date —
+  // if it's in the future, that's the earliest day to schedule from.
+  const anchor = student.startDate > now ? student.startDate : now;
+  const horizonEnd = new Date(anchor.getTime() + HORIZON_WEEKS * 7 * 24 * 60 * 60 * 1000);
   const toCreate: {
     studentId: string;
     teacherId: string;
@@ -68,12 +71,12 @@ export async function syncRecurringLessons(studentId: string) {
     const [hour, minute] = entry.start.split(":").map(Number);
     if (Number.isNaN(hour) || Number.isNaN(minute)) continue;
 
-    const cursor = new Date(now);
+    const cursor = new Date(anchor);
     cursor.setHours(0, 0, 0, 0);
     const daysUntilTarget = (entry.weekday - cursor.getDay() + 7) % 7;
     cursor.setDate(cursor.getDate() + daysUntilTarget);
     cursor.setHours(hour, minute, 0, 0);
-    if (cursor < now) cursor.setDate(cursor.getDate() + 7);
+    if (cursor < anchor) cursor.setDate(cursor.getDate() + 7);
 
     while (cursor <= horizonEnd) {
       toCreate.push({
