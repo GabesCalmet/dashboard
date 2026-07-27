@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createTeacher, updateTeacher } from "@/server/actions/teachers";
 import { useActionToast } from "@/hooks/use-action-toast";
+import { TempPasswordDialog } from "@/components/shared/temp-password-dialog";
 
 type TeacherDefaults = {
   id: string;
@@ -34,9 +35,12 @@ export function TeacherFormDialog({ teacher }: { teacher?: TeacherDefaults }) {
   const action = isEdit ? updateTeacher.bind(null, teacher!.id) : createTeacher;
   const [state, formAction, isPending] = useActionState(action, undefined);
   const [open, setOpen] = useState(false);
-  useActionToast(state, () => setOpen(false));
+  const [email, setEmail] = useState("");
+  const [newPassword, setNewPassword] = useState<string | null>(null);
+  useActionToast(state, () => setOpen(false), (password) => setNewPassword(password));
 
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size={isEdit ? "sm" : "default"} variant={isEdit ? "outline" : "default"}>
@@ -63,7 +67,14 @@ export function TeacherFormDialog({ teacher }: { teacher?: TeacherDefaults }) {
           {!isEdit && (
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" required />
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
           )}
 
@@ -116,5 +127,12 @@ export function TeacherFormDialog({ teacher }: { teacher?: TeacherDefaults }) {
         </form>
       </DialogContent>
     </Dialog>
+    <TempPasswordDialog
+      open={newPassword !== null}
+      onOpenChange={(o) => !o && setNewPassword(null)}
+      email={email}
+      password={newPassword ?? ""}
+    />
+    </>
   );
 }

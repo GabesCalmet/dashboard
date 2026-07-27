@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { createStudent, updateStudent } from "@/server/actions/students";
 import { useActionToast } from "@/hooks/use-action-toast";
+import { TempPasswordDialog } from "@/components/shared/temp-password-dialog";
 import { LessonScheduleEditor, type ScheduleEntry } from "@/components/students/lesson-schedule-editor";
 import { levelLabel } from "@/lib/labels";
 import type { CourseLevel, StudentStatus } from "@prisma/client";
@@ -66,9 +67,12 @@ export function StudentFormDialog({
   const action = isEdit ? updateStudent.bind(null, student!.id) : createStudent;
   const [state, formAction, isPending] = useActionState(action, undefined);
   const [open, setOpen] = useState(false);
-  useActionToast(state, () => setOpen(false));
+  const [email, setEmail] = useState("");
+  const [newPassword, setNewPassword] = useState<string | null>(null);
+  useActionToast(state, () => setOpen(false), (password) => setNewPassword(password));
 
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size={isEdit ? "sm" : "default"} variant={isEdit ? "outline" : "default"}>
@@ -95,7 +99,14 @@ export function StudentFormDialog({
           {!isEdit && (
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" required />
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
           )}
 
@@ -260,5 +271,12 @@ export function StudentFormDialog({
         </form>
       </DialogContent>
     </Dialog>
+    <TempPasswordDialog
+      open={newPassword !== null}
+      onOpenChange={(o) => !o && setNewPassword(null)}
+      email={email}
+      password={newPassword ?? ""}
+    />
+    </>
   );
 }

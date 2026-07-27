@@ -23,13 +23,17 @@ import {
 } from "@/components/ui/select";
 import { createStaffUser } from "@/server/actions/users";
 import { useActionToast } from "@/hooks/use-action-toast";
+import { TempPasswordDialog } from "@/components/shared/temp-password-dialog";
 
 export function CreateStaffDialog() {
   const [state, formAction, isPending] = useActionState(createStaffUser, undefined);
   const [open, setOpen] = useState(false);
-  useActionToast(state, () => setOpen(false));
+  const [email, setEmail] = useState("");
+  const [newPassword, setNewPassword] = useState<string | null>(null);
+  useActionToast(state, () => setOpen(false), (password) => setNewPassword(password));
 
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
@@ -51,7 +55,14 @@ export function CreateStaffDialog() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" required />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="phone">Telefone</Label>
@@ -78,5 +89,12 @@ export function CreateStaffDialog() {
         </form>
       </DialogContent>
     </Dialog>
+    <TempPasswordDialog
+      open={newPassword !== null}
+      onOpenChange={(o) => !o && setNewPassword(null)}
+      email={email}
+      password={newPassword ?? ""}
+    />
+    </>
   );
 }

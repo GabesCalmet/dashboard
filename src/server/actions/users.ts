@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { provisionUserAccount, deactivateUserAccount } from "@/server/accounts";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, generateTempPassword } from "@/lib/supabase/admin";
 import { recordAudit } from "@/server/audit";
 import type { ActionState } from "@/server/actions/students";
 
@@ -60,6 +60,32 @@ export async function toggleUserActive(userId: string, active: boolean) {
     changes: { active },
   });
   revalidatePath("/admin/users");
+}
+
+export async function resetUserPassword(userId: string) {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+  const target = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+
+  // Coordinators can reset student/teacher passwords (matches their
+  // "cadastrar/editar alunos" permissions) but not admin/coordinator ones.
+  if (actor.role === "COORDINATOR" && !["STUDENT", "TEACHER"].includes(target.role)) {
+    throw new Error("Você não pode redefinir a senha deste usuário.");
+  }
+
+  const newPassword = generateTempPassword();
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(userId, { password: newPassword });
+  if (error) throw new Error(error.message);
+
+  await recordAudit({
+    entityType: "User",
+    entityId: userId,
+    action: "UPDATE",
+    actor,
+    changes: { action: "password_reset" },
+  });
+
+  return { email: target.email, password: newPassword };
 }
 
 export async function deleteUserAccount(userId: string) {

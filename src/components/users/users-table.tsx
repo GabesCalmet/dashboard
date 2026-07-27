@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { roleLabel } from "@/components/layout/nav-config";
 import { toggleUserActive, deleteUserAccount } from "@/server/actions/users";
+import { ResetPasswordButton } from "@/components/shared/reset-password-button";
 import type { User } from "@prisma/client";
 
 export function UsersTable({ users, currentUserId }: { users: User[]; currentUserId: string }) {
@@ -65,39 +66,42 @@ export function UsersTable({ users, currentUserId }: { users: User[]; currentUse
                 />
               </TableCell>
               <TableCell className="text-right">
-                {u.id !== currentUserId && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-destructive">
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Excluir usuário</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Esta ação é irreversível e remove o acesso de {u.name} ao portal.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          disabled={isPending}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            startTransition(async () => {
-                              await deleteUserAccount(u.id);
-                              toast.success("Usuário excluído.");
-                            });
-                          }}
-                        >
-                          {isPending && <Loader2 className="animate-spin" />}
-                          Confirmar
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
+                <div className="flex items-center justify-end gap-1">
+                  <ResetPasswordButton userId={u.id} size="icon" />
+                  {u.id !== currentUserId && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-destructive">
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir usuário</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação é irreversível e remove o acesso de {u.name} ao portal.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            disabled={isPending}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              startTransition(async () => {
+                                await deleteUserAccount(u.id);
+                                toast.success("Usuário excluído.");
+                              });
+                            }}
+                          >
+                            {isPending && <Loader2 className="animate-spin" />}
+                            Confirmar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           ))}

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/shared/stat-card";
 import { TeacherFormDialog } from "@/components/teachers/teacher-form-dialog";
 import { DeleteTeacherButton } from "@/components/teachers/delete-teacher-button";
+import { ResetPasswordButton } from "@/components/shared/reset-password-button";
 import { studentStatusLabel, studentStatusVariant, formatCurrency, formatDate } from "@/lib/labels";
 import type { getTeacherDetail } from "@/server/queries/teachers";
 
@@ -51,23 +52,26 @@ export function TeacherDetailView({
             </div>
           </div>
         </div>
-        {canManage && (
-          <div className="flex items-center gap-2">
-            <TeacherFormDialog
-              teacher={{
-                id: teacher.id,
-                name: teacher.user.name,
-                phone: teacher.user.phone,
-                specialties: teacher.specialties,
-                hourlyRate: Number(teacher.hourlyRate),
-                weeklyHours: teacher.weeklyHours,
-                admissionDate: teacher.admissionDate.toISOString().slice(0, 10),
-                notes: teacher.notes,
-              }}
-            />
-            <DeleteTeacherButton teacherId={teacher.id} redirectTo={basePath} />
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <>
+              <TeacherFormDialog
+                teacher={{
+                  id: teacher.id,
+                  name: teacher.user.name,
+                  phone: teacher.user.phone,
+                  specialties: teacher.specialties,
+                  hourlyRate: Number(teacher.hourlyRate),
+                  weeklyHours: teacher.weeklyHours,
+                  admissionDate: teacher.admissionDate.toISOString().slice(0, 10),
+                  notes: teacher.notes,
+                }}
+              />
+              <DeleteTeacherButton teacherId={teacher.id} redirectTo={basePath} />
+            </>
+          )}
+          <ResetPasswordButton userId={teacher.userId} />
+        </div>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

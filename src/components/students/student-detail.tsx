@@ -17,6 +17,7 @@ import { StudentPaymentsTable } from "@/components/students/student-payments-tab
 import { StudentFormDialog } from "@/components/students/student-form-dialog";
 import type { ScheduleEntry } from "@/components/students/lesson-schedule-editor";
 import { DeleteStudentButton } from "@/components/students/delete-student-button";
+import { ResetPasswordButton } from "@/components/shared/reset-password-button";
 import { AuditTrail } from "@/components/shared/audit-trail";
 import { studentStatusLabel, studentStatusVariant, formatDate, formatDateTime } from "@/lib/labels";
 import type { getStudentDetail } from "@/server/queries/students";
@@ -112,6 +113,7 @@ export function StudentDetailView({
                 }}
               />
             )}
+            {permissions.canEdit && <ResetPasswordButton userId={student.userId} />}
             {permissions.canDelete && (
               <DeleteStudentButton studentId={student.id} redirectTo={basePath} />
             )}
