@@ -92,7 +92,7 @@ export function CreateStaffDialog() {
     <TempPasswordDialog
       open={newPassword !== null}
       onOpenChange={(o) => !o && setNewPassword(null)}
-      email={email}
+      login={email}
       password={newPassword ?? ""}
     />
     </>

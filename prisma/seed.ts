@@ -7,23 +7,41 @@
  * `.env` must point at a real project before running `npm run db:seed`.
  */
 import { prisma } from "../src/lib/prisma";
-import { provisionUserAccount } from "../src/server/accounts";
+import { provisionUserAccount, provisionUsernameAccount } from "../src/server/accounts";
 
 const DEMO_PASSWORD = "Upfront@2026";
 
-async function upsertDemoUser(params: {
+// ADMIN/COORDINATOR still log in with email + password.
+async function upsertStaffUser(params: {
   name: string;
   email: string;
-  role: "ADMIN" | "COORDINATOR" | "TEACHER" | "STUDENT";
-  phone?: string;
+  role: "ADMIN" | "COORDINATOR";
 }) {
-  const existing = await prisma.user.findUnique({ where: { email: params.email } });
+  const existing = await prisma.user.findFirst({ where: { email: params.email, role: params.role } });
   if (existing) return existing;
 
   const { user } = await provisionUserAccount(params);
   // Overwrite the random temp password with a memorable one for the demo.
   const { createAdminClient } = await import("../src/lib/supabase/admin");
   await createAdminClient().auth.admin.updateUserById(user.id, { password: DEMO_PASSWORD });
+  return user;
+}
+
+// TEACHER/STUDENT log in with an admin-chosen username instead.
+async function upsertUsernameUser(params: {
+  name: string;
+  username: string;
+  role: "TEACHER" | "STUDENT";
+}) {
+  const existing = await prisma.user.findUnique({ where: { username: params.username } });
+  if (existing) return existing;
+
+  const { user } = await provisionUsernameAccount({
+    name: params.name,
+    username: params.username,
+    password: DEMO_PASSWORD,
+    role: params.role,
+  });
   return user;
 }
 
@@ -61,26 +79,26 @@ async function main() {
     }),
   ]);
 
-  const admin = await upsertDemoUser({
+  const admin = await upsertStaffUser({
     name: "Ana Diretora",
     email: "admin@upfront.com",
     role: "ADMIN",
   });
 
-  await upsertDemoUser({
+  await upsertStaffUser({
     name: "Bruno Coordenador",
     email: "coordenador@upfront.com",
     role: "COORDINATOR",
   });
 
-  const teacherUser1 = await upsertDemoUser({
+  const teacherUser1 = await upsertUsernameUser({
     name: "Camila Teacher",
-    email: "professora.camila@upfront.com",
+    username: "camila.teacher",
     role: "TEACHER",
   });
-  const teacherUser2 = await upsertDemoUser({
+  const teacherUser2 = await upsertUsernameUser({
     name: "Daniel Teacher",
-    email: "professor.daniel@upfront.com",
+    username: "daniel.teacher",
     role: "TEACHER",
   });
 
@@ -111,7 +129,7 @@ async function main() {
   const studentSeeds = [
     {
       name: "João Aluno",
-      email: "aluno.joao@upfront.com",
+      username: "joao.aluno",
       teacher: teacher1,
       course: general,
       plan: planStandard,
@@ -120,7 +138,7 @@ async function main() {
     },
     {
       name: "Maria Aluna",
-      email: "aluna.maria@upfront.com",
+      username: "maria.aluna",
       teacher: teacher1,
       course: business,
       plan: planIntensive,
@@ -129,7 +147,7 @@ async function main() {
     },
     {
       name: "Pedro Aluno",
-      email: "aluno.pedro@upfront.com",
+      username: "pedro.aluno",
       teacher: teacher2,
       course: conversation,
       plan: planStandard,
@@ -139,7 +157,7 @@ async function main() {
   ];
 
   for (const s of studentSeeds) {
-    const studentUser = await upsertDemoUser({ name: s.name, email: s.email, role: "STUDENT" });
+    const studentUser = await upsertUsernameUser({ name: s.name, username: s.username, role: "STUDENT" });
     const student =
       (await prisma.studentProfile.findUnique({ where: { userId: studentUser.id } })) ??
       (await prisma.studentProfile.create({
@@ -211,10 +229,10 @@ async function main() {
 
   console.log("Seed complete.");
   console.log("Demo login credentials (password for all: %s):", DEMO_PASSWORD);
-  console.log("  Admin:        admin@upfront.com");
-  console.log("  Coordenador:  coordenador@upfront.com");
-  console.log("  Professores:  professora.camila@upfront.com / professor.daniel@upfront.com");
-  console.log("  Alunos:       aluno.joao@upfront.com / aluna.maria@upfront.com / aluno.pedro@upfront.com");
+  console.log("  Admin (email):        admin@upfront.com");
+  console.log("  Coordenador (email):  coordenador@upfront.com");
+  console.log("  Professores (usuário): camila.teacher / daniel.teacher");
+  console.log("  Alunos (usuário):      joao.aluno / maria.aluna / pedro.aluno");
   console.log("Admin id:", admin.id);
 }
 

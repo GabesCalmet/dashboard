@@ -15,13 +15,13 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
       <input type="hidden" name="redirectTo" value={redirectTo ?? ""} />
 
       <div className="space-y-1.5">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="login">Usuário ou email</Label>
         <Input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          placeholder="voce@upfront.com"
+          id="login"
+          name="login"
+          type="text"
+          autoComplete="username"
+          placeholder="usuário ou email de acesso"
           required
         />
       </div>

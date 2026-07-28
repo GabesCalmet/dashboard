@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRole, requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { provisionUserAccount, deactivateUserAccount } from "@/server/accounts";
+import { provisionUsernameAccount, hardDeleteUserAccount } from "@/server/accounts";
 import { recordAudit } from "@/server/audit";
 import { studentFormSchema } from "@/lib/validation/student";
 import { levelOrder } from "@/lib/labels";
@@ -25,10 +25,12 @@ export async function createStudent(
   const data = parsed.data;
 
   try {
-    const { user, tempPassword } = await provisionUserAccount({
+    const { user } = await provisionUsernameAccount({
       name: data.name,
-      email: data.email,
+      username: data.username,
+      password: data.password,
       role: "STUDENT",
+      email: data.email || undefined,
       phone: data.phone,
     });
 
@@ -58,7 +60,7 @@ export async function createStudent(
       entityId: student.id,
       action: "CREATE",
       actor,
-      changes: { name: data.name, email: data.email },
+      changes: { name: data.name, username: data.username },
     });
 
     await syncRecurringLessons(student.id);
@@ -67,7 +69,7 @@ export async function createStudent(
     revalidatePath("/coordinator/students");
     revalidatePath("/admin/agenda");
     revalidatePath("/coordinator/agenda");
-    return { success: "Aluno cadastrado com sucesso.", tempPassword };
+    return { success: "Aluno cadastrado com sucesso." };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Erro ao cadastrar aluno." };
   }
@@ -80,7 +82,7 @@ export async function updateStudent(
 ): Promise<ActionState> {
   const actor = await requireRole("ADMIN", "COORDINATOR");
   const raw = Object.fromEntries(formData.entries());
-  const parsed = studentFormSchema.omit({ email: true }).safeParse(raw);
+  const parsed = studentFormSchema.omit({ username: true, password: true }).safeParse(raw);
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
@@ -93,7 +95,10 @@ export async function updateStudent(
   });
 
   await prisma.$transaction([
-    prisma.user.update({ where: { id: before.userId }, data: { name: data.name, phone: data.phone } }),
+    prisma.user.update({
+      where: { id: before.userId },
+      data: { name: data.name, phone: data.phone, email: data.email || null },
+    }),
     prisma.studentProfile.update({
       where: { id: studentId },
       data: {
@@ -147,7 +152,7 @@ export async function deleteStudent(studentId: string) {
     actor,
   });
 
-  await deactivateUserAccount(student.userId);
+  await hardDeleteUserAccount(student.userId);
   revalidatePath("/admin/students");
 }
 

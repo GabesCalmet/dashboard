@@ -11,7 +11,7 @@ export default async function AdminLayout({
   const notifications = await getRecentNotifications(user.id);
 
   return (
-    <AppShell user={user} notifications={notifications}>
+    <AppShell user={{ ...user, email: user.username ?? user.email ?? "" }} notifications={notifications}>
       {children}
     </AppShell>
   );

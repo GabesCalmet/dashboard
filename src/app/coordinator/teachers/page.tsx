@@ -23,7 +23,7 @@ export default async function CoordinatorTeachersPage() {
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{t.user.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">{t.user.email}</p>
+                  <p className="truncate text-xs text-muted-foreground">@{t.user.username}</p>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {t.specialties.slice(0, 3).map((s) => (
                       <Badge key={s} variant="outline">

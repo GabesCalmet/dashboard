@@ -33,8 +33,9 @@ export function DeleteStudentButton({ studentId, redirectTo }: { studentId: stri
         <AlertDialogHeader>
           <AlertDialogTitle>Excluir aluno</AlertDialogTitle>
           <AlertDialogDescription>
-            Esta ação remove o acesso do aluno ao portal e não pode ser desfeita. O
-            histórico de aulas permanece registrado para auditoria.
+            Esta ação é permanente: o cadastro, o login e todo o histórico de
+            aulas e pagamentos deste aluno serão apagados e não podem ser
+            recuperados.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -39,13 +39,21 @@ function CopyField({ label, value }: { label: string; value: string }) {
 export function TempPasswordDialog({
   open,
   onOpenChange,
-  email,
+  login,
   password,
+  title = "Login criado",
+  description = "Copie e envie essas credenciais com segurança — esta senha não ficará visível novamente depois de fechar esta janela.",
+  loginLabel = "Login de acesso",
+  passwordLabel = "Senha temporária",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  email: string;
+  login: string;
   password: string;
+  title?: string;
+  description?: string;
+  loginLabel?: string;
+  passwordLabel?: string;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -53,17 +61,14 @@ export function TempPasswordDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <KeyRound className="size-4.5 text-accent" />
-            Login criado
+            {title}
           </DialogTitle>
-          <DialogDescription>
-            Copie e envie essas credenciais com segurança — esta senha não
-            ficará visível novamente depois de fechar esta janela.
-          </DialogDescription>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          <CopyField label="Email de acesso" value={email} />
-          <CopyField label="Senha temporária" value={password} />
+          <CopyField label={loginLabel} value={login} />
+          <CopyField label={passwordLabel} value={password} />
         </div>
 
         <DialogFooter>

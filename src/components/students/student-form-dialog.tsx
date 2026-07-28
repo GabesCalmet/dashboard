@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/select";
 import { createStudent, updateStudent } from "@/server/actions/students";
 import { useActionToast } from "@/hooks/use-action-toast";
-import { TempPasswordDialog } from "@/components/shared/temp-password-dialog";
 import { LessonScheduleEditor, type ScheduleEntry } from "@/components/students/lesson-schedule-editor";
 import { levelLabel } from "@/lib/labels";
 import type { CourseLevel, StudentStatus } from "@prisma/client";
@@ -34,6 +33,8 @@ type Option = { id: string; label: string };
 type StudentDefaults = {
   id: string;
   name: string;
+  username?: string | null;
+  email?: string | null;
   cpf?: string | null;
   phone?: string | null;
   birthDate?: string;
@@ -67,12 +68,9 @@ export function StudentFormDialog({
   const action = isEdit ? updateStudent.bind(null, student!.id) : createStudent;
   const [state, formAction, isPending] = useActionState(action, undefined);
   const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [newPassword, setNewPassword] = useState<string | null>(null);
-  useActionToast(state, () => setOpen(false), (password) => setNewPassword(password));
+  useActionToast(state, () => setOpen(false));
 
   return (
-    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size={isEdit ? "sm" : "default"} variant={isEdit ? "outline" : "default"}>
@@ -86,7 +84,7 @@ export function StudentFormDialog({
           <DialogDescription>
             {isEdit
               ? "Atualize as informações do aluno."
-              : "Um login será criado automaticamente para o aluno acessar o portal."}
+              : "Defina o login e a senha que o aluno vai usar para acessar o portal."}
           </DialogDescription>
         </DialogHeader>
 
@@ -96,19 +94,28 @@ export function StudentFormDialog({
             <Input id="name" name="name" defaultValue={student?.name} required />
           </div>
 
-          {!isEdit && (
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+          {isEdit ? (
+            <div className="space-y-1.5">
+              <Label>Nome de usuário (login)</Label>
+              <Input value={student?.username ?? ""} disabled readOnly />
             </div>
+          ) : (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="username">Nome de usuário (login)</Label>
+                <Input id="username" name="username" placeholder="ex: joao.silva" required />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Senha</Label>
+                <Input id="password" name="password" type="text" placeholder="Mínimo 6 caracteres" required />
+              </div>
+            </>
           )}
+
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="email">Email de contato (opcional)</Label>
+            <Input id="email" name="email" type="email" defaultValue={student?.email ?? ""} />
+          </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="cpf">CPF</Label>
@@ -271,12 +278,5 @@ export function StudentFormDialog({
         </form>
       </DialogContent>
     </Dialog>
-    <TempPasswordDialog
-      open={newPassword !== null}
-      onOpenChange={(o) => !o && setNewPassword(null)}
-      email={email}
-      password={newPassword ?? ""}
-    />
-    </>
   );
 }

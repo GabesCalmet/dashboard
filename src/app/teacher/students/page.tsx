@@ -10,7 +10,7 @@ export default async function TeacherStudentsPage() {
   const rows = students.map((s) => ({
     id: s.id,
     name: s.user.name,
-    email: s.user.email,
+    login: s.user.username ?? s.user.email,
     avatarUrl: s.user.avatarUrl,
     level: s.level,
     status: s.status,

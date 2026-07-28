@@ -26,7 +26,7 @@ export function ResetPasswordButton({
   size?: "sm" | "default" | "icon";
 }) {
   const [isPending, startTransition] = useTransition();
-  const [result, setResult] = useState<{ email: string; password: string } | null>(null);
+  const [result, setResult] = useState<{ login: string; password: string } | null>(null);
 
   return (
     <>
@@ -71,7 +71,7 @@ export function ResetPasswordButton({
         <TempPasswordDialog
           open={Boolean(result)}
           onOpenChange={(o) => !o && setResult(null)}
-          email={result.email}
+          login={result.login}
           password={result.password}
         />
       )}

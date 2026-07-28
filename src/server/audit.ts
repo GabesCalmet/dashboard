@@ -10,7 +10,7 @@ export async function recordAudit(params: {
   entityType: string;
   entityId: string;
   action: AuditAction;
-  actor: { id: string; name: string; email: string; role: Role };
+  actor: { id: string; name: string; email: string | null; role: Role };
   changes?: Record<string, unknown>;
 }) {
   await prisma.auditLog.create({
@@ -20,7 +20,7 @@ export async function recordAudit(params: {
       action: params.action,
       actorId: params.actor.id,
       actorName: params.actor.name,
-      actorEmail: params.actor.email,
+      actorEmail: params.actor.email ?? "",
       actorRole: params.actor.role,
       changes: (params.changes ?? undefined) as Prisma.InputJsonValue | undefined,
     },

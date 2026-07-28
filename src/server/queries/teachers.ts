@@ -2,10 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
 
 export async function listTeachers() {
+  // Includes inactive teachers too (not just active) so admins can find and
+  // reactivate them from the same list instead of only via Usuários.
   const teachers = await prisma.teacherProfile.findMany({
-    where: { user: { active: true } },
     include: { user: true, students: true },
-    orderBy: { user: { name: "asc" } },
+    orderBy: [{ user: { active: "desc" } }, { user: { name: "asc" } }],
   });
 
   const now = new Date();

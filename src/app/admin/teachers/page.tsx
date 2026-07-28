@@ -27,8 +27,13 @@ export default async function AdminTeachersPage() {
                   <AvatarFallback>{t.user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{t.user.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">{t.user.email}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="truncate font-medium">{t.user.name}</p>
+                    <Badge variant={t.user.active ? "success" : "outline"}>
+                      {t.user.active ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </div>
+                  <p className="truncate text-xs text-muted-foreground">@{t.user.username}</p>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {t.specialties.slice(0, 3).map((s) => (
                       <Badge key={s} variant="outline">

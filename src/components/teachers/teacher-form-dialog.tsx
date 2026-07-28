@@ -17,11 +17,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createTeacher, updateTeacher } from "@/server/actions/teachers";
 import { useActionToast } from "@/hooks/use-action-toast";
-import { TempPasswordDialog } from "@/components/shared/temp-password-dialog";
 
 type TeacherDefaults = {
   id: string;
   name: string;
+  username?: string | null;
+  email?: string | null;
   phone?: string | null;
   specialties: string[];
   hourlyRate: number;
@@ -35,12 +36,9 @@ export function TeacherFormDialog({ teacher }: { teacher?: TeacherDefaults }) {
   const action = isEdit ? updateTeacher.bind(null, teacher!.id) : createTeacher;
   const [state, formAction, isPending] = useActionState(action, undefined);
   const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [newPassword, setNewPassword] = useState<string | null>(null);
-  useActionToast(state, () => setOpen(false), (password) => setNewPassword(password));
+  useActionToast(state, () => setOpen(false));
 
   return (
-    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size={isEdit ? "sm" : "default"} variant={isEdit ? "outline" : "default"}>
@@ -54,7 +52,7 @@ export function TeacherFormDialog({ teacher }: { teacher?: TeacherDefaults }) {
           <DialogDescription>
             {isEdit
               ? "Atualize as informações do professor."
-              : "Um login será criado automaticamente para o professor acessar o portal."}
+              : "Defina o login e a senha que o professor vai usar para acessar o portal."}
           </DialogDescription>
         </DialogHeader>
 
@@ -64,19 +62,28 @@ export function TeacherFormDialog({ teacher }: { teacher?: TeacherDefaults }) {
             <Input id="name" name="name" defaultValue={teacher?.name} required />
           </div>
 
-          {!isEdit && (
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+          {isEdit ? (
+            <div className="space-y-1.5">
+              <Label>Nome de usuário (login)</Label>
+              <Input value={teacher?.username ?? ""} disabled readOnly />
             </div>
+          ) : (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="username">Nome de usuário (login)</Label>
+                <Input id="username" name="username" placeholder="ex: maria.souza" required />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Senha</Label>
+                <Input id="password" name="password" type="text" placeholder="Mínimo 6 caracteres" required />
+              </div>
+            </>
           )}
+
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="email">Email de contato (opcional)</Label>
+            <Input id="email" name="email" type="email" defaultValue={teacher?.email ?? ""} />
+          </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="phone">Telefone</Label>
@@ -127,12 +134,5 @@ export function TeacherFormDialog({ teacher }: { teacher?: TeacherDefaults }) {
         </form>
       </DialogContent>
     </Dialog>
-    <TempPasswordDialog
-      open={newPassword !== null}
-      onOpenChange={(o) => !o && setNewPassword(null)}
-      email={email}
-      password={newPassword ?? ""}
-    />
-    </>
   );
 }

@@ -33,8 +33,10 @@ export function DeleteTeacherButton({ teacherId, redirectTo }: { teacherId: stri
         <AlertDialogHeader>
           <AlertDialogTitle>Excluir professor</AlertDialogTitle>
           <AlertDialogDescription>
-            Esta ação remove o acesso do professor ao portal. Os alunos vinculados
-            ficarão sem professor responsável até uma nova atribuição.
+            Esta ação é permanente: o cadastro, o login e{" "}
+            <strong>todas as aulas registradas com este professor</strong>{" "}
+            serão apagados — inclusive do histórico dos alunos dele. Não pode
+            ser desfeita.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

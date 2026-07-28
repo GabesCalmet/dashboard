@@ -7,7 +7,7 @@ export default async function StudentSettingsPage() {
     <SettingsPage
       userId={user.id}
       name={user.name}
-      email={user.email}
+      email={user.username ?? user.email ?? ""}
       phone={user.phone}
       avatarUrl={user.avatarUrl}
       role={user.role}

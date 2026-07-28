@@ -28,6 +28,8 @@ import {
 import { roleLabel } from "@/components/layout/nav-config";
 import { toggleUserActive, deleteUserAccount } from "@/server/actions/users";
 import { ResetPasswordButton } from "@/components/shared/reset-password-button";
+import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
+import { SetPasswordButton } from "@/components/shared/set-password-button";
 import type { User } from "@prisma/client";
 
 export function UsersTable({ users, currentUserId }: { users: User[]; currentUserId: string }) {
@@ -39,7 +41,7 @@ export function UsersTable({ users, currentUserId }: { users: User[]; currentUse
         <TableHeader>
           <TableRow>
             <TableHead>Nome</TableHead>
-            <TableHead>Email</TableHead>
+            <TableHead>Login</TableHead>
             <TableHead>Nível</TableHead>
             <TableHead>Ativo</TableHead>
             <TableHead className="text-right">Ação</TableHead>
@@ -49,7 +51,9 @@ export function UsersTable({ users, currentUserId }: { users: User[]; currentUse
           {users.map((u) => (
             <TableRow key={u.id}>
               <TableCell className="font-medium">{u.name}</TableCell>
-              <TableCell className="text-muted-foreground">{u.email}</TableCell>
+              <TableCell className="text-muted-foreground">
+                {u.username ? `@${u.username}` : u.email}
+              </TableCell>
               <TableCell>
                 <Badge variant="outline">{roleLabel[u.role]}</Badge>
               </TableCell>
@@ -67,7 +71,14 @@ export function UsersTable({ users, currentUserId }: { users: User[]; currentUse
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
-                  <ResetPasswordButton userId={u.id} size="icon" />
+                  {u.role === "STUDENT" || u.role === "TEACHER" ? (
+                    <>
+                      <ViewCredentialsButton userId={u.id} size="icon" />
+                      <SetPasswordButton userId={u.id} size="icon" />
+                    </>
+                  ) : (
+                    <ResetPasswordButton userId={u.id} size="icon" />
+                  )}
                   {u.id !== currentUserId && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -79,7 +90,18 @@ export function UsersTable({ users, currentUserId }: { users: User[]; currentUse
                         <AlertDialogHeader>
                           <AlertDialogTitle>Excluir usuário</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Esta ação é irreversível e remove o acesso de {u.name} ao portal.
+                            {u.role === "STUDENT" || u.role === "TEACHER" ? (
+                              <>
+                                Esta ação é permanente: o cadastro, o login e todo o
+                                histórico de {u.name} serão apagados e não podem ser
+                                recuperados.
+                              </>
+                            ) : (
+                              <>
+                                Esta ação é irreversível e remove o acesso de {u.name}{" "}
+                                ao portal (a conta é desativada, não apagada).
+                              </>
+                            )}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

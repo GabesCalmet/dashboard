@@ -88,8 +88,20 @@ enum AuditAction {
 // ---------------------------------------------------------------------------
 
 model User {
-  id          String    @id @default(uuid()) // == auth.users.id in Supabase
-  email       String    @unique
+  id                String  @id @default(uuid()) // == auth.users.id in Supabase
+  // Real contact email — optional, NOT unique (students/teachers can share
+  // one family/school email; it's not used to log in for those two roles).
+  email             String?
+  // Login handle for STUDENT/TEACHER accounts, chosen by an admin. NULL for
+  // ADMIN/COORDINATOR, which still log in with `email` below.
+  username          String? @unique
+  // Admin-chosen password for STUDENT/TEACHER accounts, encrypted at rest
+  // (AES-256-GCM, key from CREDENTIALS_ENCRYPTION_KEY) so it can be viewed
+  // again from the admin account — see src/lib/crypto.ts. NULL for
+  // ADMIN/COORDINATOR, whose passwords are never stored, only hashed by
+  // Supabase Auth.
+  passwordEncrypted String?
+
   name        String
   role        Role
   avatarUrl   String?

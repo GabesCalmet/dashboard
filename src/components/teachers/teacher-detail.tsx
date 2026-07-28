@@ -6,7 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/shared/stat-card";
 import { TeacherFormDialog } from "@/components/teachers/teacher-form-dialog";
 import { DeleteTeacherButton } from "@/components/teachers/delete-teacher-button";
-import { ResetPasswordButton } from "@/components/shared/reset-password-button";
+import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
+import { SetPasswordButton } from "@/components/shared/set-password-button";
+import { TeacherActiveSwitch } from "@/components/teachers/teacher-active-switch";
 import { studentStatusLabel, studentStatusVariant, formatCurrency, formatDate } from "@/lib/labels";
 import type { getTeacherDetail } from "@/server/queries/teachers";
 
@@ -42,7 +44,10 @@ export function TeacherDetailView({
           </Avatar>
           <div>
             <h1 className="text-xl font-semibold">{teacher.user.name}</h1>
-            <p className="text-sm text-muted-foreground">{teacher.user.email}</p>
+            <p className="text-sm text-muted-foreground">@{teacher.user.username}</p>
+            {teacher.user.email && (
+              <p className="text-xs text-muted-foreground">{teacher.user.email}</p>
+            )}
             <div className="mt-1.5 flex flex-wrap gap-1">
               {teacher.specialties.map((s) => (
                 <Badge key={s} variant="outline">
@@ -52,13 +57,16 @@ export function TeacherDetailView({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {canManage && <TeacherActiveSwitch userId={teacher.userId} active={teacher.user.active} />}
           {canManage && (
             <>
               <TeacherFormDialog
                 teacher={{
                   id: teacher.id,
                   name: teacher.user.name,
+                  username: teacher.user.username,
+                  email: teacher.user.email,
                   phone: teacher.user.phone,
                   specialties: teacher.specialties,
                   hourlyRate: Number(teacher.hourlyRate),
@@ -70,7 +78,8 @@ export function TeacherDetailView({
               <DeleteTeacherButton teacherId={teacher.id} redirectTo={basePath} />
             </>
           )}
-          <ResetPasswordButton userId={teacher.userId} />
+          <ViewCredentialsButton userId={teacher.userId} />
+          {canManage && <SetPasswordButton userId={teacher.userId} />}
         </div>
       </div>
 

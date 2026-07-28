@@ -26,7 +26,7 @@ import type { CourseLevel, StudentStatus } from "@prisma/client";
 type Row = {
   id: string;
   name: string;
-  email: string;
+  login: string | null;
   avatarUrl?: string | null;
   level: CourseLevel;
   status: StudentStatus;
@@ -93,7 +93,7 @@ export function StudentsTable({ rows, basePath }: { rows: Row[]; basePath: strin
                     </Avatar>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{r.name}</p>
-                      <p className="truncate text-xs text-muted-foreground">{r.email}</p>
+                      <p className="truncate text-xs text-muted-foreground">{r.login}</p>
                     </div>
                   </Link>
                 </TableCell>

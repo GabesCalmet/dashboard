@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
         "alunos.csv",
         students.map((s) => ({
           Nome: s.user.name,
+          Usuario: s.user.username,
           Email: s.user.email,
           Nivel: levelLabel[s.level],
           Status: studentStatusLabel[s.status],
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
         "professores.csv",
         teachers.map((t) => ({
           Nome: t.user.name,
+          Usuario: t.user.username,
           Email: t.user.email,
           Especialidades: t.specialties.join(", "),
           "Valor/hora": t.hourlyRate.toString(),
