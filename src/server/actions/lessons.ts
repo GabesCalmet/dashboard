@@ -7,6 +7,7 @@ import { recordAudit } from "@/server/audit";
 import {
   lessonScheduleSchema,
   lessonReportSchema,
+  quickLessonStatusSchema,
 } from "@/lib/validation/lesson";
 import type { ActionState } from "@/server/actions/students";
 
@@ -127,20 +128,44 @@ export async function submitLessonReport(
   return { success: "Relatório de aula salvo." };
 }
 
+// Quick status update — used by the "Aulas de hoje" picker and the
+// Relatórios tables. Only the lesson's own teacher or an admin may set it;
+// coordinators and students are view-only, matching the rest of the agenda.
 export async function updateLessonStatus(lessonId: string, status: string) {
   const actor = await requireUser();
+  const parsed = quickLessonStatusSchema.safeParse(status);
+  if (!parsed.success) {
+    throw new Error("Status inválido.");
+  }
+
+  const lesson = await prisma.lesson.findUniqueOrThrow({ where: { id: lessonId } });
+  const isOwnLesson = actor.role === "TEACHER" && lesson.teacherId === actor.teacherProfile?.id;
+  if (actor.role !== "ADMIN" && !isOwnLesson) {
+    throw new Error("Você não pode alterar o status desta aula.");
+  }
+
   await prisma.lesson.update({
     where: { id: lessonId },
-    data: { status: status as never },
+    data: { status: parsed.data, reportedAt: new Date() },
   });
+
   await recordAudit({
     entityType: "Lesson",
     entityId: lessonId,
     action: "STATUS_CHANGE",
     actor,
-    changes: { status },
+    changes: { status: parsed.data },
   });
+
   revalidatePath("/admin/agenda");
   revalidatePath("/coordinator/agenda");
   revalidatePath("/teacher/agenda");
+  revalidatePath("/teacher");
+  revalidatePath("/teacher/reports");
+  revalidatePath("/admin/reports/lessons");
+  revalidatePath("/coordinator/reports/lessons");
+  revalidatePath(`/admin/students/${lesson.studentId}`);
+  revalidatePath(`/coordinator/students/${lesson.studentId}`);
+  revalidatePath(`/teacher/students/${lesson.studentId}`);
+  revalidatePath("/student/history");
 }

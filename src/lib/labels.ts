@@ -33,25 +33,54 @@ export const studentStatusVariant: Record<
 
 export const lessonStatusLabel: Record<LessonStatus, string> = {
   SCHEDULED: "Agendada",
-  COMPLETED: "Realizada",
-  CANCELED_BY_STUDENT: "CA — Cancelamento pelo aluno",
+  COMPLETED: "OK — Aula dada",
+  CANCELED_BY_STUDENT: "CA — Cancelamento aluno",
   NO_SHOW: "NC — Não compareceu",
-  CANCELED_BY_TEACHER: "CP — Cancelamento pelo professor",
-  CANCELED_HOLIDAY: "CF — Cancelamento por feriado",
+  CANCELED_BY_TEACHER: "CP — Cancelamento professor",
+  CANCELED_VACATION: "CF — Cancelamento férias",
+  CANCELED_HOLIDAY: "F — Feriado",
   MAKEUP: "R — Reposição",
   POWER_OUTAGE: "Faltou energia",
   TECH_ISSUE: "Problema técnico",
   OTHER: "Outro",
 };
 
+// Short code shown in the quick status picker (Aulas de hoje).
+export const lessonStatusCode: Record<LessonStatus, string> = {
+  SCHEDULED: "—",
+  COMPLETED: "OK",
+  CANCELED_BY_STUDENT: "CA",
+  NO_SHOW: "NC",
+  CANCELED_BY_TEACHER: "CP",
+  CANCELED_VACATION: "CF",
+  CANCELED_HOLIDAY: "F",
+  MAKEUP: "R",
+  POWER_OUTAGE: "—",
+  TECH_ISSUE: "—",
+  OTHER: "—",
+};
+
+// The set of statuses teachers pick from day-to-day when logging today's
+// lessons — a subset of the full LessonStatus enum (which also covers
+// reposição/technical issues, set elsewhere in the detailed report form).
+export const quickLessonStatuses: LessonStatus[] = [
+  "COMPLETED",
+  "CANCELED_BY_STUDENT",
+  "CANCELED_BY_TEACHER",
+  "CANCELED_VACATION",
+  "CANCELED_HOLIDAY",
+  "NO_SHOW",
+];
+
 // Calendar / badge colors per the spec: green=realizada, blue=agendada,
-// red=cancelada, yellow=reposição, gray=feriado.
+// red=cancelada, yellow=reposição, gray=feriado/férias.
 export const lessonStatusColor: Record<LessonStatus, string> = {
   SCHEDULED: "#3b6dc7",
   COMPLETED: "#1f9d55",
   CANCELED_BY_STUDENT: "#d64545",
   NO_SHOW: "#d64545",
   CANCELED_BY_TEACHER: "#d64545",
+  CANCELED_VACATION: "#8a8f98",
   CANCELED_HOLIDAY: "#8a8f98",
   MAKEUP: "#e0a91f",
   POWER_OUTAGE: "#d64545",
@@ -68,6 +97,7 @@ export const lessonStatusBadgeVariant: Record<
   CANCELED_BY_STUDENT: "destructive",
   NO_SHOW: "destructive",
   CANCELED_BY_TEACHER: "destructive",
+  CANCELED_VACATION: "outline",
   CANCELED_HOLIDAY: "outline",
   MAKEUP: "warning",
   POWER_OUTAGE: "destructive",

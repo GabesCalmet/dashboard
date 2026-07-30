@@ -41,11 +41,12 @@ enum StudentStatus {
 
 enum LessonStatus {
   SCHEDULED
-  COMPLETED
+  COMPLETED // OK - aula dada
   CANCELED_BY_STUDENT // CA
   NO_SHOW // NC
   CANCELED_BY_TEACHER // CP
-  CANCELED_HOLIDAY // CF
+  CANCELED_VACATION // CF - cancelamento por férias
+  CANCELED_HOLIDAY // F - feriado
   MAKEUP // R - reposição
   POWER_OUTAGE // Faltou energia
   TECH_ISSUE // Problema técnico

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { requireRole } from "@/lib/auth";
 import { getTeacherDashboardData } from "@/server/queries/teacher-dashboard";
 import { formatDateTime } from "@/lib/labels";
+import { LessonStatusSelect } from "@/components/lessons/lesson-status-select";
 
 export default async function TeacherDashboardPage() {
   const user = await requireRole("TEACHER");
@@ -30,14 +31,16 @@ export default async function TeacherDashboardPage() {
           </CardHeader>
           <CardContent className="space-y-1">
             {data.todayLessons.map((l) => (
-              <Link
+              <div
                 key={l.id}
-                href={`/teacher/students/${l.studentId}`}
-                className="flex items-center justify-between rounded-md px-2 py-2 text-sm hover:bg-secondary"
+                className="flex items-center justify-between gap-3 rounded-md px-2 py-2 text-sm hover:bg-secondary"
               >
-                <span>{l.student.user.name}</span>
-                <span className="text-xs text-muted-foreground">{formatDateTime(l.scheduledAt)}</span>
-              </Link>
+                <Link href={`/teacher/students/${l.studentId}`} className="min-w-0 flex-1">
+                  <p className="truncate">{l.student.user.name}</p>
+                  <p className="text-xs text-muted-foreground">{formatDateTime(l.scheduledAt)}</p>
+                </Link>
+                <LessonStatusSelect lessonId={l.id} status={l.status} />
+              </div>
             ))}
             {data.todayLessons.length === 0 && (
               <p className="py-6 text-center text-sm text-muted-foreground">

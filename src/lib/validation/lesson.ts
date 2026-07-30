@@ -18,6 +18,7 @@ export const lessonReportSchema = z.object({
     "CANCELED_BY_STUDENT",
     "NO_SHOW",
     "CANCELED_BY_TEACHER",
+    "CANCELED_VACATION",
     "CANCELED_HOLIDAY",
     "MAKEUP",
     "POWER_OUTAGE",
@@ -38,3 +39,14 @@ export const lessonReportSchema = z.object({
 });
 
 export type LessonReportValues = z.infer<typeof lessonReportSchema>;
+
+// Statuses selectable from the quick picker (Aulas de hoje / Relatórios
+// tables) — a subset of the full LessonStatus enum.
+export const quickLessonStatusSchema = z.enum([
+  "COMPLETED",
+  "CANCELED_BY_STUDENT",
+  "CANCELED_BY_TEACHER",
+  "CANCELED_VACATION",
+  "CANCELED_HOLIDAY",
+  "NO_SHOW",
+]);
