@@ -45,7 +45,7 @@ export function LessonHistoryTable({
                 </Badge>
               </TableCell>
               <TableCell className="max-w-64 truncate text-sm text-muted-foreground">
-                {l.contentTaught ?? "—"}
+                {[l.contentTaught, l.classFocus].filter(Boolean).join(" · ") || "—"}
               </TableCell>
               <TableCell className="max-w-48 truncate text-sm text-muted-foreground">
                 {l.homework ?? "—"}

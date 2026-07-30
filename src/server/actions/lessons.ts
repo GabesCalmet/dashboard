@@ -8,6 +8,7 @@ import {
   lessonScheduleSchema,
   lessonReportSchema,
   quickLessonStatusSchema,
+  lessonSummarySchema,
 } from "@/lib/validation/lesson";
 import type { ActionState } from "@/server/actions/students";
 
@@ -161,6 +162,50 @@ export async function updateLessonStatus(lessonId: string, status: string) {
   revalidatePath("/coordinator/agenda");
   revalidatePath("/teacher/agenda");
   revalidatePath("/teacher");
+  revalidatePath("/teacher/reports");
+  revalidatePath("/admin/reports/lessons");
+  revalidatePath("/coordinator/reports/lessons");
+  revalidatePath(`/admin/students/${lesson.studentId}`);
+  revalidatePath(`/coordinator/students/${lesson.studentId}`);
+  revalidatePath(`/teacher/students/${lesson.studentId}`);
+  revalidatePath("/student/history");
+}
+
+// Sets the "Resumo" fields from the Relatórios table — either a free-text
+// note or a picked curriculum unit label, plus the class focus tag. Same
+// permission rule as updateLessonStatus: the lesson's own teacher or admin.
+export async function updateLessonSummary(
+  lessonId: string,
+  values: { contentTaught?: string; classFocus?: string }
+) {
+  const actor = await requireUser();
+  const parsed = lessonSummarySchema.safeParse(values);
+  if (!parsed.success) {
+    throw new Error("Dados inválidos.");
+  }
+
+  const lesson = await prisma.lesson.findUniqueOrThrow({ where: { id: lessonId } });
+  const isOwnLesson = actor.role === "TEACHER" && lesson.teacherId === actor.teacherProfile?.id;
+  if (actor.role !== "ADMIN" && !isOwnLesson) {
+    throw new Error("Você não pode editar o resumo desta aula.");
+  }
+
+  await prisma.lesson.update({
+    where: { id: lessonId },
+    data: {
+      contentTaught: parsed.data.contentTaught || null,
+      classFocus: parsed.data.classFocus || null,
+    },
+  });
+
+  await recordAudit({
+    entityType: "Lesson",
+    entityId: lessonId,
+    action: "UPDATE",
+    actor,
+    changes: { contentTaught: parsed.data.contentTaught, classFocus: parsed.data.classFocus },
+  });
+
   revalidatePath("/teacher/reports");
   revalidatePath("/admin/reports/lessons");
   revalidatePath("/coordinator/reports/lessons");

@@ -9,6 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime, lessonStatusLabel, lessonStatusBadgeVariant } from "@/lib/labels";
 import { LessonStatusSelect } from "@/components/lessons/lesson-status-select";
+import { LessonSummaryEditor } from "@/components/lessons/lesson-summary-editor";
 import type { Lesson, LessonStatus } from "@prisma/client";
 
 type ReportLesson = Lesson & {
@@ -66,8 +67,18 @@ export function LessonsReportTable({
                   </Badge>
                 )}
               </TableCell>
-              <TableCell className="max-w-64 truncate text-sm text-muted-foreground">
-                {l.contentTaught ?? "—"}
+              <TableCell className="max-w-64">
+                {canEdit(l) ? (
+                  <LessonSummaryEditor
+                    lessonId={l.id}
+                    contentTaught={l.contentTaught}
+                    classFocus={l.classFocus}
+                  />
+                ) : (
+                  <p className="truncate text-sm text-muted-foreground">
+                    {[l.contentTaught, l.classFocus].filter(Boolean).join(" · ") || "—"}
+                  </p>
+                )}
               </TableCell>
             </TableRow>
           ))}

@@ -50,3 +50,8 @@ export const quickLessonStatusSchema = z.enum([
   "CANCELED_HOLIDAY",
   "NO_SHOW",
 ]);
+
+export const lessonSummarySchema = z.object({
+  contentTaught: z.string().trim().max(200).optional().or(z.literal("")),
+  classFocus: z.string().trim().max(50).optional().or(z.literal("")),
+});
