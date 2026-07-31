@@ -75,27 +75,29 @@ export function LessonsReportTable({
               <TableCell>
                 <div className="flex items-center gap-3">
                   {(reschedulableStatuses as readonly string[]).includes(l.status) ? (
-                    canEdit(l) ? (
-                      <LessonRescheduleEditor lessonId={l.id} rescheduledTo={l.rescheduledTo} />
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        {l.rescheduledTo ? formatDateTime(l.rescheduledTo.scheduledAt) : "—"}
-                      </span>
-                    )
+                    <>
+                      {canEdit(l) ? (
+                        <LessonRescheduleEditor lessonId={l.id} rescheduledTo={l.rescheduledTo} />
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          {l.rescheduledTo ? formatDateTime(l.rescheduledTo.scheduledAt) : "—"}
+                        </span>
+                      )}
+                      {l.rescheduledTo &&
+                        (canEdit(l) ? (
+                          <MakeupGivenToggle
+                            makeupLessonId={l.rescheduledTo.id}
+                            given={l.rescheduledTo.status === "COMPLETED"}
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            {l.rescheduledTo.status === "COMPLETED" ? "Dada" : "Pendente"}
+                          </span>
+                        ))}
+                    </>
                   ) : (
                     <span className="text-sm text-muted-foreground">—</span>
                   )}
-                  {l.rescheduledTo &&
-                    (canEdit(l) ? (
-                      <MakeupGivenToggle
-                        makeupLessonId={l.rescheduledTo.id}
-                        given={l.rescheduledTo.status === "COMPLETED"}
-                      />
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        {l.rescheduledTo.status === "COMPLETED" ? "Dada" : "Pendente"}
-                      </span>
-                    ))}
                 </div>
               </TableCell>
               <TableCell className="max-w-64">
