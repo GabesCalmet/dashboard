@@ -12,7 +12,9 @@ import { lessonStatusLabel, lessonStatusBadgeVariant } from "@/lib/labels";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
 import type { Lesson } from "@prisma/client";
 
-type HistoryLesson = Lesson & { rescheduledTo?: { scheduledAt: Date } | null };
+type HistoryLesson = Lesson & {
+  rescheduledTo?: { scheduledAt: Date; status: Lesson["status"] } | null;
+};
 
 export function LessonHistoryTable({
   lessons,
@@ -49,9 +51,16 @@ export function LessonHistoryTable({
                 </Badge>
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
-                {(reschedulableStatuses as readonly string[]).includes(l.status) && l.rescheduledTo
-                  ? formatDateTime(l.rescheduledTo.scheduledAt)
-                  : "—"}
+                {(reschedulableStatuses as readonly string[]).includes(l.status) && l.rescheduledTo ? (
+                  <span className="flex items-center gap-2">
+                    {formatDateTime(l.rescheduledTo.scheduledAt)}
+                    <span className="text-xs">
+                      ({l.rescheduledTo.status === "COMPLETED" ? "Dada" : "Pendente"})
+                    </span>
+                  </span>
+                ) : (
+                  "—"
+                )}
               </TableCell>
               <TableCell className="max-w-64 truncate text-sm text-muted-foreground">
                 {[l.contentTaught, l.classFocus].filter(Boolean).join(" · ") || "—"}

@@ -297,3 +297,24 @@ export async function clearLessonReschedule(lessonId: string) {
 
   revalidateReportPaths(lesson.studentId);
 }
+
+// Marks whether the booked makeup lesson was actually given — toggles the
+// makeup lesson's own status between MAKEUP (pending) and COMPLETED (dada).
+export async function setMakeupGiven(makeupLessonId: string, given: boolean) {
+  const { actor, lesson } = await requireLessonEditAccess(makeupLessonId);
+
+  await prisma.lesson.update({
+    where: { id: makeupLessonId },
+    data: { status: given ? "COMPLETED" : "MAKEUP" },
+  });
+
+  await recordAudit({
+    entityType: "Lesson",
+    entityId: makeupLessonId,
+    action: "STATUS_CHANGE",
+    actor,
+    changes: { reposicaoDada: given },
+  });
+
+  revalidateReportPaths(lesson.studentId);
+}
