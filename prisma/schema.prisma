@@ -240,6 +240,13 @@ model Lesson {
   // (makeups, one-off extra classes, etc).
   isRecurring Boolean      @default(false)
 
+  // Set on the NEW (makeup) lesson created via the "Reagendamento" picker
+  // when a lesson is canceled (CA/CP/CF) — points back to the lesson it
+  // replaces. Optional 1:1 self-relation.
+  rescheduledFromId String?  @unique
+  rescheduledFrom   Lesson?  @relation("LessonReschedule", fields: [rescheduledFromId], references: [id], onDelete: SetNull)
+  rescheduledTo     Lesson?  @relation("LessonReschedule")
+
   // post-lesson report (filled by teacher)
   contentTaught String? // free text, or a picked curriculum unit label ("Aula 12", "Teste 3")
   classFocus    String? // Revisão / Conversação / Etapa 1-3 / Gramática

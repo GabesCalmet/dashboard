@@ -9,14 +9,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/labels";
 import { lessonStatusLabel, lessonStatusBadgeVariant } from "@/lib/labels";
+import { reschedulableStatuses } from "@/lib/validation/lesson";
 import type { Lesson } from "@prisma/client";
+
+type HistoryLesson = Lesson & { rescheduledTo?: { scheduledAt: Date } | null };
 
 export function LessonHistoryTable({
   lessons,
   showTeacher = false,
   teacherNames = {},
 }: {
-  lessons: Lesson[];
+  lessons: HistoryLesson[];
   showTeacher?: boolean;
   teacherNames?: Record<string, string>;
 }) {
@@ -29,6 +32,7 @@ export function LessonHistoryTable({
             {showTeacher && <TableHead>Professor</TableHead>}
             <TableHead>Duração</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Reagendamento</TableHead>
             <TableHead>Resumo</TableHead>
             <TableHead>Homework</TableHead>
           </TableRow>
@@ -44,6 +48,11 @@ export function LessonHistoryTable({
                   {lessonStatusLabel[l.status]}
                 </Badge>
               </TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {(reschedulableStatuses as readonly string[]).includes(l.status) && l.rescheduledTo
+                  ? formatDateTime(l.rescheduledTo.scheduledAt)
+                  : "—"}
+              </TableCell>
               <TableCell className="max-w-64 truncate text-sm text-muted-foreground">
                 {[l.contentTaught, l.classFocus].filter(Boolean).join(" · ") || "—"}
               </TableCell>
@@ -55,7 +64,7 @@ export function LessonHistoryTable({
           {lessons.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={showTeacher ? 6 : 5}
+                colSpan={showTeacher ? 7 : 6}
                 className="py-10 text-center text-muted-foreground"
               >
                 Nenhuma aula registrada ainda.

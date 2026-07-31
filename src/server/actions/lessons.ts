@@ -9,6 +9,7 @@ import {
   lessonReportSchema,
   quickLessonStatusSchema,
   lessonSummarySchema,
+  lessonRescheduleSchema,
 } from "@/lib/validation/lesson";
 import type { ActionState } from "@/server/actions/students";
 
@@ -213,4 +214,86 @@ export async function updateLessonSummary(
   revalidatePath(`/coordinator/students/${lesson.studentId}`);
   revalidatePath(`/teacher/students/${lesson.studentId}`);
   revalidatePath("/student/history");
+}
+
+function revalidateReportPaths(studentId: string) {
+  revalidatePath("/admin/agenda");
+  revalidatePath("/coordinator/agenda");
+  revalidatePath("/teacher/agenda");
+  revalidatePath("/teacher/reports");
+  revalidatePath("/admin/reports/lessons");
+  revalidatePath("/coordinator/reports/lessons");
+  revalidatePath(`/admin/students/${studentId}`);
+  revalidatePath(`/coordinator/students/${studentId}`);
+  revalidatePath(`/teacher/students/${studentId}`);
+  revalidatePath("/student/history");
+}
+
+async function requireLessonEditAccess(lessonId: string) {
+  const actor = await requireUser();
+  const lesson = await prisma.lesson.findUniqueOrThrow({ where: { id: lessonId } });
+  const isOwnLesson = actor.role === "TEACHER" && lesson.teacherId === actor.teacherProfile?.id;
+  if (actor.role !== "ADMIN" && !isOwnLesson) {
+    throw new Error("Você não pode editar esta aula.");
+  }
+  return { actor, lesson };
+}
+
+// Books (or reschedules) the makeup lesson for a canceled one (CA/CP/CF) —
+// creates a new Lesson linked via rescheduledFromId the first time, and
+// just moves its date/time on subsequent calls.
+export async function scheduleLessonReschedule(lessonId: string, values: { date: string; time: string }) {
+  const parsed = lessonRescheduleSchema.safeParse(values);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Dados inválidos.");
+  }
+  const { actor, lesson } = await requireLessonEditAccess(lessonId);
+  const scheduledAt = new Date(`${parsed.data.date}T${parsed.data.time}:00`);
+
+  const existing = await prisma.lesson.findUnique({ where: { rescheduledFromId: lessonId } });
+
+  if (existing) {
+    await prisma.lesson.update({ where: { id: existing.id }, data: { scheduledAt } });
+  } else {
+    await prisma.lesson.create({
+      data: {
+        studentId: lesson.studentId,
+        teacherId: lesson.teacherId,
+        scheduledAt,
+        durationMin: lesson.durationMin,
+        status: "MAKEUP",
+        rescheduledFromId: lesson.id,
+      },
+    });
+  }
+
+  await recordAudit({
+    entityType: "Lesson",
+    entityId: lessonId,
+    action: "UPDATE",
+    actor,
+    changes: { reagendamento: scheduledAt.toISOString() },
+  });
+
+  revalidateReportPaths(lesson.studentId);
+}
+
+// Removes the makeup lesson booked for a canceled lesson, if any.
+export async function clearLessonReschedule(lessonId: string) {
+  const { actor, lesson } = await requireLessonEditAccess(lessonId);
+
+  const existing = await prisma.lesson.findUnique({ where: { rescheduledFromId: lessonId } });
+  if (existing) {
+    await prisma.lesson.delete({ where: { id: existing.id } });
+  }
+
+  await recordAudit({
+    entityType: "Lesson",
+    entityId: lessonId,
+    action: "UPDATE",
+    actor,
+    changes: { reagendamento: null },
+  });
+
+  revalidateReportPaths(lesson.studentId);
 }

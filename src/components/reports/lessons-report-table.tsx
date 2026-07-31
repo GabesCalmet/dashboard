@@ -10,11 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { formatDateTime, lessonStatusLabel, lessonStatusBadgeVariant } from "@/lib/labels";
 import { LessonStatusSelect } from "@/components/lessons/lesson-status-select";
 import { LessonSummaryEditor } from "@/components/lessons/lesson-summary-editor";
+import { LessonRescheduleEditor } from "@/components/lessons/lesson-reschedule-editor";
+import { reschedulableStatuses } from "@/lib/validation/lesson";
 import type { Lesson, LessonStatus } from "@prisma/client";
 
 type ReportLesson = Lesson & {
   student: { user: { name: string } };
   teacher: { user: { name: string } };
+  rescheduledTo: { scheduledAt: Date } | null;
 };
 
 export function LessonsReportTable({
@@ -48,6 +51,7 @@ export function LessonsReportTable({
             {showTeacher && <TableHead>Professor</TableHead>}
             <TableHead>Duração</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Reagendamento</TableHead>
             <TableHead>Resumo</TableHead>
           </TableRow>
         </TableHeader>
@@ -65,6 +69,19 @@ export function LessonsReportTable({
                   <Badge variant={lessonStatusBadgeVariant[l.status as LessonStatus]}>
                     {lessonStatusLabel[l.status as LessonStatus]}
                   </Badge>
+                )}
+              </TableCell>
+              <TableCell>
+                {(reschedulableStatuses as readonly string[]).includes(l.status) ? (
+                  canEdit(l) ? (
+                    <LessonRescheduleEditor lessonId={l.id} rescheduledTo={l.rescheduledTo} />
+                  ) : (
+                    <span className="text-sm text-muted-foreground">
+                      {l.rescheduledTo ? formatDateTime(l.rescheduledTo.scheduledAt) : "—"}
+                    </span>
+                  )
+                ) : (
+                  <span className="text-sm text-muted-foreground">—</span>
                 )}
               </TableCell>
               <TableCell className="max-w-64">
@@ -85,7 +102,7 @@ export function LessonsReportTable({
           {lessons.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={4 + Number(showStudent) + Number(showTeacher)}
+                colSpan={5 + Number(showStudent) + Number(showTeacher)}
                 className="py-10 text-center text-muted-foreground"
               >
                 Nenhuma aula registrada ainda.

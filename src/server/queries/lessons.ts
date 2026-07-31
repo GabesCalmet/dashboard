@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 const reportInclude = {
   student: { include: { user: true } },
   teacher: { include: { user: true } },
+  rescheduledTo: true,
 } as const;
 
 export async function listLessonsForTeacher(teacherId: string, take = 200) {

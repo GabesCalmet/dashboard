@@ -55,3 +55,15 @@ export const lessonSummarySchema = z.object({
   contentTaught: z.string().trim().max(200).optional().or(z.literal("")),
   classFocus: z.string().trim().max(50).optional().or(z.literal("")),
 });
+
+// Statuses that unlock the "Reagendamento" picker — CA/CP/CF.
+export const reschedulableStatuses = [
+  "CANCELED_BY_STUDENT",
+  "CANCELED_BY_TEACHER",
+  "CANCELED_VACATION",
+] as const;
+
+export const lessonRescheduleSchema = z.object({
+  date: z.string().min(1, "Informe a data"),
+  time: z.string().min(1, "Informe o horário"),
+});
