@@ -41,8 +41,10 @@ export const lessonReportSchema = z.object({
 export type LessonReportValues = z.infer<typeof lessonReportSchema>;
 
 // Statuses selectable from the quick picker (Aulas de hoje / Relatórios
-// tables) — a subset of the full LessonStatus enum.
+// tables) — a subset of the full LessonStatus enum. SCHEDULED is included
+// so a status set by mistake can be reverted back to "Agendada".
 export const quickLessonStatusSchema = z.enum([
+  "SCHEDULED",
   "COMPLETED",
   "CANCELED_BY_STUDENT",
   "CANCELED_BY_TEACHER",

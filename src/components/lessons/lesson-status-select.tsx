@@ -42,9 +42,7 @@ export function LessonStatusSelect({
         {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <SelectValue />}
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="SCHEDULED" disabled>
-          {lessonStatusLabel.SCHEDULED}
-        </SelectItem>
+        <SelectItem value="SCHEDULED">{lessonStatusLabel.SCHEDULED}</SelectItem>
         {quickLessonStatuses.map((s) => (
           <SelectItem key={s} value={s}>
             {lessonStatusLabel[s]}
