@@ -10,6 +10,7 @@ import {
   quickLessonStatusSchema,
   lessonSummarySchema,
   lessonRescheduleSchema,
+  reschedulableStatuses,
 } from "@/lib/validation/lesson";
 import type { ActionState } from "@/server/actions/students";
 
@@ -150,6 +151,16 @@ export async function updateLessonStatus(lessonId: string, status: string) {
     where: { id: lessonId },
     data: { status: parsed.data, reportedAt: new Date() },
   });
+
+  // A reagendamento only makes sense while the lesson is CA/CP/CF — if the
+  // status moved away from those (e.g. reverted back to Agendada), drop any
+  // makeup lesson that was booked for it.
+  if (!(reschedulableStatuses as readonly string[]).includes(parsed.data)) {
+    const makeup = await prisma.lesson.findUnique({ where: { rescheduledFromId: lessonId } });
+    if (makeup) {
+      await prisma.lesson.delete({ where: { id: makeup.id } });
+    }
+  }
 
   await recordAudit({
     entityType: "Lesson",
