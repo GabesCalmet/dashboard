@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_PATHS = ["/login", "/api/auth/callback"];
 const IDLE_COOKIE = "upfront_last_active";
+const USER_ID_HEADER = "x-user-id";
 const idleMinutes = Number(process.env.SESSION_IDLE_TIMEOUT_MINUTES ?? 30);
 
 function isPublicPath(pathname: string) {
@@ -14,7 +15,11 @@ function isPublicPath(pathname: string) {
 }
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  // Never trust a client-supplied value here — it's only ever set below,
+  // after auth.getUser() has verified the session with Supabase.
+  request.headers.delete(USER_ID_HEADER);
+
+  const cookiesToForward: { name: string; value: string; options?: Record<string, unknown> }[] = [];
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,10 +31,7 @@ export async function updateSession(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
+          cookiesToForward.push(...cookiesToSet);
         },
       },
     }
@@ -48,6 +50,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  let touchIdleCookie = false;
   if (user && !isPublicPath(pathname)) {
     const lastActive = request.cookies.get(IDLE_COOKIE)?.value;
     const now = Date.now();
@@ -60,11 +63,7 @@ export async function updateSession(request: NextRequest) {
       redirectResponse.cookies.delete(IDLE_COOKIE);
       return redirectResponse;
     }
-    supabaseResponse.cookies.set(IDLE_COOKIE, String(now), {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-    });
+    touchIdleCookie = true;
   }
 
   if (user && pathname === "/login") {
@@ -73,5 +72,26 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return supabaseResponse;
+  // Pass the already-verified user id downstream via a request header so
+  // page renders and Server Actions can read it directly (see
+  // lib/auth.ts#getCurrentUser) instead of calling auth.getUser() a second
+  // time — that call is a real network round-trip to Supabase, and doing it
+  // twice per request roughly doubles auth latency on every navigation.
+  if (user) {
+    request.headers.set(USER_ID_HEADER, user.id);
+  }
+
+  const response = NextResponse.next({ request });
+  cookiesToForward.forEach(({ name, value, options }) =>
+    response.cookies.set(name, value, options)
+  );
+  if (touchIdleCookie) {
+    response.cookies.set(IDLE_COOKIE, String(Date.now()), {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+    });
+  }
+
+  return response;
 }

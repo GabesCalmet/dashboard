@@ -1,21 +1,22 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { cache } from "react";
 import type { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { createClient } from "@/lib/supabase/server";
 
 export type SessionUser = Awaited<ReturnType<typeof getCurrentUser>>;
 
+// The user id here comes from middleware (src/lib/supabase/middleware.ts),
+// which already verified the session with Supabase's auth server for this
+// exact request. Reusing that instead of calling auth.getUser() again here
+// saves a second network round-trip to Supabase on every page/action.
 export const getCurrentUser = cache(async () => {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
+  const headerList = await headers();
+  const userId = headerList.get("x-user-id");
+  if (!userId) return null;
 
   const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
+    where: { id: userId },
     include: { teacherProfile: true, studentProfile: true },
   });
 
