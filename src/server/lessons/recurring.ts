@@ -28,11 +28,13 @@ function durationFromTimes(start: string, end: string) {
   return minutes > 0 ? minutes : 50;
 }
 
-// Regenerates a student's upcoming recurring lessons (next HORIZON_WEEKS)
-// to match their current weekly schedule. Only ever touches lessons this
-// same generator created (isRecurring) that are still SCHEDULED and in the
-// future — manual bookings and anything a teacher has already reported on
-// are never deleted or altered.
+// Regenerates a student's recurring lessons (from their enrollment start
+// date through the next HORIZON_WEEKS) to match their current weekly
+// schedule. Only ever touches lessons this same generator created
+// (isRecurring) that are still SCHEDULED — i.e. still unconfirmed, whether
+// in the past or future. Manual bookings and anything a teacher has
+// already reported/marked a real outcome for (OK/CA/CP/NC/...) are never
+// deleted or altered, so re-running this after enrollment is always safe.
 export async function syncRecurringLessons(studentId: string) {
   const student = await prisma.studentProfile.findUnique({ where: { id: studentId } });
   if (!student || !student.teacherId) return;
@@ -42,7 +44,6 @@ export async function syncRecurringLessons(studentId: string) {
       studentId,
       isRecurring: true,
       status: "SCHEDULED",
-      scheduledAt: { gte: new Date() },
     },
   });
 
@@ -54,10 +55,13 @@ export async function syncRecurringLessons(studentId: string) {
   if (schedule.length === 0) return;
 
   const now = new Date();
-  // Never generate lessons before the student's own enrollment start date —
-  // if it's in the future, that's the earliest day to schedule from.
-  const anchor = student.startDate > now ? student.startDate : now;
-  const horizonEnd = new Date(anchor.getTime() + HORIZON_WEEKS * 7 * 24 * 60 * 60 * 1000);
+  // The earliest day to schedule from is always the enrollment start date —
+  // whether that's in the past (so history gets backfilled up to today) or
+  // the future (nothing generated before the student actually starts).
+  const anchor = student.startDate;
+  const horizonEnd = new Date(
+    Math.max(now.getTime(), anchor.getTime()) + HORIZON_WEEKS * 7 * 24 * 60 * 60 * 1000
+  );
   const toCreate: {
     studentId: string;
     teacherId: string;
