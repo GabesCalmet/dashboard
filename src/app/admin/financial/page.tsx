@@ -48,6 +48,25 @@ export default async function AdminFinancialPage() {
         </CardContent>
       </Card>
 
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Receita por conta bancária (mês atual)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {data.byBankAccount.map((b) => (
+              <div key={b.account} className="rounded-lg border p-4">
+                <p className="text-sm font-medium">{b.label}</p>
+                <p className="mt-1 text-lg font-semibold">{formatCurrency(b.received)}</p>
+                <p className="text-xs text-muted-foreground">
+                  de {formatCurrency(b.expected)} previsto
+                </p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="mt-6">
         <h2 className="mb-3 text-sm font-semibold">Cobranças do mês atual</h2>
         <PaymentsTable payments={data.payments} />

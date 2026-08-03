@@ -20,7 +20,13 @@ import { DeleteStudentButton } from "@/components/students/delete-student-button
 import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
 import { SetPasswordButton } from "@/components/shared/set-password-button";
 import { AuditTrail } from "@/components/shared/audit-trail";
-import { studentStatusLabel, studentStatusVariant, formatDate, formatDateTime } from "@/lib/labels";
+import {
+  studentStatusLabel,
+  studentStatusVariant,
+  formatDate,
+  formatDateTime,
+  bankAccountLabel,
+} from "@/lib/labels";
 import type { getStudentDetail } from "@/server/queries/students";
 
 type Student = NonNullable<Awaited<ReturnType<typeof getStudentDetail>>>;
@@ -108,6 +114,7 @@ export function StudentDetailView({
                   courseId: student.courseId,
                   planId: student.planId,
                   monthlyValue: Number(student.monthlyValue),
+                  bankAccount: student.bankAccount,
                   dueDay: student.dueDay,
                   lessonsPerMonth: student.lessonsPerMonth,
                   lessonSchedule: parseLessonSchedule(student.lessonSchedule),
@@ -173,6 +180,7 @@ export function StudentDetailView({
                     value={formatLessonSchedule(parseLessonSchedule(student.lessonSchedule))}
                   />
                   <InfoRow label="Vencimento do boleto" value={`Dia ${student.dueDay}`} />
+                  <InfoRow label="Conta bancária" value={bankAccountLabel[student.bankAccount]} />
                 </CardContent>
               </Card>
 

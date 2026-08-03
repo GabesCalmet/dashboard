@@ -3,6 +3,7 @@ import type {
   LessonStatus,
   PaymentStatus,
   StudentStatus,
+  BankAccount,
 } from "@prisma/client";
 
 export const levelLabel: Record<CourseLevel, string> = {
@@ -29,6 +30,12 @@ export const studentStatusVariant: Record<
   ACTIVE: "success",
   PAUSED: "warning",
   CANCELED: "destructive",
+};
+
+export const bankAccountLabel: Record<BankAccount, string> = {
+  GABES: "Gabes",
+  JOE: "Joe",
+  ASAAS: "Asaas",
 };
 
 export const lessonStatusLabel: Record<LessonStatus, string> = {

@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
+import { bankAccountLabel } from "@/lib/labels";
+import type { BankAccount } from "@prisma/client";
 
 export async function getFinancialOverview() {
   const now = new Date();
@@ -32,6 +34,15 @@ export async function getFinancialOverview() {
   const receivedTotal = Number(received._sum.amount ?? 0);
   const delinquencyRate =
     expectedTotal > 0 ? ((expectedTotal - receivedTotal) / expectedTotal) * 100 : 0;
+
+  const byBankAccount = (Object.keys(bankAccountLabel) as BankAccount[]).map((account) => {
+    const accountPayments = payments.filter((p) => p.student.bankAccount === account);
+    const expectedAcc = accountPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const receivedAcc = accountPayments
+      .filter((p) => p.status === "PAID")
+      .reduce((sum, p) => sum + Number(p.amount), 0);
+    return { account, label: bankAccountLabel[account], expected: expectedAcc, received: receivedAcc };
+  });
 
   const cashFlowBuckets = Array.from({ length: 6 }).map((_, i) => {
     const d = subMonths(now, 5 - i);
@@ -71,7 +82,9 @@ export async function getFinancialOverview() {
       dueDate: p.dueDate,
       status: p.status,
       studentName: p.student.user.name,
+      bankAccount: p.student.bankAccount,
     })),
     cashFlow,
+    byBankAccount,
   };
 }

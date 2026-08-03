@@ -18,9 +18,10 @@ import {
   formatDate,
   paymentStatusLabel,
   paymentStatusVariant,
+  bankAccountLabel,
 } from "@/lib/labels";
 import { markPaymentPaid } from "@/server/actions/payments";
-import type { PaymentStatus } from "@prisma/client";
+import type { PaymentStatus, BankAccount } from "@prisma/client";
 
 type Row = {
   id: string;
@@ -28,6 +29,7 @@ type Row = {
   dueDate: Date;
   status: PaymentStatus;
   studentName: string;
+  bankAccount: BankAccount;
 };
 
 export function PaymentsTable({ payments }: { payments: Row[] }) {
@@ -41,6 +43,7 @@ export function PaymentsTable({ payments }: { payments: Row[] }) {
             <TableHead>Aluno</TableHead>
             <TableHead>Valor</TableHead>
             <TableHead>Vencimento</TableHead>
+            <TableHead>Conta</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Ação</TableHead>
           </TableRow>
@@ -51,6 +54,9 @@ export function PaymentsTable({ payments }: { payments: Row[] }) {
               <TableCell>{p.studentName}</TableCell>
               <TableCell>{formatCurrency(p.amount)}</TableCell>
               <TableCell>{formatDate(p.dueDate)}</TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {bankAccountLabel[p.bankAccount]}
+              </TableCell>
               <TableCell>
                 <Badge variant={paymentStatusVariant[p.status]}>
                   {paymentStatusLabel[p.status]}
@@ -78,7 +84,7 @@ export function PaymentsTable({ payments }: { payments: Row[] }) {
           ))}
           {payments.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+              <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                 Nenhuma cobrança gerada para este mês ainda.
               </TableCell>
             </TableRow>

@@ -39,6 +39,14 @@ enum StudentStatus {
   CANCELED
 }
 
+// The school's three receiving bank accounts — which one a given student's
+// payments go into.
+enum BankAccount {
+  GABES
+  JOE
+  ASAAS
+}
+
 enum LessonStatus {
   SCHEDULED
   COMPLETED // OK - aula dada
@@ -182,6 +190,7 @@ model StudentProfile {
   planId            String?
   plan              Plan?           @relation(fields: [planId], references: [id])
   monthlyValue      Decimal         @db.Decimal(10, 2)
+  bankAccount       BankAccount     @default(GABES) // which of the school's 3 accounts receives this student's payments
   dueDay            Int             @default(10) // day of the month the invoice ("boleto") is due, 1-31
   lessonsPerMonth   Int             @default(4)
   // One entry per scheduled day, each with its own time:

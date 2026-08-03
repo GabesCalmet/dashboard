@@ -26,6 +26,7 @@ export const studentFormSchema = z.object({
   courseId: z.string().optional(),
   planId: z.string().optional(),
   monthlyValue: z.coerce.number().min(0, "Valor inválido"),
+  bankAccount: z.enum(["GABES", "JOE", "ASAAS"]).default("GABES"),
   dueDay: z.coerce.number().int().min(1).max(31).default(10),
   lessonsPerMonth: z.coerce.number().int().min(1).max(60),
   // Submitted by LessonScheduleEditor as a JSON string, e.g.

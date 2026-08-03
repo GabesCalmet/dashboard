@@ -25,8 +25,8 @@ import {
 import { createStudent, updateStudent } from "@/server/actions/students";
 import { useActionToast } from "@/hooks/use-action-toast";
 import { LessonScheduleEditor, type ScheduleEntry } from "@/components/students/lesson-schedule-editor";
-import { levelLabel } from "@/lib/labels";
-import type { CourseLevel, StudentStatus } from "@prisma/client";
+import { levelLabel, bankAccountLabel } from "@/lib/labels";
+import type { CourseLevel, StudentStatus, BankAccount } from "@prisma/client";
 
 type Option = { id: string; label: string };
 
@@ -43,6 +43,7 @@ type StudentDefaults = {
   courseId?: string | null;
   planId?: string | null;
   monthlyValue: number;
+  bankAccount?: BankAccount;
   dueDay?: number;
   lessonsPerMonth: number;
   lessonSchedule?: ScheduleEntry[];
@@ -198,6 +199,22 @@ export function StudentFormDialog({
               defaultValue={student?.monthlyValue}
               required
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Conta bancária</Label>
+            <Select name="bankAccount" defaultValue={student?.bankAccount ?? "GABES"} required>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(bankAccountLabel).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1.5">
