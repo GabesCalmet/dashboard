@@ -14,7 +14,7 @@ export default async function StudentHistoryPage() {
   const [lessons, stats] = await Promise.all([
     prisma.lesson.findMany({
       where: { studentId },
-      orderBy: { scheduledAt: "desc" },
+      orderBy: { scheduledAt: "asc" },
       include: { rescheduledTo: true },
     }),
     getStudentStats(studentId),

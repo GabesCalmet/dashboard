@@ -47,6 +47,9 @@ export function StudentDetailView({
     canPromote: boolean;
     showFinancial: boolean;
     showAudit: boolean;
+    // Lets status/reagendamento/resumo be changed directly from this page
+    // (admin), instead of only from the teacher's own Relatórios/Agenda.
+    canEditLessons?: boolean;
   };
   editOptions?: {
     teachers: { id: string; label: string }[];
@@ -197,7 +200,10 @@ export function StudentDetailView({
             </TabsContent>
 
             <TabsContent value="lessons" className="mt-4">
-              <LessonHistoryTable lessons={student.lessons} />
+              <LessonHistoryTable
+                lessons={student.lessons}
+                editable={permissions.canEditLessons}
+              />
             </TabsContent>
 
             {permissions.showFinancial && (
