@@ -20,11 +20,12 @@ import {
   paymentStatusVariant,
   bankAccountLabel,
 } from "@/lib/labels";
-import { markPaymentPaid } from "@/server/actions/payments";
+import { markCobrancaPaid } from "@/server/actions/payments";
 import type { PaymentStatus, BankAccount } from "@prisma/client";
 
 type Row = {
-  id: string;
+  id: string | null;
+  studentId: string;
   amount: number;
   dueDate: Date;
   status: PaymentStatus;
@@ -50,7 +51,7 @@ export function PaymentsTable({ payments }: { payments: Row[] }) {
         </TableHeader>
         <TableBody>
           {payments.map((p) => (
-            <TableRow key={p.id}>
+            <TableRow key={p.id ?? p.studentId}>
               <TableCell>{p.studentName}</TableCell>
               <TableCell>{formatCurrency(p.amount)}</TableCell>
               <TableCell>{formatDate(p.dueDate)}</TableCell>
@@ -70,7 +71,7 @@ export function PaymentsTable({ payments }: { payments: Row[] }) {
                     disabled={isPending}
                     onClick={() =>
                       startTransition(async () => {
-                        await markPaymentPaid(p.id);
+                        await markCobrancaPaid(p.studentId);
                         toast.success("Pagamento marcado como pago.");
                       })
                     }
@@ -85,7 +86,7 @@ export function PaymentsTable({ payments }: { payments: Row[] }) {
           {payments.length === 0 && (
             <TableRow>
               <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                Nenhuma cobrança gerada para este mês ainda.
+                Nenhum aluno ativo no momento.
               </TableCell>
             </TableRow>
           )}

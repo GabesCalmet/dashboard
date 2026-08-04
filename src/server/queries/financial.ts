@@ -1,46 +1,79 @@
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { bankAccountLabel } from "@/lib/labels";
-import type { BankAccount, Expense } from "@prisma/client";
+import type { BankAccount, Expense, PaymentStatus } from "@prisma/client";
 
 export async function getFinancialOverview() {
   const now = new Date();
   const monthStart = startOfMonth(now);
+  const daysInMonth = endOfMonth(monthStart).getDate();
 
-  const [received, expected, pendingCount, lateCount, activeStudentsAgg, payments] =
-    await Promise.all([
-      prisma.payment.aggregate({
-        where: { referenceMonth: monthStart, status: "PAID" },
-        _sum: { amount: true },
-      }),
-      prisma.payment.aggregate({
-        where: { referenceMonth: monthStart },
-        _sum: { amount: true },
-      }),
-      prisma.payment.count({ where: { referenceMonth: monthStart, status: "PENDING" } }),
-      prisma.payment.count({ where: { referenceMonth: monthStart, status: "LATE" } }),
-      prisma.studentProfile.aggregate({
-        where: { status: "ACTIVE" },
-        _sum: { monthlyValue: true },
-      }),
-      prisma.payment.findMany({
-        where: { referenceMonth: monthStart },
-        include: { student: { include: { user: true } } },
-        orderBy: { dueDate: "asc" },
-      }),
-    ]);
+  const [received, activeStudents, payments] = await Promise.all([
+    prisma.payment.aggregate({
+      where: { referenceMonth: monthStart, status: "PAID" },
+      _sum: { amount: true },
+    }),
+    prisma.studentProfile.findMany({
+      where: { status: "ACTIVE" },
+      include: { user: true },
+    }),
+    prisma.payment.findMany({
+      where: { referenceMonth: monthStart },
+      include: { student: { include: { user: true } } },
+    }),
+  ]);
 
-  const expectedTotal = Number(expected._sum.amount ?? activeStudentsAgg._sum.monthlyValue ?? 0);
+  const paymentByStudent = new Map(payments.map((p) => [p.studentId, p]));
+
+  // Every active student shows up here — either their real cobrança for
+  // this month, or a placeholder (not yet billed) so nobody's missing from
+  // the list just because "Gerar cobranças" hasn't been run yet. Marking a
+  // placeholder as paid creates the real Payment row on demand.
+  const rows = activeStudents
+    .map((s) => {
+      const payment = paymentByStudent.get(s.id);
+      if (payment) {
+        return {
+          id: payment.id,
+          studentId: s.id,
+          studentName: s.user.name,
+          amount: Number(payment.amount),
+          dueDate: payment.dueDate,
+          status: payment.status,
+          bankAccount: s.bankAccount,
+        };
+      }
+      const dueDate = new Date(
+        monthStart.getFullYear(),
+        monthStart.getMonth(),
+        Math.min(s.dueDay, daysInMonth)
+      );
+      const status: PaymentStatus = dueDate < now ? "LATE" : "PENDING";
+      return {
+        id: null,
+        studentId: s.id,
+        studentName: s.user.name,
+        amount: Number(s.monthlyValue),
+        dueDate,
+        status,
+        bankAccount: s.bankAccount,
+      };
+    })
+    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+
+  const expectedTotal = rows.reduce((sum, r) => sum + r.amount, 0);
   const receivedTotal = Number(received._sum.amount ?? 0);
   const delinquencyRate =
     expectedTotal > 0 ? ((expectedTotal - receivedTotal) / expectedTotal) * 100 : 0;
+  const pendingCount = rows.filter((r) => r.status === "PENDING").length;
+  const lateCount = rows.filter((r) => r.status === "LATE").length;
 
   const byBankAccount = (Object.keys(bankAccountLabel) as BankAccount[]).map((account) => {
-    const accountPayments = payments.filter((p) => p.student.bankAccount === account);
-    const expectedAcc = accountPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-    const receivedAcc = accountPayments
-      .filter((p) => p.status === "PAID")
-      .reduce((sum, p) => sum + Number(p.amount), 0);
+    const accountRows = rows.filter((r) => r.bankAccount === account);
+    const expectedAcc = accountRows.reduce((sum, r) => sum + r.amount, 0);
+    const receivedAcc = accountRows
+      .filter((r) => r.status === "PAID")
+      .reduce((sum, r) => sum + r.amount, 0);
     return { account, label: bankAccountLabel[account], expected: expectedAcc, received: receivedAcc };
   });
 
@@ -73,17 +106,9 @@ export async function getFinancialOverview() {
     pendingCount,
     lateCount,
     delinquencyRate,
-    // Prisma's Decimal is a class instance, not a plain object — it can't
-    // cross the server/client boundary as a prop, so plain numbers are
-    // handed to the (client-side) PaymentsTable instead of raw rows.
-    payments: payments.map((p) => ({
-      id: p.id,
-      amount: Number(p.amount),
-      dueDate: p.dueDate,
-      status: p.status,
-      studentName: p.student.user.name,
-      bankAccount: p.student.bankAccount,
-    })),
+    // Already plain numbers/primitives (not Prisma Decimal instances), so
+    // safe to hand straight to the client-side PaymentsTable.
+    payments: rows,
     cashFlow,
     byBankAccount,
   };
