@@ -18,10 +18,12 @@ export function PaymentStatusSelect({
   studentId,
   payerName,
   status,
+  referenceMonth,
 }: {
   studentId: string;
   payerName: string | null;
   status: PaymentStatus;
+  referenceMonth: Date;
 }) {
   const [isPending, startTransition] = useTransition();
 
@@ -32,7 +34,7 @@ export function PaymentStatusSelect({
       onValueChange={(value) =>
         startTransition(async () => {
           try {
-            await setCobrancaStatus(studentId, payerName, value as PaymentStatus);
+            await setCobrancaStatus(studentId, payerName, value as PaymentStatus, referenceMonth);
             toast.success("Status do pagamento atualizado.");
           } catch (err) {
             toast.error(err instanceof Error ? err.message : "Erro ao atualizar status.");

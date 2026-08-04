@@ -12,22 +12,25 @@ function dueDateFor(monthStart: Date, day: number) {
   return new Date(monthStart.getFullYear(), monthStart.getMonth(), Math.min(day, daysInMonth));
 }
 
-// Sets this month's cobrança status for one of a student's billing slots
-// (their own, or a third party's — see server/billing.ts) — whether or not
-// it's been "generated" yet. If no Payment row exists for that slot this
-// month (nobody's clicked "Gerar cobranças"), one is created directly with
-// the requested status, so any slot can be set to Pendente/Pago/Atrasado
-// straight from the Cobranças table, and changed again later if something
-// was marked by mistake.
+// Sets a cobrança status for one of a student's billing slots (their own,
+// or a third party's — see server/billing.ts) in a given reference month —
+// whether or not it's been "generated" yet. If no Payment row exists for
+// that slot/month (nobody's clicked "Gerar cobranças", or it's a past
+// month being backfilled), one is created directly with the requested
+// status, so any slot in any month can be set to Pendente/Pago/Atrasado
+// from the Cobranças table, and changed again later if something was
+// marked by mistake. referenceMonth must be the actual month being viewed
+// — defaulting to "today's month" would silently edit the wrong month's
+// data whenever a past or future month is on screen.
 export async function setCobrancaStatus(
   studentId: string,
   payerName: string | null,
-  status: PaymentStatus
+  status: PaymentStatus,
+  referenceMonth: Date
 ) {
   const actor = await requireRole("ADMIN", "COORDINATOR");
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const paidAt = status === "PAID" ? now : null;
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+  const paidAt = status === "PAID" ? new Date() : null;
 
   const existing = await prisma.payment.findFirst({
     where: { studentId, referenceMonth: monthStart, payerName },
@@ -61,7 +64,7 @@ export async function setCobrancaStatus(
     entityId: payment.id,
     action: "STATUS_CHANGE",
     actor,
-    changes: { status, payerName },
+    changes: { status, payerName, referenceMonth: monthStart.toISOString() },
   });
   revalidatePath("/admin/financial");
   revalidatePath("/admin/financial/receita");

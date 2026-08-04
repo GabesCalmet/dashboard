@@ -21,7 +21,15 @@ type Row = {
   bankAccount: BankAccount;
 };
 
-export function PaymentsTable({ payments }: { payments: Row[] }) {
+export function PaymentsTable({
+  payments,
+  referenceMonth,
+}: {
+  payments: Row[];
+  // The month being viewed — passed through to status changes so they
+  // always target that month's cobrança, not whatever month "today" is in.
+  referenceMonth: Date;
+}) {
   return (
     <div className="overflow-hidden rounded-xl border">
       <Table>
@@ -52,6 +60,7 @@ export function PaymentsTable({ payments }: { payments: Row[] }) {
                   studentId={p.studentId}
                   payerName={p.payerName}
                   status={p.status}
+                  referenceMonth={referenceMonth}
                 />
               </TableCell>
             </TableRow>

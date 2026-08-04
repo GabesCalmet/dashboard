@@ -92,7 +92,7 @@ export default async function AdminFinancialReceitaPage({
 
       <div className="mt-6">
         <h2 className="mb-3 text-sm font-semibold capitalize">Cobranças — {monthLabel}</h2>
-        <PaymentsTable payments={data.payments} />
+        <PaymentsTable payments={data.payments} referenceMonth={new Date(year, month, 1)} />
       </div>
     </div>
   );
