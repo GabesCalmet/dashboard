@@ -123,6 +123,7 @@ export function StudentDetailView({
                   thirdPartyPayerName: student.thirdPartyPayerName,
                   thirdPartyAmount: student.thirdPartyAmount ? Number(student.thirdPartyAmount) : null,
                   thirdPartyDueDay: student.thirdPartyDueDay,
+                  thirdPartyBankAccount: student.thirdPartyBankAccount,
                   lessonsPerMonth: student.lessonsPerMonth,
                   lessonSchedule: parseLessonSchedule(student.lessonSchedule),
                   level: student.level,
@@ -197,6 +198,10 @@ export function StudentDetailView({
                       <InfoRow
                         label="Vencimento (terceiro)"
                         value={`Dia ${student.thirdPartyDueDay}`}
+                      />
+                      <InfoRow
+                        label="Conta bancária (terceiro)"
+                        value={bankAccountLabel[student.thirdPartyBankAccount ?? student.bankAccount]}
                       />
                     </>
                   )}

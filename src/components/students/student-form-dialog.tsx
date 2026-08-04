@@ -49,6 +49,7 @@ type StudentDefaults = {
   thirdPartyPayerName?: string | null;
   thirdPartyAmount?: number | null;
   thirdPartyDueDay?: number | null;
+  thirdPartyBankAccount?: BankAccount | null;
   lessonsPerMonth: number;
   lessonSchedule?: ScheduleEntry[];
   level: CourseLevel;
@@ -249,6 +250,25 @@ export function StudentFormDialog({
                   defaultValue={student?.thirdPartyDueDay ?? ""}
                   required
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Conta bancária (terceiro)</Label>
+                <Select
+                  name="thirdPartyBankAccount"
+                  defaultValue={student?.thirdPartyBankAccount ?? "GABES"}
+                  required
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(bankAccountLabel).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </>
           )}

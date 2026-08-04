@@ -198,6 +198,7 @@ model StudentProfile {
   thirdPartyPayerName String?
   thirdPartyAmount     Decimal?      @db.Decimal(10, 2)
   thirdPartyDueDay     Int? // 1-31
+  thirdPartyBankAccount BankAccount? // which account receives the third party's portion
   lessonsPerMonth   Int             @default(4)
   // One entry per scheduled day, each with its own time:
   // [{ "weekday": 2, "start": "19:00", "end": "19:50" }, ...] (weekday 0=Sun..6=Sat)

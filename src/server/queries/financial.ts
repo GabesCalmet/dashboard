@@ -45,7 +45,7 @@ export async function getFinancialOverview() {
             amount: Number(payment.amount),
             dueDate: payment.dueDate,
             status: payment.status,
-            bankAccount: s.bankAccount,
+            bankAccount: slot.bankAccount,
           };
         }
         const dueDate = new Date(monthStart.getFullYear(), monthStart.getMonth(), Math.min(slot.dueDay, daysInMonth));
@@ -58,7 +58,7 @@ export async function getFinancialOverview() {
           amount: slot.amount,
           dueDate,
           status,
-          bankAccount: s.bankAccount,
+          bankAccount: slot.bankAccount,
         };
       })
     )
