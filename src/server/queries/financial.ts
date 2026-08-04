@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { bankAccountLabel } from "@/lib/labels";
-import type { BankAccount } from "@prisma/client";
+import type { BankAccount, Expense } from "@prisma/client";
 
 export async function getFinancialOverview() {
   const now = new Date();
@@ -86,5 +86,113 @@ export async function getFinancialOverview() {
     })),
     cashFlow,
     byBankAccount,
+  };
+}
+
+function daysInMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+}
+
+function recurringActiveInMonth(e: Expense, monthStart: Date, monthEnd: Date) {
+  return e.date <= monthEnd && (!e.endDate || e.endDate >= monthStart);
+}
+
+// Sums expenses that fall within [monthStart, monthEnd]. If `cutoff` is
+// given, only counts an expense once its effective day in that month has
+// actually arrived (used for "realizado" vs "previsto" — previsto omits
+// the cutoff and counts the whole month's known/expected expenses).
+function expenseTotalForMonth(expenses: Expense[], monthStart: Date, monthEnd: Date, cutoff?: Date) {
+  return expenses.reduce((sum, e) => {
+    if (e.frequency === "ONE_TIME") {
+      if (e.date < monthStart || e.date > monthEnd) return sum;
+      if (cutoff && e.date > cutoff) return sum;
+      return sum + Number(e.amount);
+    }
+    if (!recurringActiveInMonth(e, monthStart, monthEnd)) return sum;
+    if (cutoff) {
+      const day = Math.min(e.dayOfMonth ?? 1, daysInMonth(monthStart));
+      const effectiveDate = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
+      if (effectiveDate > cutoff) return sum;
+    }
+    return sum + Number(e.amount);
+  }, 0);
+}
+
+// Overview for the main /admin/financial dashboard: realized vs. previsto
+// for the current month (receita/gasto/caixa), the teacher férias
+// provision, year-to-date totals, a monthly chart for the year, and the
+// active student count.
+export async function getFinancialSummary() {
+  const now = new Date();
+  const monthStart = startOfMonth(now);
+  const monthEnd = endOfMonth(now);
+
+  const [receivedAgg, activeStudentsAgg, totalContributors, expenses, activeTeachers] =
+    await Promise.all([
+      prisma.payment.aggregate({
+        where: { referenceMonth: monthStart, status: "PAID" },
+        _sum: { amount: true },
+      }),
+      prisma.studentProfile.aggregate({
+        where: { status: "ACTIVE" },
+        _sum: { monthlyValue: true },
+      }),
+      prisma.studentProfile.count({ where: { status: "ACTIVE" } }),
+      prisma.expense.findMany(),
+      prisma.teacherProfile.findMany({ where: { user: { active: true } } }),
+    ]);
+
+  const revenueRealized = Number(receivedAgg._sum.amount ?? 0);
+  const revenuePrevisto = Number(activeStudentsAgg._sum.monthlyValue ?? 0);
+  const expenseRealized = expenseTotalForMonth(expenses, monthStart, monthEnd, now);
+  const expensePrevisto = expenseTotalForMonth(expenses, monthStart, monthEnd);
+
+  // Provisão mensal de férias dos professores: 1/12 do valor mensal +
+  // adicional constitucional de 1/3 sobre esse valor (≈1/9 do mensal),
+  // acumulada mês a mês desde janeiro com o quadro atual de professores.
+  const feriasMonthly = activeTeachers.reduce((sum, t) => {
+    const monthlyPay = Number(t.hourlyRate) * t.weeklyHours;
+    return sum + monthlyPay * (1 / 12 + 1 / 36);
+  }, 0);
+  const monthsElapsed = now.getMonth() + 1;
+  const feriasAnnual = feriasMonthly * monthsElapsed;
+
+  const monthsInYear = Array.from({ length: now.getMonth() + 1 }, (_, m) => {
+    const mStart = new Date(now.getFullYear(), m, 1);
+    return { start: mStart, end: endOfMonth(mStart) };
+  });
+
+  const monthlyReceitas = await Promise.all(
+    monthsInYear.map((mo) =>
+      prisma.payment.aggregate({
+        where: { status: "PAID", referenceMonth: mo.start },
+        _sum: { amount: true },
+      })
+    )
+  );
+
+  const yearlyChart = monthsInYear.map((mo, i) => {
+    const receita = Number(monthlyReceitas[i]._sum.amount ?? 0);
+    const gasto = expenseTotalForMonth(expenses, mo.start, mo.end);
+    return { month: format(mo.start, "MMM"), receita, gasto, lucro: receita - gasto };
+  });
+
+  const ytdGrossRevenue = yearlyChart.reduce((sum, m) => sum + m.receita, 0);
+  const ytdExpenses = yearlyChart.reduce((sum, m) => sum + m.gasto, 0);
+
+  return {
+    revenueRealized,
+    revenuePrevisto,
+    expenseRealized,
+    expensePrevisto,
+    caixaRealized: revenueRealized - expenseRealized,
+    caixaPrevisto: revenuePrevisto - expensePrevisto,
+    feriasMonthly,
+    feriasAnnual,
+    ytdGrossRevenue,
+    ytdExpenses,
+    ytdProfit: ytdGrossRevenue - ytdExpenses,
+    yearlyChart,
+    totalContributors,
   };
 }

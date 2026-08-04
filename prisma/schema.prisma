@@ -302,6 +302,29 @@ model Payment {
   @@map("payments")
 }
 
+enum ExpenseFrequency {
+  ONE_TIME
+  RECURRING
+}
+
+model Expense {
+  id          String           @id @default(uuid())
+  description String
+  amount      Decimal          @db.Decimal(10, 2)
+  frequency   ExpenseFrequency
+  // ONE_TIME: the date it happened/is due.
+  // RECURRING: the date the recurring obligation started.
+  date        DateTime
+  dayOfMonth  Int? // RECURRING only: day of month it's due, 1-31
+  // RECURRING only: when it stopped recurring — null means still ongoing.
+  endDate     DateTime?
+  notes       String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("expenses")
+}
+
 // ---------------------------------------------------------------------------
 // Notifications
 // ---------------------------------------------------------------------------
