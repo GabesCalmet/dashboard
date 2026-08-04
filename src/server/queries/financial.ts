@@ -4,9 +4,10 @@ import { bankAccountLabel } from "@/lib/labels";
 import { getBillingSlots } from "@/server/billing";
 import type { BankAccount, Expense, PaymentStatus } from "@prisma/client";
 
-export async function getFinancialOverview() {
+export async function getFinancialOverview(year?: number, month?: number) {
   const now = new Date();
-  const monthStart = startOfMonth(now);
+  const viewedMonth = year !== undefined && month !== undefined ? new Date(year, month, 1) : now;
+  const monthStart = startOfMonth(viewedMonth);
   const daysInMonth = endOfMonth(monthStart).getDate();
 
   const [received, activeStudents, payments] = await Promise.all([
@@ -81,7 +82,7 @@ export async function getFinancialOverview() {
   });
 
   const cashFlowBuckets = Array.from({ length: 6 }).map((_, i) => {
-    const d = subMonths(now, 5 - i);
+    const d = subMonths(viewedMonth, 5 - i);
     return { start: startOfMonth(d), end: endOfMonth(d), label: format(d, "MMM") };
   });
 

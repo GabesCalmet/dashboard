@@ -6,11 +6,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CashFlowChart } from "@/components/financial/cash-flow-chart";
 import { PaymentsTable } from "@/components/financial/payments-table";
 import { GenerateBillingButton } from "@/components/financial/generate-billing-button";
+import { MonthNav } from "@/components/financial/month-nav";
 import { getFinancialOverview } from "@/server/queries/financial";
+import { parseMonthParam } from "@/lib/month-param";
 import { formatCurrency } from "@/lib/labels";
 
-export default async function AdminFinancialReceitaPage() {
-  const data = await getFinancialOverview();
+export default async function AdminFinancialReceitaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
+  const { month: monthParamValue } = await searchParams;
+  const { year, month } = parseMonthParam(monthParamValue);
+  const data = await getFinancialOverview(year, month);
+  const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(
+    new Date(year, month, 1)
+  );
 
   return (
     <div>
@@ -24,17 +35,21 @@ export default async function AdminFinancialReceitaPage() {
       <PageHeader
         title="Receita"
         description="Mensalidades, cobranças e fluxo de caixa recebido."
-        actions={<GenerateBillingButton />}
+        actions={<GenerateBillingButton year={year} month={month} />}
       />
+
+      <div className="mb-4">
+        <MonthNav basePath="/admin/financial/receita" year={year} month={month} />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Receita prevista (mês)"
+          label="Receita prevista"
           value={formatCurrency(data.monthlyRevenueExpected)}
           icon={Wallet}
         />
         <StatCard
-          label="Receita recebida (mês)"
+          label="Receita recebida"
           value={formatCurrency(data.monthlyRevenueReceived)}
           icon={TrendingUp}
           accent
@@ -49,7 +64,7 @@ export default async function AdminFinancialReceitaPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Fluxo de caixa — últimos 6 meses</CardTitle>
+          <CardTitle>Fluxo de caixa — 6 meses até {monthLabel}</CardTitle>
         </CardHeader>
         <CardContent>
           <CashFlowChart data={data.cashFlow} />
@@ -58,7 +73,7 @@ export default async function AdminFinancialReceitaPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Receita por conta bancária (mês atual)</CardTitle>
+          <CardTitle className="capitalize">Receita por conta bancária — {monthLabel}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -76,7 +91,7 @@ export default async function AdminFinancialReceitaPage() {
       </Card>
 
       <div className="mt-6">
-        <h2 className="mb-3 text-sm font-semibold">Cobranças do mês atual</h2>
+        <h2 className="mb-3 text-sm font-semibold capitalize">Cobranças — {monthLabel}</h2>
         <PaymentsTable payments={data.payments} />
       </div>
     </div>
