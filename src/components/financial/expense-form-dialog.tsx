@@ -37,7 +37,16 @@ type ExpenseDefaults = {
   notes?: string | null;
 };
 
-export function ExpenseFormDialog({ expense }: { expense?: ExpenseDefaults }) {
+export function ExpenseFormDialog({
+  expense,
+  defaultDate,
+}: {
+  expense?: ExpenseDefaults;
+  // Prefills "Data" for a new expense — e.g. the month currently being
+  // viewed on the Gastos page, so backfilling a past month starts there
+  // instead of on today's date.
+  defaultDate?: string;
+}) {
   const isEdit = Boolean(expense);
   const action = isEdit ? updateExpense.bind(null, expense!.id) : createExpense;
   const [state, formAction, isPending] = useActionState(action, undefined);
@@ -101,7 +110,13 @@ export function ExpenseFormDialog({ expense }: { expense?: ExpenseDefaults }) {
             <Label htmlFor="date">
               {frequency === "RECURRING" ? "Início da recorrência" : "Data"}
             </Label>
-            <Input id="date" name="date" type="date" defaultValue={expense?.date} required />
+            <Input
+              id="date"
+              name="date"
+              type="date"
+              defaultValue={expense?.date ?? defaultDate}
+              required
+            />
           </div>
 
           {frequency === "RECURRING" && (

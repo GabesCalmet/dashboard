@@ -35,6 +35,9 @@ type Row = {
   amount: number;
   frequency: Expense["frequency"];
   date: Date;
+  // This month's actual date for the expense — same as `date` for ONE_TIME,
+  // or dayOfMonth clamped into the viewed month for RECURRING.
+  occurrenceDate: Date;
   dayOfMonth: number | null;
   endDate: Date | null;
   notes: string | null;
@@ -51,7 +54,7 @@ export function ExpensesTable({ expenses }: { expenses: Row[] }) {
             <TableHead>Descrição</TableHead>
             <TableHead>Valor</TableHead>
             <TableHead>Tipo</TableHead>
-            <TableHead>Data / Vencimento</TableHead>
+            <TableHead>Data</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Ações</TableHead>
           </TableRow>
@@ -67,9 +70,9 @@ export function ExpensesTable({ expenses }: { expenses: Row[] }) {
                   <Badge variant="outline">{expenseFrequencyLabel[e.frequency]}</Badge>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {e.frequency === "RECURRING"
-                    ? `Todo dia ${e.dayOfMonth}${e.endDate ? ` (até ${formatDate(e.endDate)})` : ""}`
-                    : formatDate(e.date)}
+                  {formatDate(e.occurrenceDate)}
+                  {e.frequency === "RECURRING" &&
+                    ` (recorrente${e.endDate ? `, até ${formatDate(e.endDate)}` : ""})`}
                 </TableCell>
                 <TableCell>
                   {e.frequency === "RECURRING" ? (
@@ -148,7 +151,7 @@ export function ExpensesTable({ expenses }: { expenses: Row[] }) {
           {expenses.length === 0 && (
             <TableRow>
               <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                Nenhum gasto cadastrado ainda.
+                Nenhum gasto neste mês.
               </TableCell>
             </TableRow>
           )}
