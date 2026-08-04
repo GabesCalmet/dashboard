@@ -4,16 +4,19 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
+import type { PaymentStatus } from "@prisma/client";
 
-// Marks this month's cobrança as paid for a student — whether or not it's
-// been "generated" yet. If no Payment row exists yet for the current
-// month (nobody's clicked "Gerar cobranças"), one is created directly as
-// PAID, so every active student can be marked paid straight from the
-// Cobranças table without a separate generation step first.
-export async function markCobrancaPaid(studentId: string) {
+// Sets this month's cobrança status for a student — whether or not it's
+// been "generated" yet. If no Payment row exists for the current month
+// (nobody's clicked "Gerar cobranças"), one is created directly with the
+// requested status, so any active student's charge can be set to
+// Pendente/Pago/Atrasado straight from the Cobranças table, and changed
+// again later if something was marked by mistake.
+export async function setCobrancaStatus(studentId: string, status: PaymentStatus) {
   const actor = await requireRole("ADMIN", "COORDINATOR");
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const paidAt = status === "PAID" ? now : null;
 
   const existing = await prisma.payment.findFirst({
     where: { studentId, referenceMonth: monthStart },
@@ -23,7 +26,7 @@ export async function markCobrancaPaid(studentId: string) {
   if (existing) {
     payment = await prisma.payment.update({
       where: { id: existing.id },
-      data: { status: "PAID", paidAt: now },
+      data: { status, paidAt },
     });
   } else {
     const student = await prisma.studentProfile.findUniqueOrThrow({ where: { id: studentId } });
@@ -39,8 +42,8 @@ export async function markCobrancaPaid(studentId: string) {
         referenceMonth: monthStart,
         amount: student.monthlyValue,
         dueDate,
-        status: "PAID",
-        paidAt: now,
+        status,
+        paidAt,
       },
     });
   }
@@ -50,7 +53,7 @@ export async function markCobrancaPaid(studentId: string) {
     entityId: payment.id,
     action: "STATUS_CHANGE",
     actor,
-    changes: { status: "PAID" },
+    changes: { status },
   });
   revalidatePath("/admin/financial");
   revalidatePath("/admin/financial/receita");
