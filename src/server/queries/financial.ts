@@ -147,12 +147,12 @@ export async function getFinancialSummary() {
   const expenseRealized = expenseTotalForMonth(expenses, monthStart, monthEnd, now);
   const expensePrevisto = expenseTotalForMonth(expenses, monthStart, monthEnd);
 
-  // Provisão mensal de férias dos professores: 1/12 do valor mensal +
-  // adicional constitucional de 1/3 sobre esse valor (≈1/9 do mensal),
-  // acumulada mês a mês desde janeiro com o quadro atual de professores.
+  // Provisão mensal de férias dos professores: 8,3% do valor que cada
+  // professor recebe no mês (valor/hora × horas mensais), acumulada mês a
+  // mês desde janeiro com o quadro atual de professores.
   const feriasMonthly = activeTeachers.reduce((sum, t) => {
     const monthlyPay = Number(t.hourlyRate) * t.weeklyHours;
-    return sum + monthlyPay * (1 / 12 + 1 / 36);
+    return sum + monthlyPay * 0.083;
   }, 0);
   const monthsElapsed = now.getMonth() + 1;
   const feriasAnnual = feriasMonthly * monthsElapsed;
