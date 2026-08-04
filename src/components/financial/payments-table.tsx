@@ -13,6 +13,7 @@ import type { PaymentStatus, BankAccount } from "@prisma/client";
 type Row = {
   id: string | null;
   studentId: string;
+  payerName: string | null;
   amount: number;
   dueDate: Date;
   status: PaymentStatus;
@@ -27,6 +28,7 @@ export function PaymentsTable({ payments }: { payments: Row[] }) {
         <TableHeader>
           <TableRow>
             <TableHead>Aluno</TableHead>
+            <TableHead>Pagador</TableHead>
             <TableHead>Valor</TableHead>
             <TableHead>Vencimento</TableHead>
             <TableHead>Conta</TableHead>
@@ -35,21 +37,28 @@ export function PaymentsTable({ payments }: { payments: Row[] }) {
         </TableHeader>
         <TableBody>
           {payments.map((p) => (
-            <TableRow key={p.id ?? p.studentId}>
+            <TableRow key={`${p.studentId}::${p.payerName ?? ""}`}>
               <TableCell>{p.studentName}</TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {p.payerName ?? "Aluno"}
+              </TableCell>
               <TableCell>{formatCurrency(p.amount)}</TableCell>
               <TableCell>{formatDate(p.dueDate)}</TableCell>
               <TableCell className="text-sm text-muted-foreground">
                 {bankAccountLabel[p.bankAccount]}
               </TableCell>
               <TableCell>
-                <PaymentStatusSelect studentId={p.studentId} status={p.status} />
+                <PaymentStatusSelect
+                  studentId={p.studentId}
+                  payerName={p.payerName}
+                  status={p.status}
+                />
               </TableCell>
             </TableRow>
           ))}
           {payments.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+              <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                 Nenhum aluno ativo no momento.
               </TableCell>
             </TableRow>

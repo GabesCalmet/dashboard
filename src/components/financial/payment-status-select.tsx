@@ -16,9 +16,11 @@ import type { PaymentStatus } from "@prisma/client";
 
 export function PaymentStatusSelect({
   studentId,
+  payerName,
   status,
 }: {
   studentId: string;
+  payerName: string | null;
   status: PaymentStatus;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -30,7 +32,7 @@ export function PaymentStatusSelect({
       onValueChange={(value) =>
         startTransition(async () => {
           try {
-            await setCobrancaStatus(studentId, value as PaymentStatus);
+            await setCobrancaStatus(studentId, payerName, value as PaymentStatus);
             toast.success("Status do pagamento atualizado.");
           } catch (err) {
             toast.error(err instanceof Error ? err.message : "Erro ao atualizar status.");

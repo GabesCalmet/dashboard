@@ -192,6 +192,12 @@ model StudentProfile {
   monthlyValue      Decimal         @db.Decimal(10, 2)
   bankAccount       BankAccount     @default(GABES) // which of the school's 3 accounts receives this student's payments
   dueDay            Int             @default(10) // day of the month the invoice ("boleto") is due, 1-31
+  // Optional third-party payer (e.g. a company) covering part or all of
+  // monthlyValue, billed separately with its own due date. Null name means
+  // no third party is configured — the student is billed the full amount.
+  thirdPartyPayerName String?
+  thirdPartyAmount     Decimal?      @db.Decimal(10, 2)
+  thirdPartyDueDay     Int? // 1-31
   lessonsPerMonth   Int             @default(4)
   // One entry per scheduled day, each with its own time:
   // [{ "weekday": 2, "start": "19:00", "end": "19:50" }, ...] (weekday 0=Sun..6=Sat)
@@ -294,6 +300,10 @@ model Payment {
   paidAt         DateTime?
   status         PaymentStatus  @default(PENDING)
   method         String? // pix, boleto, card... (prepared for gateway integration)
+  // Null = billed to the student themselves. Otherwise the name of the
+  // third party (e.g. a company) this specific charge is billed to — a
+  // student can have up to two Payment rows per month, one per payer.
+  payerName      String?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 

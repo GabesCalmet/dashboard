@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -45,6 +46,9 @@ type StudentDefaults = {
   monthlyValue: number;
   bankAccount?: BankAccount;
   dueDay?: number;
+  thirdPartyPayerName?: string | null;
+  thirdPartyAmount?: number | null;
+  thirdPartyDueDay?: number | null;
   lessonsPerMonth: number;
   lessonSchedule?: ScheduleEntry[];
   level: CourseLevel;
@@ -69,6 +73,7 @@ export function StudentFormDialog({
   const action = isEdit ? updateStudent.bind(null, student!.id) : createStudent;
   const [state, formAction, isPending] = useActionState(action, undefined);
   const [open, setOpen] = useState(false);
+  const [hasThirdParty, setHasThirdParty] = useState(Boolean(student?.thirdPartyAmount));
   useActionToast(state, () => setOpen(false));
 
   return (
@@ -200,6 +205,53 @@ export function StudentFormDialog({
               required
             />
           </div>
+
+          <div className="flex items-end pb-1.5">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={hasThirdParty}
+                onCheckedChange={(checked) => setHasThirdParty(checked === true)}
+              />
+              Parte ou todo o valor é pago por terceiros (empresa)
+            </label>
+          </div>
+
+          {hasThirdParty && (
+            <>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="thirdPartyPayerName">Nome do terceiro (empresa)</Label>
+                <Input
+                  id="thirdPartyPayerName"
+                  name="thirdPartyPayerName"
+                  defaultValue={student?.thirdPartyPayerName ?? ""}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="thirdPartyAmount">Valor pago pelo terceiro (R$)</Label>
+                <Input
+                  id="thirdPartyAmount"
+                  name="thirdPartyAmount"
+                  type="number"
+                  step="0.01"
+                  defaultValue={student?.thirdPartyAmount ?? ""}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="thirdPartyDueDay">Dia de vencimento (terceiro)</Label>
+                <Input
+                  id="thirdPartyDueDay"
+                  name="thirdPartyDueDay"
+                  type="number"
+                  min={1}
+                  max={31}
+                  defaultValue={student?.thirdPartyDueDay ?? ""}
+                  required
+                />
+              </div>
+            </>
+          )}
 
           <div className="space-y-1.5">
             <Label>Conta bancária</Label>

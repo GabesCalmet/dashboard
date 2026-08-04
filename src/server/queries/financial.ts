@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { bankAccountLabel } from "@/lib/labels";
+import { getBillingSlots } from "@/server/billing";
 import type { BankAccount, Expense, PaymentStatus } from "@prisma/client";
 
 export async function getFinancialOverview() {
@@ -23,42 +24,44 @@ export async function getFinancialOverview() {
     }),
   ]);
 
-  const paymentByStudent = new Map(payments.map((p) => [p.studentId, p]));
+  const paymentBySlot = new Map(payments.map((p) => [`${p.studentId}::${p.payerName ?? ""}`, p]));
 
-  // Every active student shows up here — either their real cobrança for
-  // this month, or a placeholder (not yet billed) so nobody's missing from
-  // the list just because "Gerar cobranças" hasn't been run yet. Marking a
-  // placeholder as paid creates the real Payment row on demand.
+  // Every active student shows up here — one row per billing slot (their
+  // own portion, plus a separate one for a third-party payer if
+  // configured) — either the real cobrança for this month, or a
+  // placeholder (not yet billed) so nobody's missing just because "Gerar
+  // cobranças" hasn't been run yet. Marking a placeholder as paid creates
+  // the real Payment row on demand.
   const rows = activeStudents
-    .map((s) => {
-      const payment = paymentByStudent.get(s.id);
-      if (payment) {
+    .flatMap((s) =>
+      getBillingSlots(s).map((slot) => {
+        const payment = paymentBySlot.get(`${s.id}::${slot.payerName ?? ""}`);
+        if (payment) {
+          return {
+            id: payment.id,
+            studentId: s.id,
+            studentName: s.user.name,
+            payerName: payment.payerName,
+            amount: Number(payment.amount),
+            dueDate: payment.dueDate,
+            status: payment.status,
+            bankAccount: s.bankAccount,
+          };
+        }
+        const dueDate = new Date(monthStart.getFullYear(), monthStart.getMonth(), Math.min(slot.dueDay, daysInMonth));
+        const status: PaymentStatus = dueDate < now ? "LATE" : "PENDING";
         return {
-          id: payment.id,
+          id: null,
           studentId: s.id,
           studentName: s.user.name,
-          amount: Number(payment.amount),
-          dueDate: payment.dueDate,
-          status: payment.status,
+          payerName: slot.payerName,
+          amount: slot.amount,
+          dueDate,
+          status,
           bankAccount: s.bankAccount,
         };
-      }
-      const dueDate = new Date(
-        monthStart.getFullYear(),
-        monthStart.getMonth(),
-        Math.min(s.dueDay, daysInMonth)
-      );
-      const status: PaymentStatus = dueDate < now ? "LATE" : "PENDING";
-      return {
-        id: null,
-        studentId: s.id,
-        studentName: s.user.name,
-        amount: Number(s.monthlyValue),
-        dueDate,
-        status,
-        bankAccount: s.bankAccount,
-      };
-    })
+      })
+    )
     .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
 
   const expectedTotal = rows.reduce((sum, r) => sum + r.amount, 0);

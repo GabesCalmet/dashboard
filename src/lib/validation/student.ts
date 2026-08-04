@@ -28,6 +28,13 @@ export const studentFormSchema = z.object({
   monthlyValue: z.coerce.number().min(0, "Valor inválido"),
   bankAccount: z.enum(["GABES", "JOE", "ASAAS"]).default("GABES"),
   dueDay: z.coerce.number().int().min(1).max(31).default(10),
+  // Third party (e.g. a company) covering part or all of monthlyValue,
+  // billed separately with its own due date. Only submitted by the form
+  // when "tem pagador terceiro" is checked — absent otherwise, so these
+  // stay genuinely unset (not "0") when there's no third party.
+  thirdPartyPayerName: z.string().optional(),
+  thirdPartyAmount: z.coerce.number().min(0.01, "Valor inválido").optional(),
+  thirdPartyDueDay: z.coerce.number().int().min(1).max(31).optional(),
   lessonsPerMonth: z.coerce.number().int().min(1).max(60),
   // Submitted by LessonScheduleEditor as a JSON string, e.g.
   // '[{"weekday":2,"start":"19:00","end":"19:50"}]'.

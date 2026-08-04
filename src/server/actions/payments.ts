@@ -4,22 +4,33 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
+import { getBillingSlots } from "@/server/billing";
 import type { PaymentStatus } from "@prisma/client";
 
-// Sets this month's cobrança status for a student — whether or not it's
-// been "generated" yet. If no Payment row exists for the current month
-// (nobody's clicked "Gerar cobranças"), one is created directly with the
-// requested status, so any active student's charge can be set to
-// Pendente/Pago/Atrasado straight from the Cobranças table, and changed
-// again later if something was marked by mistake.
-export async function setCobrancaStatus(studentId: string, status: PaymentStatus) {
+function dueDateFor(monthStart: Date, day: number) {
+  const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
+  return new Date(monthStart.getFullYear(), monthStart.getMonth(), Math.min(day, daysInMonth));
+}
+
+// Sets this month's cobrança status for one of a student's billing slots
+// (their own, or a third party's — see server/billing.ts) — whether or not
+// it's been "generated" yet. If no Payment row exists for that slot this
+// month (nobody's clicked "Gerar cobranças"), one is created directly with
+// the requested status, so any slot can be set to Pendente/Pago/Atrasado
+// straight from the Cobranças table, and changed again later if something
+// was marked by mistake.
+export async function setCobrancaStatus(
+  studentId: string,
+  payerName: string | null,
+  status: PaymentStatus
+) {
   const actor = await requireRole("ADMIN", "COORDINATOR");
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const paidAt = status === "PAID" ? now : null;
 
   const existing = await prisma.payment.findFirst({
-    where: { studentId, referenceMonth: monthStart },
+    where: { studentId, referenceMonth: monthStart, payerName },
   });
 
   let payment;
@@ -30,18 +41,15 @@ export async function setCobrancaStatus(studentId: string, status: PaymentStatus
     });
   } else {
     const student = await prisma.studentProfile.findUniqueOrThrow({ where: { id: studentId } });
-    const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
-    const dueDate = new Date(
-      monthStart.getFullYear(),
-      monthStart.getMonth(),
-      Math.min(student.dueDay, daysInMonth)
-    );
+    const slot = getBillingSlots(student).find((s) => s.payerName === payerName);
+    if (!slot) throw new Error("Cobrança não encontrada para este pagador.");
     payment = await prisma.payment.create({
       data: {
         studentId,
         referenceMonth: monthStart,
-        amount: student.monthlyValue,
-        dueDate,
+        amount: slot.amount,
+        dueDate: dueDateFor(monthStart, slot.dueDay),
+        payerName: slot.payerName,
         status,
         paidAt,
       },
@@ -53,7 +61,7 @@ export async function setCobrancaStatus(studentId: string, status: PaymentStatus
     entityId: payment.id,
     action: "STATUS_CHANGE",
     actor,
-    changes: { status },
+    changes: { status, payerName },
   });
   revalidatePath("/admin/financial");
   revalidatePath("/admin/financial/receita");
@@ -68,35 +76,35 @@ export async function generateMonthlyPayments(referenceMonth: Date) {
   const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
 
   for (const student of students) {
-    const existing = await prisma.payment.findFirst({
-      where: { studentId: student.id, referenceMonth: monthStart },
-    });
-    if (existing) continue;
+    for (const slot of getBillingSlots(student)) {
+      const existing = await prisma.payment.findFirst({
+        where: { studentId: student.id, referenceMonth: monthStart, payerName: slot.payerName },
+      });
+      if (existing) continue;
 
-    const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
-    const dueDate = new Date(
-      monthStart.getFullYear(),
-      monthStart.getMonth(),
-      Math.min(student.dueDay, daysInMonth)
-    );
+      await prisma.payment.create({
+        data: {
+          studentId: student.id,
+          referenceMonth: monthStart,
+          amount: slot.amount,
+          dueDate: dueDateFor(monthStart, slot.dueDay),
+          payerName: slot.payerName,
+        },
+      });
 
-    await prisma.payment.create({
-      data: {
-        studentId: student.id,
-        referenceMonth: monthStart,
-        amount: student.monthlyValue,
-        dueDate,
-      },
-    });
-
-    await prisma.notification.create({
-      data: {
-        userId: student.userId,
-        type: "PAYMENT_DUE",
-        title: "Pagamento do mês disponível",
-        message: "Sua mensalidade deste mês já está disponível para pagamento.",
-      },
-    });
+      // Only notify the student themselves — a third-party payer has no
+      // portal account to notify.
+      if (!slot.payerName) {
+        await prisma.notification.create({
+          data: {
+            userId: student.userId,
+            type: "PAYMENT_DUE",
+            title: "Pagamento do mês disponível",
+            message: "Sua mensalidade deste mês já está disponível para pagamento.",
+          },
+        });
+      }
+    }
   }
 
   await recordAudit({

@@ -26,6 +26,7 @@ import {
   formatDate,
   formatDateTime,
   bankAccountLabel,
+  formatCurrency,
 } from "@/lib/labels";
 import type { getStudentDetail } from "@/server/queries/students";
 
@@ -119,6 +120,9 @@ export function StudentDetailView({
                   monthlyValue: Number(student.monthlyValue),
                   bankAccount: student.bankAccount,
                   dueDay: student.dueDay,
+                  thirdPartyPayerName: student.thirdPartyPayerName,
+                  thirdPartyAmount: student.thirdPartyAmount ? Number(student.thirdPartyAmount) : null,
+                  thirdPartyDueDay: student.thirdPartyDueDay,
                   lessonsPerMonth: student.lessonsPerMonth,
                   lessonSchedule: parseLessonSchedule(student.lessonSchedule),
                   level: student.level,
@@ -184,6 +188,18 @@ export function StudentDetailView({
                   />
                   <InfoRow label="Vencimento do boleto" value={`Dia ${student.dueDay}`} />
                   <InfoRow label="Conta bancária" value={bankAccountLabel[student.bankAccount]} />
+                  {student.thirdPartyAmount && (
+                    <>
+                      <InfoRow
+                        label="Pago por terceiro"
+                        value={`${student.thirdPartyPayerName} — ${formatCurrency(student.thirdPartyAmount.toString())}`}
+                      />
+                      <InfoRow
+                        label="Vencimento (terceiro)"
+                        value={`Dia ${student.thirdPartyDueDay}`}
+                      />
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
