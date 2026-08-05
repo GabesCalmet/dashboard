@@ -8,7 +8,8 @@ export async function getFinancialOverview(year?: number, month?: number) {
   const now = new Date();
   const viewedMonth = year !== undefined && month !== undefined ? new Date(year, month, 1) : now;
   const monthStart = startOfMonth(viewedMonth);
-  const daysInMonth = endOfMonth(monthStart).getDate();
+  const monthEnd = endOfMonth(monthStart);
+  const daysInMonth = monthEnd.getDate();
 
   const [received, activeStudents, payments] = await Promise.all([
     prisma.payment.aggregate({
@@ -26,14 +27,18 @@ export async function getFinancialOverview(year?: number, month?: number) {
   ]);
 
   const paymentBySlot = new Map(payments.map((p) => [`${p.studentId}::${p.payerName ?? ""}`, p]));
+  const studentIdsWithPayment = new Set(payments.map((p) => p.studentId));
 
-  // Every active student shows up here — one row per billing slot (their
-  // own portion, plus a separate one for a third-party payer if
-  // configured) — either the real cobrança for this month, or a
-  // placeholder (not yet billed) so nobody's missing just because "Gerar
-  // cobranças" hasn't been run yet. Marking a placeholder as paid creates
-  // the real Payment row on demand.
+  // Every active student who'd already enrolled by this month shows up
+  // here — one row per billing slot (their own portion, plus a separate
+  // one for a third-party payer if configured) — either the real cobrança
+  // for this month, or a placeholder (not yet billed) so nobody's missing
+  // just because "Gerar cobranças" hasn't been run yet. Students who
+  // start later don't get placeholders for months before they enrolled,
+  // even though "active" — a real Payment row (if one somehow exists) is
+  // never hidden, only the synthesized placeholder is skipped.
   const rows = activeStudents
+    .filter((s) => s.startDate <= monthEnd || studentIdsWithPayment.has(s.id))
     .flatMap((s) =>
       getBillingSlots(s).map((slot) => {
         const payment = paymentBySlot.get(`${s.id}::${slot.payerName ?? ""}`);
