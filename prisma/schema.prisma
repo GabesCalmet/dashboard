@@ -330,6 +330,7 @@ model Expense {
   dayOfMonth  Int? // RECURRING only: day of month it's due, 1-31
   // RECURRING only: when it stopped recurring — null means still ongoing.
   endDate     DateTime?
+  bankAccount BankAccount      @default(GABES) // which account this gasto is paid from
   notes       String?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt

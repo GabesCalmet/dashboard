@@ -157,6 +157,52 @@ function expenseTotalForMonth(expenses: Expense[], monthStart: Date, monthEnd: D
   }, 0);
 }
 
+// How much of a recurring/one-time expense has actually accrued by `now`
+// since it started — used for all-time balances, not just one month.
+function expenseTotalToDate(e: Expense, now: Date) {
+  if (e.frequency === "ONE_TIME") {
+    return e.date <= now ? Number(e.amount) : 0;
+  }
+  if (e.date > now) return 0;
+  const end = e.endDate && e.endDate < now ? e.endDate : now;
+  const months =
+    (end.getFullYear() - e.date.getFullYear()) * 12 + (end.getMonth() - e.date.getMonth()) + 1;
+  return Math.max(0, months) * Number(e.amount);
+}
+
+// Running balance per bank account: everything ever received into it
+// (paid cobranças) minus everything ever spent from it (gastos, accrued
+// to date) — "how much is actually in the account right now".
+export async function getBankBalances() {
+  const now = new Date();
+
+  const [paidPayments, expenses] = await Promise.all([
+    prisma.payment.findMany({ where: { status: "PAID" }, include: { student: true } }),
+    prisma.expense.findMany(),
+  ]);
+
+  const received: Record<BankAccount, number> = { GABES: 0, JOE: 0, ASAAS: 0 };
+  for (const p of paidPayments) {
+    const account = p.payerName
+      ? (p.student.thirdPartyBankAccount ?? p.student.bankAccount)
+      : p.student.bankAccount;
+    received[account] += Number(p.amount);
+  }
+
+  const spent: Record<BankAccount, number> = { GABES: 0, JOE: 0, ASAAS: 0 };
+  for (const e of expenses) {
+    spent[e.bankAccount] += expenseTotalToDate(e, now);
+  }
+
+  return (Object.keys(bankAccountLabel) as BankAccount[]).map((account) => ({
+    account,
+    label: bankAccountLabel[account],
+    received: received[account],
+    spent: spent[account],
+    balance: received[account] - spent[account],
+  }));
+}
+
 // Overview for the main /admin/financial dashboard: realized vs. previsto
 // for the current month (receita/gasto/caixa), the teacher férias
 // provision, year-to-date totals, a monthly chart for the year, and the

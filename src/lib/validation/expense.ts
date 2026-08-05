@@ -8,6 +8,7 @@ export const expenseFormSchema = z
     date: z.string().min(1, "Informe a data"),
     dayOfMonth: z.coerce.number().int().min(1).max(31).optional(),
     endDate: z.string().optional(),
+    bankAccount: z.enum(["GABES", "JOE", "ASAAS"]).default("GABES"),
     notes: z.string().optional(),
   })
   .refine((data) => data.frequency !== "RECURRING" || data.dayOfMonth, {

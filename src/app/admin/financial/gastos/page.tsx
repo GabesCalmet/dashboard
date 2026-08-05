@@ -53,6 +53,7 @@ export default async function AdminFinancialGastosPage({
           occurrenceDate: e.occurrenceDate,
           dayOfMonth: e.dayOfMonth,
           endDate: e.endDate,
+          bankAccount: e.bankAccount,
           notes: e.notes,
         }))}
       />

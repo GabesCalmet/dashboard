@@ -25,9 +25,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ExpenseFormDialog } from "@/components/financial/expense-form-dialog";
-import { formatCurrency, formatDate, expenseFrequencyLabel } from "@/lib/labels";
+import { formatCurrency, formatDate, expenseFrequencyLabel, bankAccountLabel } from "@/lib/labels";
 import { deleteExpense, endRecurringExpense } from "@/server/actions/expenses";
-import type { Expense } from "@prisma/client";
+import type { Expense, BankAccount } from "@prisma/client";
 
 type Row = {
   id: string;
@@ -40,6 +40,7 @@ type Row = {
   occurrenceDate: Date;
   dayOfMonth: number | null;
   endDate: Date | null;
+  bankAccount: BankAccount;
   notes: string | null;
 };
 
@@ -53,6 +54,7 @@ export function ExpensesTable({ expenses }: { expenses: Row[] }) {
           <TableRow>
             <TableHead>Descrição</TableHead>
             <TableHead>Valor</TableHead>
+            <TableHead>Conta</TableHead>
             <TableHead>Tipo</TableHead>
             <TableHead>Data</TableHead>
             <TableHead>Status</TableHead>
@@ -66,6 +68,9 @@ export function ExpensesTable({ expenses }: { expenses: Row[] }) {
               <TableRow key={e.id}>
                 <TableCell className="font-medium">{e.description}</TableCell>
                 <TableCell>{formatCurrency(e.amount)}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {bankAccountLabel[e.bankAccount]}
+                </TableCell>
                 <TableCell>
                   <Badge variant="outline">{expenseFrequencyLabel[e.frequency]}</Badge>
                 </TableCell>
@@ -94,6 +99,7 @@ export function ExpensesTable({ expenses }: { expenses: Row[] }) {
                         date: e.date.toISOString().slice(0, 10),
                         dayOfMonth: e.dayOfMonth,
                         endDate: e.endDate?.toISOString().slice(0, 10),
+                        bankAccount: e.bankAccount,
                         notes: e.notes,
                       }}
                     />
@@ -150,7 +156,7 @@ export function ExpensesTable({ expenses }: { expenses: Row[] }) {
           })}
           {expenses.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+              <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                 Nenhum gasto neste mês.
               </TableCell>
             </TableRow>

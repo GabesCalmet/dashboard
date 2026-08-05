@@ -14,11 +14,11 @@ import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { YearlyGrowthChart } from "@/components/financial/yearly-growth-chart";
-import { getFinancialSummary } from "@/server/queries/financial";
+import { getFinancialSummary, getBankBalances } from "@/server/queries/financial";
 import { formatCurrency } from "@/lib/labels";
 
 export default async function AdminFinancialPage() {
-  const data = await getFinancialSummary();
+  const [data, bankBalances] = await Promise.all([getFinancialSummary(), getBankBalances()]);
 
   return (
     <div>
@@ -108,6 +108,26 @@ export default async function AdminFinancialPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Saldo por conta bancária</CardTitle>
+          <CardDescription>Total recebido menos total gasto em cada conta, desde o início.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {bankBalances.map((b) => (
+              <div key={b.account} className="rounded-lg border p-4">
+                <p className="text-sm font-medium">{b.label}</p>
+                <p className="mt-1 text-lg font-semibold">{formatCurrency(b.balance)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatCurrency(b.received)} recebido − {formatCurrency(b.spent)} gasto
+                </p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Receita bruta (ano)" value={formatCurrency(data.ytdGrossRevenue)} icon={Wallet} />

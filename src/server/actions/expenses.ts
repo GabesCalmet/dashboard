@@ -30,6 +30,7 @@ export async function createExpense(_prev: ActionState, formData: FormData): Pro
       date: new Date(data.date),
       dayOfMonth: data.frequency === "RECURRING" ? data.dayOfMonth : null,
       endDate: data.frequency === "RECURRING" && data.endDate ? new Date(data.endDate) : null,
+      bankAccount: data.bankAccount,
       notes: data.notes || undefined,
     },
   });
@@ -68,6 +69,7 @@ export async function updateExpense(
       date: new Date(data.date),
       dayOfMonth: data.frequency === "RECURRING" ? data.dayOfMonth : null,
       endDate: data.frequency === "RECURRING" && data.endDate ? new Date(data.endDate) : null,
+      bankAccount: data.bankAccount,
       notes: data.notes || undefined,
     },
   });
