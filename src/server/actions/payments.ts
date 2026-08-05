@@ -77,8 +77,11 @@ export async function generateMonthlyPayments(referenceMonth: Date) {
   });
 
   const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+  const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
 
   for (const student of students) {
+    // Never bill a month before the student actually enrolled.
+    if (student.startDate > monthEnd) continue;
     for (const slot of getBillingSlots(student)) {
       const existing = await prisma.payment.findFirst({
         where: { studentId: student.id, referenceMonth: monthStart, payerName: slot.payerName },
