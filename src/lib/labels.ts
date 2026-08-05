@@ -122,15 +122,17 @@ export const paymentStatusLabel: Record<PaymentStatus, string> = {
   PENDING: "Pendente",
   PAID: "Pago",
   LATE: "Atrasado",
+  PAUSED: "Pausado",
 };
 
 export const paymentStatusVariant: Record<
   PaymentStatus,
-  "success" | "warning" | "destructive"
+  "success" | "warning" | "destructive" | "outline"
 > = {
   PENDING: "warning",
   PAID: "success",
   LATE: "destructive",
+  PAUSED: "outline",
 };
 
 export function formatCurrency(value: number | string) {

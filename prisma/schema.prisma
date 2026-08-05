@@ -65,6 +65,7 @@ enum PaymentStatus {
   PENDING
   PAID
   LATE
+  PAUSED // course paused that month — nothing owed, not late
 }
 
 enum NotificationType {

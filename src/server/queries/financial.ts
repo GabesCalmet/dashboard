@@ -70,15 +70,19 @@ export async function getFinancialOverview(year?: number, month?: number) {
     )
     .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
 
-  const expectedTotal = rows.reduce((sum, r) => sum + r.amount, 0);
+  // A paused row means nothing is owed for that month — it never counts
+  // toward what's "expected", so it can't inflate inadimplência either.
+  const billableRows = rows.filter((r) => r.status !== "PAUSED");
+  const expectedTotal = billableRows.reduce((sum, r) => sum + r.amount, 0);
   const receivedTotal = Number(received._sum.amount ?? 0);
   const delinquencyRate =
     expectedTotal > 0 ? ((expectedTotal - receivedTotal) / expectedTotal) * 100 : 0;
   const pendingCount = rows.filter((r) => r.status === "PENDING").length;
   const lateCount = rows.filter((r) => r.status === "LATE").length;
+  const pausedCount = rows.filter((r) => r.status === "PAUSED").length;
 
   const byBankAccount = (Object.keys(bankAccountLabel) as BankAccount[]).map((account) => {
-    const accountRows = rows.filter((r) => r.bankAccount === account);
+    const accountRows = rows.filter((r) => r.bankAccount === account && r.status !== "PAUSED");
     const expectedAcc = accountRows.reduce((sum, r) => sum + r.amount, 0);
     const receivedAcc = accountRows
       .filter((r) => r.status === "PAID")
@@ -98,7 +102,7 @@ export async function getFinancialOverview(year?: number, month?: number) {
         _sum: { amount: true },
       });
       const total = await prisma.payment.aggregate({
-        where: { referenceMonth: b.start },
+        where: { referenceMonth: b.start, status: { not: "PAUSED" } },
         _sum: { amount: true },
       });
       return {
@@ -114,6 +118,7 @@ export async function getFinancialOverview(year?: number, month?: number) {
     monthlyRevenueReceived: receivedTotal,
     pendingCount,
     lateCount,
+    pausedCount,
     delinquencyRate,
     // Already plain numbers/primitives (not Prisma Decimal instances), so
     // safe to hand straight to the client-side PaymentsTable.
