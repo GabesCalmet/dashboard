@@ -92,7 +92,7 @@ export function ExpenseFormDialog({
 
           <div className="space-y-1.5">
             <Label>Conta bancária</Label>
-            <Select name="bankAccount" defaultValue={expense?.bankAccount ?? "GABES"} required>
+            <Select name="bankAccount" defaultValue={expense?.bankAccount ?? "JOE"} required>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>

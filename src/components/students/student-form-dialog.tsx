@@ -255,7 +255,7 @@ export function StudentFormDialog({
                 <Label>Conta bancária (terceiro)</Label>
                 <Select
                   name="thirdPartyBankAccount"
-                  defaultValue={student?.thirdPartyBankAccount ?? "GABES"}
+                  defaultValue={student?.thirdPartyBankAccount ?? "JOE"}
                   required
                 >
                   <SelectTrigger className="w-full">
@@ -275,7 +275,7 @@ export function StudentFormDialog({
 
           <div className="space-y-1.5">
             <Label>Conta bancária</Label>
-            <Select name="bankAccount" defaultValue={student?.bankAccount ?? "GABES"} required>
+            <Select name="bankAccount" defaultValue={student?.bankAccount ?? "JOE"} required>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>

@@ -26,7 +26,7 @@ export const studentFormSchema = z.object({
   courseId: z.string().optional(),
   planId: z.string().optional(),
   monthlyValue: z.coerce.number().min(0, "Valor inválido"),
-  bankAccount: z.enum(["GABES", "JOE", "ASAAS"]).default("GABES"),
+  bankAccount: z.enum(["GABES", "JOE", "ASAAS"]).default("JOE"),
   dueDay: z.coerce.number().int().min(1).max(31).default(10),
   // Third party (e.g. a company) covering part or all of monthlyValue,
   // billed separately with its own due date. Only submitted by the form
