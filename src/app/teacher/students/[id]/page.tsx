@@ -26,6 +26,7 @@ export default async function TeacherStudentDetailPage({
         showFinancial: false,
         showAudit: false,
         canEditLessons: true,
+        showOverview: false,
       }}
     />
   );

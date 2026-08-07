@@ -56,6 +56,9 @@ export function StudentDetailView({
     // Lets status/reagendamento/resumo be changed directly from this page
     // (admin), instead of only from the teacher's own Relatórios/Agenda.
     canEditLessons?: boolean;
+    // Teachers only need the lesson history day-to-day, not cadastro data
+    // (CPF, address, billing info) — defaults to shown for admin/coordinator.
+    showOverview?: boolean;
   };
   editOptions?: {
     teachers: { id: string; label: string }[];
@@ -199,14 +202,17 @@ export function StudentDetailView({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <Tabs defaultValue="overview">
+          <Tabs defaultValue={permissions.showOverview === false ? "lessons" : "overview"}>
             <TabsList>
-              <TabsTrigger value="overview">Visão geral</TabsTrigger>
+              {permissions.showOverview !== false && (
+                <TabsTrigger value="overview">Visão geral</TabsTrigger>
+              )}
               <TabsTrigger value="lessons">Histórico de aulas</TabsTrigger>
               {permissions.showFinancial && <TabsTrigger value="financial">Financeiro</TabsTrigger>}
               {permissions.showAudit && <TabsTrigger value="audit">Auditoria</TabsTrigger>}
             </TabsList>
 
+            {permissions.showOverview !== false && (
             <TabsContent value="overview" className="mt-4 space-y-4">
               <Card>
                 <CardHeader>
@@ -258,6 +264,7 @@ export function StudentDetailView({
                 </CardContent>
               </Card>
             </TabsContent>
+            )}
 
             <TabsContent value="lessons" className="mt-4">
               <LessonHistoryTable
