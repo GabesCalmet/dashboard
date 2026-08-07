@@ -49,7 +49,6 @@ export async function GET(request: NextRequest) {
           Email: t.user.email,
           Especialidades: t.specialties.join(", "),
           "Valor/hora": t.hourlyRate.toString(),
-          "Carga horaria": t.weeklyHours,
           Admissao: t.admissionDate.toISOString().slice(0, 10),
         }))
       );

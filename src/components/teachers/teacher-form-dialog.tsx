@@ -26,7 +26,6 @@ type TeacherDefaults = {
   phone?: string | null;
   specialties: string[];
   hourlyRate: number;
-  weeklyHours: number;
   admissionDate?: string;
   notes?: string | null;
 };
@@ -94,7 +93,7 @@ export function TeacherFormDialog({ teacher }: { teacher?: TeacherDefaults }) {
             <Input id="admissionDate" name="admissionDate" type="date" defaultValue={teacher?.admissionDate} />
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="hourlyRate">Valor por hora (R$)</Label>
             <Input
               id="hourlyRate"
@@ -104,10 +103,6 @@ export function TeacherFormDialog({ teacher }: { teacher?: TeacherDefaults }) {
               defaultValue={teacher?.hourlyRate}
               required
             />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="weeklyHours">Carga horária mensal</Label>
-            <Input id="weeklyHours" name="weeklyHours" type="number" defaultValue={teacher?.weeklyHours} required />
           </div>
 
           <div className="space-y-1.5 sm:col-span-2">

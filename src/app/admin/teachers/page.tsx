@@ -43,7 +43,9 @@ export default async function AdminTeachersPage() {
                   </div>
                   <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
                     <span>{t.activeStudents} alunos ativos</span>
-                    <span>{t.lessonsThisMonth} aulas/mês</span>
+                    <span>
+                      {t.actualLessonsThisMonth}/{t.expectedLessonsThisMonth} aulas (mês)
+                    </span>
                   </div>
                 </div>
               </CardContent>

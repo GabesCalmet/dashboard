@@ -165,7 +165,10 @@ model TeacherProfile {
   specialties   String[]
   availability  Json? // { mon: ["09:00-12:00"], tue: [...] }
   hourlyRate    Decimal  @db.Decimal(10, 2)
-  weeklyHours   Int
+  // Deprecated — no longer collected at cadastro; actual monthly class load
+  // is computed instead (see server/queries/teachers.ts). Kept only so
+  // existing rows don't need a backfill; new rows just get the default.
+  weeklyHours   Int      @default(0)
   admissionDate DateTime
   notes         String?
   createdAt     DateTime @default(now())

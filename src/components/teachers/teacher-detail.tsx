@@ -70,7 +70,6 @@ export function TeacherDetailView({
                   phone: teacher.user.phone,
                   specialties: teacher.specialties,
                   hourlyRate: Number(teacher.hourlyRate),
-                  weeklyHours: teacher.weeklyHours,
                   admissionDate: teacher.admissionDate.toISOString().slice(0, 10),
                   notes: teacher.notes,
                 }}
@@ -85,8 +84,17 @@ export function TeacherDetailView({
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Alunos" value={String(teacher.students.length)} icon={Users} />
-        <StatCard label="Aulas hoje" value={String(teacher.todayLessons)} icon={CalendarCheck2} accent />
-        <StatCard label="Aulas realizadas (total)" value={String(teacher.completedTotal)} icon={GraduationCap} />
+        <StatCard
+          label="Aulas esperadas (mês)"
+          value={String(teacher.expectedLessonsThisMonth)}
+          icon={CalendarCheck2}
+        />
+        <StatCard
+          label="Aulas realizadas (mês)"
+          value={String(teacher.actualLessonsThisMonth)}
+          icon={GraduationCap}
+          accent
+        />
         <StatCard label="Valor/hora" value={formatCurrency(teacher.hourlyRate.toString())} icon={GraduationCap} />
       </div>
 
@@ -119,7 +127,6 @@ export function TeacherDetailView({
             <CardTitle>Dados profissionais</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Row label="Carga horária" value={`${teacher.weeklyHours}h/mês`} />
             <Row label="Admissão" value={formatDate(teacher.admissionDate)} />
             <Row label="Observações" value={teacher.notes || "—"} />
           </CardContent>

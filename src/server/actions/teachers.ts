@@ -37,7 +37,6 @@ export async function createTeacher(
           ? data.specialties.split(",").map((s) => s.trim()).filter(Boolean)
           : [],
         hourlyRate: data.hourlyRate,
-        weeklyHours: data.weeklyHours,
         admissionDate: data.admissionDate ? new Date(data.admissionDate) : new Date(),
         notes: data.notes,
       },
@@ -85,7 +84,6 @@ export async function updateTeacher(
           ? data.specialties.split(",").map((s) => s.trim()).filter(Boolean)
           : [],
         hourlyRate: data.hourlyRate,
-        weeklyHours: data.weeklyHours,
         admissionDate: data.admissionDate ? new Date(data.admissionDate) : undefined,
         notes: data.notes,
       },

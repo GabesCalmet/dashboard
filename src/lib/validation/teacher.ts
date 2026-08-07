@@ -19,7 +19,6 @@ export const teacherFormSchema = z.object({
   phone: z.string().optional(),
   specialties: z.string().optional(), // comma-separated
   hourlyRate: z.coerce.number().min(0),
-  weeklyHours: z.coerce.number().int().min(0).max(320),
   admissionDate: z.string().optional(),
   notes: z.string().optional(),
 });
