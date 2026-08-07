@@ -240,6 +240,13 @@ function revalidateReportPaths(studentId: string) {
   revalidatePath("/student/history");
 }
 
+function durationFromTimes(start: string, end: string) {
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const minutes = eh * 60 + em - (sh * 60 + sm);
+  return minutes > 0 ? minutes : null;
+}
+
 async function requireLessonEditAccess(lessonId: string) {
   const actor = await requireUser();
   const lesson = await prisma.lesson.findUniqueOrThrow({ where: { id: lessonId } });
@@ -252,26 +259,30 @@ async function requireLessonEditAccess(lessonId: string) {
 
 // Books (or reschedules) the makeup lesson for a canceled one (CA/CP/CF) —
 // creates a new Lesson linked via rescheduledFromId the first time, and
-// just moves its date/time on subsequent calls.
-export async function scheduleLessonReschedule(lessonId: string, values: { date: string; time: string }) {
+// just moves its date/time/duration on subsequent calls.
+export async function scheduleLessonReschedule(
+  lessonId: string,
+  values: { date: string; time: string; endTime: string }
+) {
   const parsed = lessonRescheduleSchema.safeParse(values);
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? "Dados inválidos.");
   }
   const { actor, lesson } = await requireLessonEditAccess(lessonId);
   const scheduledAt = new Date(`${parsed.data.date}T${parsed.data.time}:00`);
+  const durationMin = durationFromTimes(parsed.data.time, parsed.data.endTime) ?? lesson.durationMin;
 
   const existing = await prisma.lesson.findUnique({ where: { rescheduledFromId: lessonId } });
 
   if (existing) {
-    await prisma.lesson.update({ where: { id: existing.id }, data: { scheduledAt } });
+    await prisma.lesson.update({ where: { id: existing.id }, data: { scheduledAt, durationMin } });
   } else {
     await prisma.lesson.create({
       data: {
         studentId: lesson.studentId,
         teacherId: lesson.teacherId,
         scheduledAt,
-        durationMin: lesson.durationMin,
+        durationMin,
         status: "MAKEUP",
         rescheduledFromId: lesson.id,
       },

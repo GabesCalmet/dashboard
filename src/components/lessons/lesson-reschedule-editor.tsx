@@ -23,17 +23,20 @@ export function LessonRescheduleEditor({
   rescheduledTo,
 }: {
   lessonId: string;
-  rescheduledTo: { scheduledAt: Date } | null;
+  rescheduledTo: { scheduledAt: Date; durationMin: number } | null;
 }) {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState(rescheduledTo ? toDateInput(rescheduledTo.scheduledAt) : "");
   const [time, setTime] = useState(rescheduledTo ? toTimeInput(rescheduledTo.scheduledAt) : "");
+  const [endTime, setEndTime] = useState(
+    rescheduledTo ? toTimeInput(addMinutes(rescheduledTo.scheduledAt, rescheduledTo.durationMin)) : ""
+  );
   const [isPending, startTransition] = useTransition();
 
   function save() {
     startTransition(async () => {
       try {
-        await scheduleLessonReschedule(lessonId, { date, time });
+        await scheduleLessonReschedule(lessonId, { date, time, endTime });
         toast.success("Reagendamento salvo.");
         setOpen(false);
       } catch (err) {
@@ -49,6 +52,7 @@ export function LessonRescheduleEditor({
         toast.success("Reagendamento removido.");
         setDate("");
         setTime("");
+        setEndTime("");
         setOpen(false);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Erro ao remover reagendamento.");
@@ -70,7 +74,7 @@ export function LessonRescheduleEditor({
           <DialogDescription>Escolha a nova data e horário da reposição.</DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1.5">
             <Label htmlFor="reschedule-date">Data</Label>
             <Input
@@ -81,12 +85,21 @@ export function LessonRescheduleEditor({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="reschedule-time">Horário</Label>
+            <Label htmlFor="reschedule-time">Início</Label>
             <Input
               id="reschedule-time"
               type="time"
               value={time}
               onChange={(e) => setTime(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="reschedule-end-time">Término</Label>
+            <Input
+              id="reschedule-end-time"
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
             />
           </div>
         </div>
@@ -99,7 +112,7 @@ export function LessonRescheduleEditor({
           ) : (
             <span />
           )}
-          <Button onClick={save} disabled={isPending || !date || !time}>
+          <Button onClick={save} disabled={isPending || !date || !time || !endTime}>
             {isPending && <Loader2 className="animate-spin" />}
             Salvar
           </Button>
@@ -115,4 +128,8 @@ function toDateInput(d: Date) {
 
 function toTimeInput(d: Date) {
   return new Date(d).toTimeString().slice(0, 5);
+}
+
+function addMinutes(d: Date, minutes: number) {
+  return new Date(new Date(d).getTime() + minutes * 60_000);
 }

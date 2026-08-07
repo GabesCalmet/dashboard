@@ -17,7 +17,7 @@ import { LessonSummaryEditor } from "@/components/lessons/lesson-summary-editor"
 import type { Lesson } from "@prisma/client";
 
 type HistoryLesson = Lesson & {
-  rescheduledTo?: { id: string; scheduledAt: Date; status: Lesson["status"] } | null;
+  rescheduledTo?: { id: string; scheduledAt: Date; status: Lesson["status"]; durationMin: number } | null;
 };
 
 export function LessonHistoryTable({

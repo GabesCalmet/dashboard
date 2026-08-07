@@ -18,7 +18,7 @@ import type { Lesson, LessonStatus } from "@prisma/client";
 type ReportLesson = Lesson & {
   student: { user: { name: string } };
   teacher: { user: { name: string } };
-  rescheduledTo: { id: string; scheduledAt: Date; status: LessonStatus } | null;
+  rescheduledTo: { id: string; scheduledAt: Date; status: LessonStatus; durationMin: number } | null;
 };
 
 export function LessonsReportTable({

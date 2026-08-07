@@ -68,4 +68,5 @@ export const reschedulableStatuses = [
 export const lessonRescheduleSchema = z.object({
   date: z.string().min(1, "Informe a data"),
   time: z.string().min(1, "Informe o horário"),
+  endTime: z.string().min(1, "Informe o horário de término"),
 });
