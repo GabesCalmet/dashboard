@@ -76,6 +76,7 @@ export async function generateMonthlyPayments(referenceMonth: Date) {
     where: { status: "ACTIVE" },
   });
 
+  const now = new Date();
   const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
   const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
 
@@ -88,13 +89,21 @@ export async function generateMonthlyPayments(referenceMonth: Date) {
       });
       if (existing) continue;
 
+      const dueDate = dueDateFor(monthStart, slot.dueDay);
+      // Backfilling a past month (e.g. after fixing a billing bug) should
+      // never create a fresh "Pendente" row for a due date that's already
+      // gone by — matches the same LATE-if-overdue rule the live Cobranças
+      // placeholder already uses before a row exists.
+      const status: PaymentStatus = dueDate < now ? "LATE" : "PENDING";
+
       await prisma.payment.create({
         data: {
           studentId: student.id,
           referenceMonth: monthStart,
           amount: slot.amount,
-          dueDate: dueDateFor(monthStart, slot.dueDay),
+          dueDate,
           payerName: slot.payerName,
+          status,
         },
       });
 
