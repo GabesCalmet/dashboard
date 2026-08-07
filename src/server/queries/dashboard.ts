@@ -49,13 +49,19 @@ export async function getAdminDashboardData() {
     }),
   ]);
 
-  const avgTicket =
-    activeStudents > 0
-      ? (await prisma.studentProfile.aggregate({
-          where: { status: "ACTIVE" },
-          _avg: { monthlyValue: true },
-        }))._avg.monthlyValue ?? 0
-      : 0;
+  // Ticket médio = each course's real total (own portion + whatever a
+  // third party covers on top), averaged — using _sum/count rather than
+  // _avg since _avg would skip students with no third party instead of
+  // treating their thirdPartyAmount as 0.
+  let avgTicket = 0;
+  if (activeStudents > 0) {
+    const agg = await prisma.studentProfile.aggregate({
+      where: { status: "ACTIVE" },
+      _sum: { monthlyValue: true, thirdPartyAmount: true },
+    });
+    avgTicket =
+      (Number(agg._sum.monthlyValue ?? 0) + Number(agg._sum.thirdPartyAmount ?? 0)) / activeStudents;
+  }
 
   const avgLessonsPerStudent =
     activeStudents > 0

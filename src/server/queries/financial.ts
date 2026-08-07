@@ -220,7 +220,7 @@ export async function getFinancialSummary() {
       }),
       prisma.studentProfile.aggregate({
         where: { status: "ACTIVE" },
-        _sum: { monthlyValue: true },
+        _sum: { monthlyValue: true, thirdPartyAmount: true },
       }),
       prisma.studentProfile.count({ where: { status: "ACTIVE" } }),
       prisma.expense.findMany(),
@@ -239,7 +239,11 @@ export async function getFinancialSummary() {
     ]);
 
   const revenueRealized = Number(receivedAgg._sum.amount ?? 0);
-  const revenuePrevisto = Number(activeStudentsAgg._sum.monthlyValue ?? 0);
+  // The course's real monthly total is the student's own portion plus
+  // whatever a third party covers on top of it (see getBillingSlots).
+  const revenuePrevisto =
+    Number(activeStudentsAgg._sum.monthlyValue ?? 0) +
+    Number(activeStudentsAgg._sum.thirdPartyAmount ?? 0);
   const expenseRealized = expenseTotalForMonth(expenses, monthStart, monthEnd, now);
   const expensePrevisto = expenseTotalForMonth(expenses, monthStart, monthEnd);
 

@@ -1,10 +1,12 @@
 import type { BankAccount } from "@prisma/client";
 
 // A student is billed as one or two "slots" per month: their own portion
-// (payerName: null) and, if a third party covers part or all of the
-// monthlyValue, a second slot billed to that third party with its own due
-// day and bank account. Shared between billing generation and the
-// Cobranças table so both stay in sync about who owes what and when.
+// (payerName: null, amount = monthlyValue) and, if a third party also
+// covers part of the course, a second slot billed to that third party for
+// thirdPartyAmount — additional to monthlyValue, not carved out of it, so
+// the course's real total is monthlyValue + thirdPartyAmount. Shared
+// between billing generation and the Cobranças table so both stay in sync
+// about who owes what and when.
 export type BillingSlot = {
   payerName: string | null;
   amount: number;
@@ -21,7 +23,7 @@ export function getBillingSlots(student: {
   thirdPartyDueDay: number | null;
   thirdPartyBankAccount: BankAccount | null;
 }): BillingSlot[] {
-  const total = Number(student.monthlyValue);
+  const own = Number(student.monthlyValue);
   const thirdPartyAmt = student.thirdPartyAmount ? Number(student.thirdPartyAmount) : 0;
   const slots: BillingSlot[] = [];
 
@@ -34,9 +36,8 @@ export function getBillingSlots(student: {
     });
   }
 
-  const remaining = total - thirdPartyAmt;
-  if (remaining > 0) {
-    slots.push({ payerName: null, amount: remaining, dueDay: student.dueDay, bankAccount: student.bankAccount });
+  if (own > 0) {
+    slots.push({ payerName: null, amount: own, dueDay: student.dueDay, bankAccount: student.bankAccount });
   }
 
   return slots;
