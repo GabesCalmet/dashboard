@@ -73,9 +73,11 @@ export async function syncRecurringLessons(studentId: string) {
     rawHorizonEnd.getDate() <= 15
       ? new Date(rawHorizonEnd.getFullYear(), rawHorizonEnd.getMonth(), 15, 23, 59, 59, 999)
       : new Date(rawHorizonEnd.getFullYear(), rawHorizonEnd.getMonth() + 1, 15, 23, 59, 59, 999);
-  // Never schedule past the student's own course end date, if they have one.
-  const horizonEnd =
-    student.endDate && student.endDate < snappedHorizonEnd ? student.endDate : snappedHorizonEnd;
+  // A student with a course end date gets every class generated through
+  // that exact date — overriding the rolling ~12-week/15th window entirely,
+  // since the whole point of setting it is to define that course's real
+  // generation window (which may run shorter or longer than the default).
+  const horizonEnd = student.endDate ?? snappedHorizonEnd;
   const toCreate: {
     studentId: string;
     teacherId: string;
