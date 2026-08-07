@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatCard } from "@/components/shared/stat-card";
+import { MonthNav } from "@/components/financial/month-nav";
 import { LevelProgressCard } from "@/components/students/level-progress-card";
 import { LessonHistoryTable } from "@/components/students/lesson-history-table";
 import { StudentPaymentsTable } from "@/components/students/student-payments-table";
@@ -43,9 +44,14 @@ export function StudentDetailView({
   permissions,
   editOptions,
   auditEntries = [],
+  monthNav,
 }: {
   student: Student;
   basePath: string;
+  // Lets "Aulas contratadas/mês" be checked for a past month instead of
+  // only the real current one. selfPath is this same page's URL (no query),
+  // used to build the ?month=YYYY-MM prev/next links.
+  monthNav?: { year: number; month: number; selfPath: string };
   permissions: {
     canEdit: boolean;
     canDelete: boolean;
@@ -73,9 +79,9 @@ export function StudentDetailView({
   // instead of showing the flat lessonsPerMonth contract value. Reposições
   // (rescheduledFromId set) are extra makeup slots, not part of the regular
   // weekly schedule, so they're excluded here.
-  const now = new Date();
-  const monthStart = startOfMonth(now);
-  const monthEnd = endOfMonth(now);
+  const refMonthDate = monthNav ? new Date(monthNav.year, monthNav.month, 1) : new Date();
+  const monthStart = startOfMonth(refMonthDate);
+  const monthEnd = endOfMonth(refMonthDate);
   const contractedLessonsThisMonth = student.lessons.filter(
     (l) => l.scheduledAt >= monthStart && l.scheduledAt <= monthEnd && !l.rescheduledFromId
   ).length;
@@ -176,6 +182,12 @@ export function StudentDetailView({
           </div>
         )}
       </div>
+
+      {monthNav && (
+        <div className="mb-3 flex justify-end">
+          <MonthNav basePath={monthNav.selfPath} year={monthNav.year} month={monthNav.month} />
+        </div>
+      )}
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard

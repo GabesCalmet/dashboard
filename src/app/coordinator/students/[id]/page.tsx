@@ -6,13 +6,18 @@ import {
   listCoursesForSelect,
   listPlansForSelect,
 } from "@/server/queries/students";
+import { parseMonthParam } from "@/lib/month-param";
 
 export default async function CoordinatorStudentDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ month?: string }>;
 }) {
   const { id } = await params;
+  const { month: monthParamValue } = await searchParams;
+  const { year, month } = parseMonthParam(monthParamValue);
   const [student, teachers, courses, plans] = await Promise.all([
     getStudentDetail(id),
     listActiveTeachersForSelect(),
@@ -26,6 +31,7 @@ export default async function CoordinatorStudentDetailPage({
     <StudentDetailView
       student={student}
       basePath="/coordinator/students"
+      monthNav={{ year, month, selfPath: `/coordinator/students/${id}` }}
       permissions={{
         canEdit: true,
         canDelete: false,
