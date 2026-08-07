@@ -67,13 +67,29 @@ export async function getTeacherDetail(teacherId: string) {
   const completedTotal = await prisma.lesson.count({
     where: { teacherId, status: "COMPLETED" },
   });
-  const actualLessonsThisMonth = await prisma.lesson.count({
-    where: {
-      teacherId,
-      scheduledAt: { gte: monthStart, lte: monthEnd },
-      status: { in: [...REALIZED_STATUSES] },
-    },
+
+  const statusBreakdown = await prisma.lesson.groupBy({
+    by: ["status"],
+    where: { teacherId, scheduledAt: { gte: monthStart, lte: monthEnd } },
+    _count: { _all: true },
+    _sum: { durationMin: true },
   });
+  const countByStatus = new Map(statusBreakdown.map((g) => [g.status, g._count._all]));
+  const actualLessonsThisMonth = REALIZED_STATUSES.reduce(
+    (sum, status) => sum + (countByStatus.get(status) ?? 0),
+    0
+  );
+  const canceledByStudentThisMonth = countByStatus.get("CANCELED_BY_STUDENT") ?? 0;
+  const canceledByTeacherThisMonth = countByStatus.get("CANCELED_BY_TEACHER") ?? 0;
+  const makeupThisMonth = countByStatus.get("MAKEUP") ?? 0;
+  // Minutes come from each lesson's durationMin, which is itself derived
+  // from the student's registered lesson schedule (start/end time) when
+  // the lesson was generated — so this already reflects real class times,
+  // not a flat per-lesson assumption.
+  const minutesTaughtThisMonth = statusBreakdown
+    .filter((g) => (REALIZED_STATUSES as readonly string[]).includes(g.status))
+    .reduce((sum, g) => sum + (g._sum.durationMin ?? 0), 0);
+
   const expectedLessonsThisMonth = teacher.students
     .filter((s) => s.status === "ACTIVE")
     .reduce((sum, s) => sum + s.lessonsPerMonth, 0);
@@ -84,5 +100,9 @@ export async function getTeacherDetail(teacherId: string) {
     completedTotal,
     actualLessonsThisMonth,
     expectedLessonsThisMonth,
+    canceledByStudentThisMonth,
+    canceledByTeacherThisMonth,
+    makeupThisMonth,
+    hoursTaughtThisMonth: minutesTaughtThisMonth / 60,
   };
 }

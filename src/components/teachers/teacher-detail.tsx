@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, CalendarCheck2, GraduationCap, Users } from "lucide-react";
+import { ArrowLeft, CalendarCheck2, GraduationCap, Users, XCircle, Repeat, Clock } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,6 +96,25 @@ export function TeacherDetailView({
           accent
         />
         <StatCard label="Valor/hora" value={formatCurrency(teacher.hourlyRate.toString())} icon={GraduationCap} />
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="CA — Cancelamento aluno (mês)"
+          value={String(teacher.canceledByStudentThisMonth)}
+          icon={XCircle}
+        />
+        <StatCard
+          label="CP — Cancelamento professor (mês)"
+          value={String(teacher.canceledByTeacherThisMonth)}
+          icon={XCircle}
+        />
+        <StatCard label="R — Reposições (mês)" value={String(teacher.makeupThisMonth)} icon={Repeat} />
+        <StatCard
+          label="Horas trabalhadas (mês)"
+          value={`${teacher.hoursTaughtThisMonth.toFixed(1)}h`}
+          icon={Clock}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
