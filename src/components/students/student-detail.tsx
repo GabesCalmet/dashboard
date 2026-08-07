@@ -23,6 +23,7 @@ import { StudentPaymentsTable } from "@/components/students/student-payments-tab
 import { StudentFormDialog } from "@/components/students/student-form-dialog";
 import type { ScheduleEntry } from "@/components/students/lesson-schedule-editor";
 import { DeleteStudentButton } from "@/components/students/delete-student-button";
+import { ResyncLessonsButton } from "@/components/students/resync-lessons-button";
 import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
 import { SetPasswordButton } from "@/components/shared/set-password-button";
 import { AuditTrail } from "@/components/shared/audit-trail";
@@ -175,6 +176,7 @@ export function StudentDetailView({
                 }}
               />
             )}
+            {permissions.canEdit && <ResyncLessonsButton studentId={student.id} />}
             {permissions.canEdit && <ViewCredentialsButton userId={student.userId} />}
             {permissions.canEdit && <SetPasswordButton userId={student.userId} />}
             {permissions.canDelete && (

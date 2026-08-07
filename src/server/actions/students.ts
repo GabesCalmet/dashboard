@@ -153,6 +153,22 @@ export async function updateStudent(
   return { success: "Aluno atualizado." };
 }
 
+// Manually re-runs recurring lesson generation for a student — lets an
+// admin/coordinator force the horizon (or a newly-set course end date) to
+// take effect immediately, instead of waiting for the next edit or the
+// weekly cron regeneration.
+export async function resyncStudentLessons(studentId: string) {
+  await requireRole("ADMIN", "COORDINATOR");
+  await syncRecurringLessons(studentId);
+
+  revalidatePath(`/admin/students/${studentId}`);
+  revalidatePath(`/coordinator/students/${studentId}`);
+  revalidatePath(`/teacher/students/${studentId}`);
+  revalidatePath("/admin/agenda");
+  revalidatePath("/coordinator/agenda");
+  revalidatePath("/teacher/agenda");
+}
+
 export async function deleteStudent(studentId: string) {
   const actor = await requireRole("ADMIN");
   const student = await prisma.studentProfile.findUniqueOrThrow({ where: { id: studentId } });
