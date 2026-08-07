@@ -3,8 +3,12 @@ import {
   ArrowLeft,
   BookOpen,
   CalendarClock,
+  CheckCircle2,
   GraduationCap,
+  Repeat,
   Target,
+  UserX,
+  XCircle,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +64,10 @@ export function StudentDetailView({
   auditEntries?: Parameters<typeof AuditTrail>[0]["entries"];
 }) {
   const completedLessons = student.lessons.filter((l) => l.status === "COMPLETED").length;
+  const canceledByStudent = student.lessons.filter((l) => l.status === "CANCELED_BY_STUDENT").length;
+  const canceledByTeacher = student.lessons.filter((l) => l.status === "CANCELED_BY_TEACHER").length;
+  const makeupCount = student.lessons.filter((l) => l.status === "MAKEUP").length;
+  const noShowCount = student.lessons.filter((l) => l.status === "NO_SHOW").length;
   const nextLesson = student.lessons
     .filter((l) => l.scheduledAt > new Date() && l.status === "SCHEDULED")
     .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime())[0];
@@ -156,6 +164,14 @@ export function StudentDetailView({
           icon={CalendarClock}
         />
         <StatCard label="Objetivo" value={student.objective || "—"} icon={Target} />
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <StatCard label="OK — Aulas dadas" value={String(completedLessons)} icon={CheckCircle2} accent />
+        <StatCard label="CA — Cancelamento aluno" value={String(canceledByStudent)} icon={XCircle} />
+        <StatCard label="CP — Cancelamento professor" value={String(canceledByTeacher)} icon={XCircle} />
+        <StatCard label="R — Reposições" value={String(makeupCount)} icon={Repeat} />
+        <StatCard label="NC — Não compareceu" value={String(noShowCount)} icon={UserX} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
