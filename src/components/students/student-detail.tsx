@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { endOfMonth, startOfMonth } from "date-fns";
 import {
   ArrowLeft,
   BookOpen,
@@ -63,6 +64,18 @@ export function StudentDetailView({
   };
   auditEntries?: Parameters<typeof AuditTrail>[0]["entries"];
 }) {
+  // The number of classes actually scheduled this calendar month varies —
+  // months don't all contain the same number of each weekday — so this
+  // counts the student's real recurring lessons for the current month
+  // instead of showing the flat lessonsPerMonth contract value. Reposições
+  // (rescheduledFromId set) are extra makeup slots, not part of the regular
+  // weekly schedule, so they're excluded here.
+  const now = new Date();
+  const monthStart = startOfMonth(now);
+  const monthEnd = endOfMonth(now);
+  const contractedLessonsThisMonth = student.lessons.filter(
+    (l) => l.scheduledAt >= monthStart && l.scheduledAt <= monthEnd && !l.rescheduledFromId
+  ).length;
   const completedLessons = student.lessons.filter((l) => l.status === "COMPLETED").length;
   const canceledByStudent = student.lessons.filter((l) => l.status === "CANCELED_BY_STUDENT").length;
   const canceledByTeacher = student.lessons.filter((l) => l.status === "CANCELED_BY_TEACHER").length;
@@ -164,7 +177,7 @@ export function StudentDetailView({
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Aulas contratadas/mês"
-          value={String(student.lessonsPerMonth)}
+          value={String(contractedLessonsThisMonth)}
           icon={BookOpen}
         />
         <StatCard label="Aulas realizadas" value={String(realizedLessons)} icon={GraduationCap} accent />
