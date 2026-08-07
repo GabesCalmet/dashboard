@@ -66,6 +66,7 @@ export const studentFormSchema = z.object({
     }),
   level: z.enum(["A1", "A2", "B1", "B2", "C1", "C2"]),
   startDate: z.string().optional(),
+  endDate: z.string().optional(),
   objective: z.string().optional(),
   notes: z.string().optional(),
   status: z.enum(["ACTIVE", "PAUSED", "CANCELED"]).default("ACTIVE"),

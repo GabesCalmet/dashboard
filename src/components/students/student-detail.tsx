@@ -168,6 +168,7 @@ export function StudentDetailView({
                   lessonSchedule: parseLessonSchedule(student.lessonSchedule),
                   level: student.level,
                   startDate: student.startDate.toISOString().slice(0, 10),
+                  endDate: student.endDate?.toISOString().slice(0, 10),
                   objective: student.objective,
                   notes: student.notes,
                   status: student.status,
@@ -239,6 +240,10 @@ export function StudentDetailView({
                   />
                   <InfoRow label="Endereço" value={student.address ?? "—"} />
                   <InfoRow label="Início do curso" value={formatDate(student.startDate)} />
+                  <InfoRow
+                    label="Término previsto"
+                    value={student.endDate ? formatDate(student.endDate) : "—"}
+                  />
                   <InfoRow label="Plano" value={student.plan?.name ?? "—"} />
                   <InfoRow
                     label="Dia(s)/horário da aula"

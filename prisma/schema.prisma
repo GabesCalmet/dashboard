@@ -212,6 +212,9 @@ model StudentProfile {
   levelProgress     Int             @default(0) // 0-100
   lessonsContracted Int             @default(0)
   startDate         DateTime        @default(now())
+  // Optional — when set, recurring lesson generation never schedules a
+  // class past this date, and it's shown as the course's expected end.
+  endDate           DateTime?
   objective         String?
   notes             String?
   status            StudentStatus   @default(ACTIVE)

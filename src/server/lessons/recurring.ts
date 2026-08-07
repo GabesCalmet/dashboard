@@ -30,8 +30,9 @@ function durationFromTimes(start: string, end: string) {
 
 // Regenerates a student's recurring lessons (from their enrollment start
 // date through the last class on/before the 15th of the month closing out
-// the next ~HORIZON_WEEKS) to match their current weekly schedule. Only
-// ever touches lessons this same generator created
+// the next ~HORIZON_WEEKS, or their course end date if that comes sooner)
+// to match their current weekly schedule. Only ever touches lessons this
+// same generator created
 // (isRecurring) that are still SCHEDULED — i.e. still unconfirmed, whether
 // in the past or future. Manual bookings and anything a teacher has
 // already reported/marked a real outcome for (OK/CA/CP/NC/...) are never
@@ -68,10 +69,13 @@ export async function syncRecurringLessons(studentId: string) {
   // so the visible window always ends on the last class on/before a 15th
   // instead of stopping mid-month wherever the flat week count happens to
   // land.
-  const horizonEnd =
+  const snappedHorizonEnd =
     rawHorizonEnd.getDate() <= 15
       ? new Date(rawHorizonEnd.getFullYear(), rawHorizonEnd.getMonth(), 15, 23, 59, 59, 999)
       : new Date(rawHorizonEnd.getFullYear(), rawHorizonEnd.getMonth() + 1, 15, 23, 59, 59, 999);
+  // Never schedule past the student's own course end date, if they have one.
+  const horizonEnd =
+    student.endDate && student.endDate < snappedHorizonEnd ? student.endDate : snappedHorizonEnd;
   const toCreate: {
     studentId: string;
     teacherId: string;

@@ -54,6 +54,7 @@ type StudentDefaults = {
   lessonSchedule?: ScheduleEntry[];
   level: CourseLevel;
   startDate?: string;
+  endDate?: string;
   objective?: string | null;
   notes?: string | null;
   status: StudentStatus;
@@ -140,6 +141,10 @@ export function StudentFormDialog({
           <div className="space-y-1.5">
             <Label htmlFor="startDate">Data de início</Label>
             <Input id="startDate" name="startDate" type="date" defaultValue={student?.startDate} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="endDate">Data de término (opcional)</Label>
+            <Input id="endDate" name="endDate" type="date" defaultValue={student?.endDate} />
           </div>
 
           <div className="space-y-1.5 sm:col-span-2">
