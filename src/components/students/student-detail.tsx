@@ -68,6 +68,10 @@ export function StudentDetailView({
   const canceledByTeacher = student.lessons.filter((l) => l.status === "CANCELED_BY_TEACHER").length;
   const makeupCount = student.lessons.filter((l) => l.status === "MAKEUP").length;
   const noShowCount = student.lessons.filter((l) => l.status === "NO_SHOW").length;
+  // "Realizada" = the lesson slot actually happened (teacher held it), even
+  // if the student didn't show up (NC) — as opposed to "Dada" (OK), which
+  // only counts lessons the student actually attended.
+  const realizedLessons = completedLessons + noShowCount + makeupCount;
   const nextLesson = student.lessons
     .filter((l) => l.scheduledAt > new Date() && l.status === "SCHEDULED")
     .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime())[0];
@@ -157,7 +161,7 @@ export function StudentDetailView({
           value={String(student.lessonsPerMonth)}
           icon={BookOpen}
         />
-        <StatCard label="Aulas realizadas" value={String(completedLessons)} icon={GraduationCap} accent />
+        <StatCard label="Aulas realizadas" value={String(realizedLessons)} icon={GraduationCap} accent />
         <StatCard
           label="Próxima aula"
           value={nextLesson ? formatDateTime(nextLesson.scheduledAt) : "—"}
