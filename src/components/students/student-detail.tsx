@@ -66,12 +66,18 @@ export function StudentDetailView({
   const completedLessons = student.lessons.filter((l) => l.status === "COMPLETED").length;
   const canceledByStudent = student.lessons.filter((l) => l.status === "CANCELED_BY_STUDENT").length;
   const canceledByTeacher = student.lessons.filter((l) => l.status === "CANCELED_BY_TEACHER").length;
-  const makeupCount = student.lessons.filter((l) => l.status === "MAKEUP").length;
+  // A reposição lesson is any record booked via rescheduledFromId — counts
+  // here whether it's still pending or already marked "dada" (in which case
+  // its status flips to COMPLETED, so it's also folded into completedLessons
+  // above).
+  const makeupCount = student.lessons.filter((l) => l.rescheduledFromId).length;
   const noShowCount = student.lessons.filter((l) => l.status === "NO_SHOW").length;
   // "Realizada" = the lesson slot actually happened (teacher held it), even
   // if the student didn't show up (NC) — as opposed to "Dada" (OK), which
-  // only counts lessons the student actually attended.
-  const realizedLessons = completedLessons + noShowCount + makeupCount;
+  // only counts lessons the student actually attended. A reposição only
+  // counts once it's been given, at which point it's already COMPLETED, so
+  // it doesn't need to be added separately here.
+  const realizedLessons = completedLessons + noShowCount;
   const nextLesson = student.lessons
     .filter((l) => l.scheduledAt > new Date() && l.status === "SCHEDULED")
     .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime())[0];
