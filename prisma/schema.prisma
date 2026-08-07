@@ -59,6 +59,7 @@ enum LessonStatus {
   POWER_OUTAGE // Faltou energia
   TECH_ISSUE // Problema técnico
   OTHER
+  PAUSED // P - aluno suspendeu o curso
 }
 
 enum PaymentStatus {

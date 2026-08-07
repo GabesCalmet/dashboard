@@ -24,6 +24,7 @@ export const lessonReportSchema = z.object({
     "POWER_OUTAGE",
     "TECH_ISSUE",
     "OTHER",
+    "PAUSED",
   ]),
   contentTaught: z.string().optional(),
   vocabulary: z.string().optional(),
@@ -51,6 +52,7 @@ export const quickLessonStatusSchema = z.enum([
   "CANCELED_VACATION",
   "CANCELED_HOLIDAY",
   "NO_SHOW",
+  "PAUSED",
 ]);
 
 export const lessonSummarySchema = z.object({

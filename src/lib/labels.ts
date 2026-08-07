@@ -56,6 +56,7 @@ export const lessonStatusLabel: Record<LessonStatus, string> = {
   POWER_OUTAGE: "Faltou energia",
   TECH_ISSUE: "Problema técnico",
   OTHER: "Outro",
+  PAUSED: "P — Pausado",
 };
 
 // Short code shown in the quick status picker (Aulas de hoje).
@@ -71,6 +72,7 @@ export const lessonStatusCode: Record<LessonStatus, string> = {
   POWER_OUTAGE: "—",
   TECH_ISSUE: "—",
   OTHER: "—",
+  PAUSED: "P",
 };
 
 // The set of statuses teachers pick from day-to-day when logging today's
@@ -83,6 +85,7 @@ export const quickLessonStatuses: LessonStatus[] = [
   "CANCELED_VACATION",
   "CANCELED_HOLIDAY",
   "NO_SHOW",
+  "PAUSED",
 ];
 
 // Calendar / badge colors per the spec: green=realizada, blue=agendada,
@@ -99,6 +102,7 @@ export const lessonStatusColor: Record<LessonStatus, string> = {
   POWER_OUTAGE: "#d64545",
   TECH_ISSUE: "#d64545",
   OTHER: "#8a8f98",
+  PAUSED: "#8a8f98",
 };
 
 export const lessonStatusBadgeVariant: Record<
@@ -116,6 +120,7 @@ export const lessonStatusBadgeVariant: Record<
   POWER_OUTAGE: "destructive",
   TECH_ISSUE: "destructive",
   OTHER: "outline",
+  PAUSED: "outline",
 };
 
 export const paymentStatusLabel: Record<PaymentStatus, string> = {
