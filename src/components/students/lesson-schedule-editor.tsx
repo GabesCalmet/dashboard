@@ -1,22 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
-// from/until scope when this specific entry is in effect — both optional,
-// since most schedules just run for as long as the student is enrolled.
-// Lets an old entry be kept on record with an "until" instead of deleted
-// when a schedule changes, while the new entry's "from" picks up after it.
+// Flat shape persisted to the DB — one row per weekday/time. from/until
+// (both optional) scope when that specific entry is in effect: undefined
+// means "since enrollment" / "still ongoing". Entries sharing the same
+// from/until are grouped back into one visual block when the editor loads.
 export type ScheduleEntry = {
   weekday: number;
   start: string;
@@ -26,21 +20,39 @@ export type ScheduleEntry = {
 };
 
 const DAYS = [
-  { value: 0, name: "Domingo" },
-  { value: 1, name: "Segunda" },
-  { value: 2, name: "Terça" },
-  { value: 3, name: "Quarta" },
-  { value: 4, name: "Quinta" },
-  { value: 5, name: "Sexta" },
-  { value: 6, name: "Sábado" },
+  { value: 0, label: "D", name: "Domingo" },
+  { value: 1, label: "S", name: "Segunda" },
+  { value: 2, label: "T", name: "Terça" },
+  { value: 3, label: "Q", name: "Quarta" },
+  { value: 4, label: "Q", name: "Quinta" },
+  { value: 5, label: "S", name: "Sexta" },
+  { value: 6, label: "S", name: "Sábado" },
 ];
 
-// Local-only id so each row can be edited/removed independently — never
-// persisted, since a student can now have more than one entry on the same
-// weekday (e.g. an old time kept on record alongside a newly added one
-// after a schedule change).
+type BlockDay = { weekday: number; start: string; end: string };
+type Block = { _id: number; from: string; until: string; days: BlockDay[] };
+
 let nextId = 0;
-type EditorEntry = ScheduleEntry & { _id: number };
+
+// Groups a flat entry list back into blocks by matching from/until — an
+// old schedule kept on record (with an "until") and a newly added one
+// (with a later "from") land in separate blocks; entries with no range at
+// all (the common case) all land together in one block.
+function toBlocks(entries: ScheduleEntry[]): Block[] {
+  const groups = new Map<string, Block>();
+  for (const e of entries) {
+    const from = e.from ?? "";
+    const until = e.until ?? "";
+    const key = `${from}::${until}`;
+    let block = groups.get(key);
+    if (!block) {
+      block = { _id: nextId++, from, until, days: [] };
+      groups.set(key, block);
+    }
+    block.days.push({ weekday: e.weekday, start: e.start, end: e.end });
+  }
+  return [...groups.values()];
+}
 
 export function LessonScheduleEditor({
   name,
@@ -49,108 +61,147 @@ export function LessonScheduleEditor({
   name: string;
   defaultValue?: ScheduleEntry[];
 }) {
-  const [entries, setEntries] = useState<EditorEntry[]>(() =>
-    defaultValue.map((e) => ({ ...e, _id: nextId++ }))
+  const [blocks, setBlocks] = useState<Block[]>(() => toBlocks(defaultValue));
+
+  function addBlock() {
+    setBlocks((prev) => [...prev, { _id: nextId++, from: "", until: "", days: [] }]);
+  }
+
+  function removeBlock(id: number) {
+    setBlocks((prev) => prev.filter((b) => b._id !== id));
+  }
+
+  function updateBlockRange(id: number, field: "from" | "until", value: string) {
+    setBlocks((prev) => prev.map((b) => (b._id === id ? { ...b, [field]: value } : b)));
+  }
+
+  function toggleDay(blockId: number, weekday: number) {
+    setBlocks((prev) =>
+      prev.map((b) => {
+        if (b._id !== blockId) return b;
+        const exists = b.days.some((d) => d.weekday === weekday);
+        const days = exists
+          ? b.days.filter((d) => d.weekday !== weekday)
+          : [...b.days, { weekday, start: "", end: "" }].sort((a, c) => a.weekday - c.weekday);
+        return { ...b, days };
+      })
+    );
+  }
+
+  function updateDay(blockId: number, weekday: number, field: "start" | "end", value: string) {
+    setBlocks((prev) =>
+      prev.map((b) =>
+        b._id !== blockId
+          ? b
+          : { ...b, days: b.days.map((d) => (d.weekday === weekday ? { ...d, [field]: value } : d)) }
+      )
+    );
+  }
+
+  const schedule: ScheduleEntry[] = blocks.flatMap((b) =>
+    b.days.map((d) => ({
+      ...d,
+      from: b.from || undefined,
+      until: b.until || undefined,
+    }))
   );
-
-  function addEntry() {
-    setEntries((prev) => [...prev, { weekday: 1, start: "", end: "", _id: nextId++ }]);
-  }
-
-  function removeEntry(id: number) {
-    setEntries((prev) => prev.filter((e) => e._id !== id));
-  }
-
-  function updateEntry(
-    id: number,
-    field: "weekday" | "start" | "end" | "from" | "until",
-    value: string | number
-  ) {
-    setEntries((prev) => prev.map((e) => (e._id === id ? { ...e, [field]: value } : e)));
-  }
-
-  const schedule: ScheduleEntry[] = entries.map(({ weekday, start, end, from, until }) => ({
-    weekday,
-    start,
-    end,
-    from: from || undefined,
-    until: until || undefined,
-  }));
 
   return (
     <div className="space-y-2">
       <input type="hidden" name={name} value={JSON.stringify(schedule)} />
 
-      {entries.map((entry) => (
-        <div key={entry._id} className="space-y-2 rounded-lg border p-3">
-          <div className="flex items-center gap-2">
-            <Select
-              value={String(entry.weekday)}
-              onValueChange={(v) => updateEntry(entry._id, "weekday", Number(v))}
-            >
-              <SelectTrigger className="w-32 shrink-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DAYS.map((d) => (
-                  <SelectItem key={d.value} value={String(d.value)}>
-                    {d.name}
-                  </SelectItem>
+      {blocks.map((block) => {
+        const selectedDays = new Set(block.days.map((d) => d.weekday));
+        return (
+          <div key={block._id} className="space-y-3 rounded-lg border p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex gap-1.5">
+                {DAYS.map((day) => {
+                  const active = selectedDays.has(day.value);
+                  return (
+                    <button
+                      key={day.value}
+                      type="button"
+                      title={day.name}
+                      onClick={() => toggleDay(block._id, day.value)}
+                      aria-pressed={active}
+                      className={cn(
+                        "flex size-9 items-center justify-center rounded-full border text-sm font-medium transition-colors",
+                        active
+                          ? "border-accent bg-accent text-accent-foreground"
+                          : "border-input bg-transparent text-muted-foreground hover:bg-secondary"
+                      )}
+                    >
+                      {day.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="shrink-0 text-muted-foreground hover:text-destructive"
+                onClick={() => removeBlock(block._id)}
+                aria-label="Remover este horário"
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
+
+            {block.days.length > 0 && (
+              <div className="space-y-2">
+                {block.days.map((d) => (
+                  <div key={d.weekday} className="flex items-center gap-2">
+                    <span className="w-20 shrink-0 text-sm font-medium">
+                      {DAYS[d.weekday].name}
+                    </span>
+                    <Input
+                      type="time"
+                      value={d.start}
+                      onChange={(e) => updateDay(block._id, d.weekday, "start", e.target.value)}
+                      aria-label={`Início — ${DAYS[d.weekday].name}`}
+                    />
+                    <span className="shrink-0 text-sm text-muted-foreground">até</span>
+                    <Input
+                      type="time"
+                      value={d.end}
+                      onChange={(e) => updateDay(block._id, d.weekday, "end", e.target.value)}
+                      aria-label={`Término — ${DAYS[d.weekday].name}`}
+                    />
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
-            <Input
-              type="time"
-              value={entry.start}
-              onChange={(e) => updateEntry(entry._id, "start", e.target.value)}
-              aria-label={`Início — ${DAYS[entry.weekday].name}`}
-            />
-            <span className="shrink-0 text-sm text-muted-foreground">até</span>
-            <Input
-              type="time"
-              value={entry.end}
-              onChange={(e) => updateEntry(entry._id, "end", e.target.value)}
-              aria-label={`Término — ${DAYS[entry.weekday].name}`}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="shrink-0 text-muted-foreground hover:text-destructive"
-              onClick={() => removeEntry(entry._id)}
-              aria-label="Remover horário"
-            >
-              <X className="size-4" />
-            </Button>
-          </div>
+              </div>
+            )}
 
-          <div className="flex items-center gap-2 pl-1">
-            <Label className="shrink-0 text-xs font-normal text-muted-foreground">Vigência:</Label>
-            <Input
-              type="date"
-              value={entry.from ?? ""}
-              onChange={(e) => updateEntry(entry._id, "from", e.target.value)}
-              aria-label={`Vigente desde — ${DAYS[entry.weekday].name}`}
-              className="h-8"
-            />
-            <span className="shrink-0 text-xs text-muted-foreground">até</span>
-            <Input
-              type="date"
-              value={entry.until ?? ""}
-              onChange={(e) => updateEntry(entry._id, "until", e.target.value)}
-              placeholder="Atual"
-              aria-label={`Vigente até — ${DAYS[entry.weekday].name}`}
-              className="h-8"
-            />
+            <div className="flex items-center gap-2">
+              <Label className="shrink-0 text-xs font-normal text-muted-foreground">Vigência:</Label>
+              <Input
+                type="date"
+                value={block.from}
+                onChange={(e) => updateBlockRange(block._id, "from", e.target.value)}
+                aria-label="Vigente desde"
+                className="h-8"
+              />
+              <span className="shrink-0 text-xs text-muted-foreground">até</span>
+              <Input
+                type="date"
+                value={block.until}
+                onChange={(e) => updateBlockRange(block._id, "until", e.target.value)}
+                placeholder="Atual"
+                aria-label="Vigente até"
+                className="h-8"
+              />
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
-      {entries.length === 0 && (
+      {blocks.length === 0 && (
         <p className="text-sm text-muted-foreground">Nenhum horário adicionado ainda.</p>
       )}
 
-      <Button type="button" variant="outline" size="sm" onClick={addEntry}>
+      <Button type="button" variant="outline" size="sm" onClick={addBlock}>
         <Plus className="size-4" /> Adicionar horário
       </Button>
     </div>
