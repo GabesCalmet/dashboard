@@ -348,7 +348,7 @@ function parseLessonSchedule(value: unknown): ScheduleEntry[] {
   if (!Array.isArray(value)) return [];
   return value
     .filter(
-      (e): e is { weekday: number; start: string; end: string } =>
+      (e): e is { weekday: number; start: string; end: string; from?: string; until?: string } =>
         typeof e === "object" &&
         e !== null &&
         typeof (e as Record<string, unknown>).weekday === "number"
@@ -357,6 +357,8 @@ function parseLessonSchedule(value: unknown): ScheduleEntry[] {
       weekday: e.weekday,
       start: typeof e.start === "string" ? e.start : "",
       end: typeof e.end === "string" ? e.end : "",
+      from: typeof e.from === "string" && e.from ? e.from : undefined,
+      until: typeof e.until === "string" && e.until ? e.until : undefined,
     }))
     .sort((a, b) => a.weekday - b.weekday);
 }
@@ -366,9 +368,12 @@ function formatLessonSchedule(schedule: ScheduleEntry[]) {
   return schedule
     .map((e) => {
       const day = WEEKDAY_ABBR[e.weekday];
-      if (!e.start) return day;
-      const time = e.end ? `${e.start}–${e.end}` : e.start;
-      return `${day} ${time}`;
+      const time = e.start ? (e.end ? `${e.start}–${e.end}` : e.start) : "";
+      let label = time ? `${day} ${time}` : day;
+      if (e.from && e.until) label += ` (${formatDate(e.from)}–${formatDate(e.until)})`;
+      else if (e.until) label += ` (até ${formatDate(e.until)})`;
+      else if (e.from) label += ` (desde ${formatDate(e.from)})`;
+      return label;
     })
     .join(", ");
 }

@@ -2,7 +2,16 @@ import { prisma } from "@/lib/prisma";
 
 const HORIZON_WEEKS = 12;
 
-type ScheduleEntry = { weekday: number; start: string; end: string };
+type ScheduleEntry = {
+  weekday: number;
+  start: string;
+  end: string;
+  // Scopes when this specific entry is in effect — set when a schedule
+  // changed and the old entry was kept on record instead of deleted.
+  // Undefined means "since enrollment" / "still ongoing" respectively.
+  from?: string;
+  until?: string;
+};
 
 function parseSchedule(value: unknown): ScheduleEntry[] {
   if (!Array.isArray(value)) return [];
@@ -17,6 +26,8 @@ function parseSchedule(value: unknown): ScheduleEntry[] {
       weekday: e.weekday,
       start: typeof e.start === "string" ? e.start : "",
       end: typeof e.end === "string" ? e.end : "",
+      from: typeof e.from === "string" && e.from ? e.from : undefined,
+      until: typeof e.until === "string" && e.until ? e.until : undefined,
     }));
 }
 
@@ -91,14 +102,24 @@ export async function syncRecurringLessons(studentId: string) {
     const [hour, minute] = entry.start.split(":").map(Number);
     if (Number.isNaN(hour) || Number.isNaN(minute)) continue;
 
-    const cursor = new Date(anchor);
+    // An entry's own from/until only ever narrows the overall
+    // [anchor, horizonEnd] window — e.g. an old entry kept on record after
+    // a schedule change gets an "until" so it stops generating past the
+    // date it was replaced, while the new entry's "from" picks up after it.
+    const entryFrom = entry.from ? new Date(entry.from) : null;
+    const entryUntil = entry.until ? new Date(entry.until) : null;
+    const rangeStart = entryFrom && entryFrom > anchor ? entryFrom : anchor;
+    const rangeEnd = entryUntil && entryUntil < horizonEnd ? entryUntil : horizonEnd;
+    if (rangeStart > rangeEnd) continue;
+
+    const cursor = new Date(rangeStart);
     cursor.setHours(0, 0, 0, 0);
     const daysUntilTarget = (entry.weekday - cursor.getDay() + 7) % 7;
     cursor.setDate(cursor.getDate() + daysUntilTarget);
     cursor.setHours(hour, minute, 0, 0);
-    if (cursor < anchor) cursor.setDate(cursor.getDate() + 7);
+    if (cursor < rangeStart) cursor.setDate(cursor.getDate() + 7);
 
-    while (cursor <= horizonEnd) {
+    while (cursor <= rangeEnd) {
       toCreate.push({
         studentId,
         teacherId: student.teacherId,

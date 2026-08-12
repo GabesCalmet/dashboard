@@ -59,6 +59,8 @@ export const studentFormSchema = z.object({
             weekday: e.weekday,
             start: typeof e.start === "string" ? e.start : "",
             end: typeof e.end === "string" ? e.end : "",
+            from: typeof e.from === "string" && e.from ? e.from : undefined,
+            until: typeof e.until === "string" && e.until ? e.until : undefined,
           }));
       } catch {
         return [];
