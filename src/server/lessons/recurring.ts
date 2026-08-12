@@ -67,6 +67,17 @@ export async function syncRecurringLessons(studentId: string) {
   const schedule = parseSchedule(student.lessonSchedule);
   if (schedule.length === 0) return;
 
+  // Anything still on the books after the delete above — a real reported
+  // outcome (OK/NC/CA/...) or a manually booked lesson — must never be
+  // duplicated by the generator below, even if the weekly schedule would
+  // otherwise also land on that exact date/time (e.g. when backfilling a
+  // gap that spans dates already reported on).
+  const existingLessons = await prisma.lesson.findMany({
+    where: { studentId },
+    select: { scheduledAt: true },
+  });
+  const existingTimes = new Set(existingLessons.map((l) => l.scheduledAt.getTime()));
+
   const now = new Date();
   // The earliest day to schedule from is always the enrollment start date —
   // whether that's in the past (so history gets backfilled up to today) or
@@ -120,13 +131,15 @@ export async function syncRecurringLessons(studentId: string) {
     if (cursor < rangeStart) cursor.setDate(cursor.getDate() + 7);
 
     while (cursor <= rangeEnd) {
-      toCreate.push({
-        studentId,
-        teacherId: student.teacherId,
-        scheduledAt: new Date(cursor),
-        durationMin: durationFromTimes(entry.start, entry.end),
-        isRecurring: true,
-      });
+      if (!existingTimes.has(cursor.getTime())) {
+        toCreate.push({
+          studentId,
+          teacherId: student.teacherId,
+          scheduledAt: new Date(cursor),
+          durationMin: durationFromTimes(entry.start, entry.end),
+          isRecurring: true,
+        });
+      }
       cursor.setDate(cursor.getDate() + 7);
     }
   }
