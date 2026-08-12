@@ -1,20 +1,35 @@
 "use client";
 
 import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export type ScheduleEntry = { weekday: number; start: string; end: string };
 
 const DAYS = [
-  { value: 0, label: "D", name: "Domingo" },
-  { value: 1, label: "S", name: "Segunda" },
-  { value: 2, label: "T", name: "Terça" },
-  { value: 3, label: "Q", name: "Quarta" },
-  { value: 4, label: "Q", name: "Quinta" },
-  { value: 5, label: "S", name: "Sexta" },
-  { value: 6, label: "S", name: "Sábado" },
+  { value: 0, name: "Domingo" },
+  { value: 1, name: "Segunda" },
+  { value: 2, name: "Terça" },
+  { value: 3, name: "Quarta" },
+  { value: 4, name: "Quinta" },
+  { value: 5, name: "Sexta" },
+  { value: 6, name: "Sábado" },
 ];
+
+// Local-only id so each row can be edited/removed independently — never
+// persisted, since a student can now have more than one entry on the same
+// weekday (e.g. an old time kept on record alongside a newly added one
+// after a schedule change).
+let nextId = 0;
+type EditorEntry = ScheduleEntry & { _id: number };
 
 export function LessonScheduleEditor({
   name,
@@ -23,74 +38,82 @@ export function LessonScheduleEditor({
   name: string;
   defaultValue?: ScheduleEntry[];
 }) {
-  const [schedule, setSchedule] = useState<ScheduleEntry[]>(defaultValue);
+  const [entries, setEntries] = useState<EditorEntry[]>(() =>
+    defaultValue.map((e) => ({ ...e, _id: nextId++ }))
+  );
 
-  function toggleDay(weekday: number) {
-    setSchedule((prev) => {
-      const exists = prev.some((e) => e.weekday === weekday);
-      if (exists) return prev.filter((e) => e.weekday !== weekday);
-      return [...prev, { weekday, start: "", end: "" }].sort((a, b) => a.weekday - b.weekday);
-    });
+  function addEntry() {
+    setEntries((prev) => [...prev, { weekday: 1, start: "", end: "", _id: nextId++ }]);
   }
 
-  function updateEntry(weekday: number, field: "start" | "end", value: string) {
-    setSchedule((prev) =>
-      prev.map((e) => (e.weekday === weekday ? { ...e, [field]: value } : e))
-    );
+  function removeEntry(id: number) {
+    setEntries((prev) => prev.filter((e) => e._id !== id));
   }
 
-  const selectedDays = new Set(schedule.map((e) => e.weekday));
+  function updateEntry(id: number, field: "weekday" | "start" | "end", value: string | number) {
+    setEntries((prev) => prev.map((e) => (e._id === id ? { ...e, [field]: value } : e)));
+  }
+
+  const schedule: ScheduleEntry[] = entries.map(({ weekday, start, end }) => ({
+    weekday,
+    start,
+    end,
+  }));
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <input type="hidden" name={name} value={JSON.stringify(schedule)} />
-      <div className="flex gap-1.5">
-        {DAYS.map((day) => {
-          const active = selectedDays.has(day.value);
-          return (
-            <button
-              key={day.value}
-              type="button"
-              title={day.name}
-              onClick={() => toggleDay(day.value)}
-              aria-pressed={active}
-              className={cn(
-                "flex size-9 items-center justify-center rounded-full border text-sm font-medium transition-colors",
-                active
-                  ? "border-accent bg-accent text-accent-foreground"
-                  : "border-input bg-transparent text-muted-foreground hover:bg-secondary"
-              )}
-            >
-              {day.label}
-            </button>
-          );
-        })}
-      </div>
 
-      {schedule.length > 0 && (
-        <div className="space-y-2 rounded-lg border p-3">
-          {schedule.map((entry) => (
-            <div key={entry.weekday} className="flex items-center gap-2">
-              <span className="w-20 shrink-0 text-sm font-medium">
-                {DAYS[entry.weekday].name}
-              </span>
-              <Input
-                type="time"
-                value={entry.start}
-                onChange={(e) => updateEntry(entry.weekday, "start", e.target.value)}
-                aria-label={`Início — ${DAYS[entry.weekday].name}`}
-              />
-              <span className="text-muted-foreground">até</span>
-              <Input
-                type="time"
-                value={entry.end}
-                onChange={(e) => updateEntry(entry.weekday, "end", e.target.value)}
-                aria-label={`Término — ${DAYS[entry.weekday].name}`}
-              />
-            </div>
-          ))}
+      {entries.map((entry) => (
+        <div key={entry._id} className="flex items-center gap-2">
+          <Select
+            value={String(entry.weekday)}
+            onValueChange={(v) => updateEntry(entry._id, "weekday", Number(v))}
+          >
+            <SelectTrigger className="w-32 shrink-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DAYS.map((d) => (
+                <SelectItem key={d.value} value={String(d.value)}>
+                  {d.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            type="time"
+            value={entry.start}
+            onChange={(e) => updateEntry(entry._id, "start", e.target.value)}
+            aria-label={`Início — ${DAYS[entry.weekday].name}`}
+          />
+          <span className="shrink-0 text-sm text-muted-foreground">até</span>
+          <Input
+            type="time"
+            value={entry.end}
+            onChange={(e) => updateEntry(entry._id, "end", e.target.value)}
+            aria-label={`Término — ${DAYS[entry.weekday].name}`}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="shrink-0 text-muted-foreground hover:text-destructive"
+            onClick={() => removeEntry(entry._id)}
+            aria-label="Remover horário"
+          >
+            <X className="size-4" />
+          </Button>
         </div>
+      ))}
+
+      {entries.length === 0 && (
+        <p className="text-sm text-muted-foreground">Nenhum horário adicionado ainda.</p>
       )}
+
+      <Button type="button" variant="outline" size="sm" onClick={addEntry}>
+        <Plus className="size-4" /> Adicionar horário
+      </Button>
     </div>
   );
 }
