@@ -40,7 +40,7 @@ export async function getFinancialOverview(year?: number, month?: number) {
   const rows = activeStudents
     .filter((s) => s.startDate <= monthEnd || studentIdsWithPayment.has(s.id))
     .flatMap((s) =>
-      getBillingSlots(s).map((slot) => {
+      getBillingSlots(s, monthStart).map((slot) => {
         const payment = paymentBySlot.get(`${s.id}::${slot.payerName ?? ""}`);
         if (payment) {
           return {

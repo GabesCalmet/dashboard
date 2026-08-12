@@ -22,6 +22,7 @@ import { LessonHistoryTable } from "@/components/students/lesson-history-table";
 import { StudentPaymentsTable } from "@/components/students/student-payments-table";
 import { StudentFormDialog } from "@/components/students/student-form-dialog";
 import type { ScheduleEntry } from "@/components/students/lesson-schedule-editor";
+import type { ValueHistoryEntry } from "@/components/students/monthly-value-history-editor";
 import { DeleteStudentButton } from "@/components/students/delete-student-button";
 import { ResyncLessonsButton } from "@/components/students/resync-lessons-button";
 import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
@@ -159,6 +160,7 @@ export function StudentDetailView({
                   courseId: student.courseId,
                   planId: student.planId,
                   monthlyValue: Number(student.monthlyValue),
+                  monthlyValueHistory: parseValueHistory(student.monthlyValueHistory),
                   bankAccount: student.bankAccount,
                   dueDay: student.dueDay,
                   thirdPartyPayerName: student.thirdPartyPayerName,
@@ -343,6 +345,20 @@ export function StudentDetailView({
 }
 
 const WEEKDAY_ABBR = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+function parseValueHistory(value: unknown): ValueHistoryEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (e): e is { amount: number; from?: string; until?: string } =>
+        typeof e === "object" && e !== null && typeof (e as Record<string, unknown>).amount === "number"
+    )
+    .map((e) => ({
+      amount: e.amount,
+      from: typeof e.from === "string" && e.from ? e.from : undefined,
+      until: typeof e.until === "string" && e.until ? e.until : undefined,
+    }));
+}
 
 function parseLessonSchedule(value: unknown): ScheduleEntry[] {
   if (!Array.isArray(value)) return [];

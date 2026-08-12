@@ -44,7 +44,7 @@ export async function setCobrancaStatus(
     });
   } else {
     const student = await prisma.studentProfile.findUniqueOrThrow({ where: { id: studentId } });
-    const slot = getBillingSlots(student).find((s) => s.payerName === payerName);
+    const slot = getBillingSlots(student, monthStart).find((s) => s.payerName === payerName);
     if (!slot) throw new Error("Cobrança não encontrada para este pagador.");
     payment = await prisma.payment.create({
       data: {
@@ -83,7 +83,7 @@ export async function generateMonthlyPayments(referenceMonth: Date) {
   for (const student of students) {
     // Never bill a month before the student actually enrolled.
     if (student.startDate > monthEnd) continue;
-    for (const slot of getBillingSlots(student)) {
+    for (const slot of getBillingSlots(student, monthStart)) {
       const existing = await prisma.payment.findFirst({
         where: { studentId: student.id, referenceMonth: monthStart, payerName: slot.payerName },
       });

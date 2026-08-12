@@ -26,6 +26,10 @@ import {
 import { createStudent, updateStudent } from "@/server/actions/students";
 import { useActionToast } from "@/hooks/use-action-toast";
 import { LessonScheduleEditor, type ScheduleEntry } from "@/components/students/lesson-schedule-editor";
+import {
+  MonthlyValueHistoryEditor,
+  type ValueHistoryEntry,
+} from "@/components/students/monthly-value-history-editor";
 import { levelLabel, bankAccountLabel } from "@/lib/labels";
 import type { CourseLevel, StudentStatus, BankAccount } from "@prisma/client";
 
@@ -44,6 +48,7 @@ type StudentDefaults = {
   courseId?: string | null;
   planId?: string | null;
   monthlyValue: number;
+  monthlyValueHistory?: ValueHistoryEntry[];
   bankAccount?: BankAccount;
   dueDay?: number;
   thirdPartyPayerName?: string | null;
@@ -200,17 +205,12 @@ export function StudentFormDialog({
             </Select>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="monthlyValue">Valor mensal (R$)</Label>
-            <Input
-              id="monthlyValue"
-              name="monthlyValue"
-              type="number"
-              step="0.01"
-              defaultValue={student?.monthlyValue}
-              required
-            />
-          </div>
+          <MonthlyValueHistoryEditor
+            amountFieldName="monthlyValue"
+            historyFieldName="monthlyValueHistory"
+            defaultAmount={student?.monthlyValue ?? 0}
+            defaultHistory={student?.monthlyValueHistory ?? []}
+          />
 
           <div className="flex items-end pb-1.5">
             <label className="flex items-center gap-2 text-sm">

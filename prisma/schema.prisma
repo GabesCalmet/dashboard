@@ -195,6 +195,14 @@ model StudentProfile {
   planId            String?
   plan              Plan?           @relation(fields: [planId], references: [id])
   monthlyValue      Decimal         @db.Decimal(10, 2)
+  // History of monthlyValue changes over time —
+  // [{ "amount": 141.02, "from": "2026-01-01", "until": "2026-06-30" }, ...].
+  // monthlyValue always mirrors whichever entry is in effect today (or the
+  // most recent one with no "until"), kept in sync on every edit, so
+  // simple aggregate queries (dashboards, CSV) keep reading a flat number;
+  // getBillingSlots resolves the historically-correct amount for a given
+  // reference month from this instead when generating/previewing cobranças.
+  monthlyValueHistory Json          @default("[]")
   bankAccount       BankAccount     @default(JOE) // which of the school's 3 accounts receives this student's payments
   dueDay            Int             @default(10) // day of the month the invoice ("boleto") is due, 1-31
   // Optional third-party payer (e.g. a company) covering part or all of

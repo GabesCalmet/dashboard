@@ -14,16 +14,57 @@ export type BillingSlot = {
   bankAccount: BankAccount;
 };
 
-export function getBillingSlots(student: {
-  monthlyValue: unknown;
-  dueDay: number;
-  bankAccount: BankAccount;
-  thirdPartyAmount: unknown;
-  thirdPartyPayerName: string | null;
-  thirdPartyDueDay: number | null;
-  thirdPartyBankAccount: BankAccount | null;
-}): BillingSlot[] {
-  const own = Number(student.monthlyValue);
+export type ValueHistoryEntry = { amount: number; from?: string; until?: string };
+
+function parseValueHistory(value: unknown): ValueHistoryEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (e): e is ValueHistoryEntry =>
+        typeof e === "object" && e !== null && typeof (e as Record<string, unknown>).amount === "number"
+    )
+    .map((e) => ({
+      amount: e.amount,
+      from: typeof e.from === "string" && e.from ? e.from : undefined,
+      until: typeof e.until === "string" && e.until ? e.until : undefined,
+    }));
+}
+
+// Resolves what the student's own portion should be billed for a specific
+// reference month — using the historical entry in effect then, if one was
+// configured, falling back to the current monthlyValue for any month no
+// history entry covers (which is every month for a student who's never
+// had a price change recorded).
+function resolveMonthlyValue(monthlyValue: unknown, monthlyValueHistory: unknown, referenceMonth: Date) {
+  const entries = parseValueHistory(monthlyValueHistory);
+  if (entries.length === 0) return Number(monthlyValue);
+
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+  const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
+  const match = entries.find((e) => {
+    const from = e.from ? new Date(e.from) : null;
+    const until = e.until ? new Date(e.until) : null;
+    if (from && from > monthEnd) return false;
+    if (until && until < monthStart) return false;
+    return true;
+  });
+  return match ? match.amount : Number(monthlyValue);
+}
+
+export function getBillingSlots(
+  student: {
+    monthlyValue: unknown;
+    monthlyValueHistory?: unknown;
+    dueDay: number;
+    bankAccount: BankAccount;
+    thirdPartyAmount: unknown;
+    thirdPartyPayerName: string | null;
+    thirdPartyDueDay: number | null;
+    thirdPartyBankAccount: BankAccount | null;
+  },
+  referenceMonth: Date
+): BillingSlot[] {
+  const own = resolveMonthlyValue(student.monthlyValue, student.monthlyValueHistory, referenceMonth);
   const thirdPartyAmt = student.thirdPartyAmount ? Number(student.thirdPartyAmount) : 0;
   const slots: BillingSlot[] = [];
 
