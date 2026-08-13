@@ -90,26 +90,6 @@ export function LessonReportForm({
         <Label htmlFor="contentTaught">Conteúdo ensinado</Label>
         <Textarea id="contentTaught" name="contentTaught" defaultValue={lesson.contentTaught ?? ""} />
       </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="vocabulary">Vocabulary</Label>
-        <Textarea id="vocabulary" name="vocabulary" />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="grammar">Grammar</Label>
-        <Textarea id="grammar" name="grammar" />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="speaking">Speaking</Label>
-        <Textarea id="speaking" name="speaking" />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="listening">Listening</Label>
-        <Textarea id="listening" name="listening" />
-      </div>
-      <div className="space-y-1.5 sm:col-span-2">
-        <Label htmlFor="homework">Homework</Label>
-        <Textarea id="homework" name="homework" defaultValue={lesson.homework ?? ""} />
-      </div>
       <div className="space-y-1.5 sm:col-span-2">
         <Label htmlFor="observations">Observações</Label>
         <Textarea id="observations" name="observations" defaultValue={lesson.observations ?? ""} />

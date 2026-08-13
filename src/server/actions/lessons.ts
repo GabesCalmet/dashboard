@@ -76,11 +76,6 @@ export async function submitLessonReport(
       durationMin: data.durationMin,
       status: data.status,
       contentTaught: data.contentTaught,
-      vocabulary: data.vocabulary,
-      grammar: data.grammar,
-      speaking: data.speaking,
-      listening: data.listening,
-      homework: data.homework,
       observations: data.observations,
       difficulties: data.difficulties,
       nextTopics: data.nextTopics,
@@ -90,29 +85,17 @@ export async function submitLessonReport(
     },
   });
 
-  if (data.homework || data.observations) {
+  if (data.observations) {
     const student = await prisma.studentProfile.findUnique({ where: { id: lesson.studentId } });
     if (student) {
-      if (data.homework) {
-        await prisma.notification.create({
-          data: {
-            userId: student.userId,
-            type: "HOMEWORK_AVAILABLE",
-            title: "Novo homework disponível",
-            message: "Seu professor registrou uma nova tarefa de casa após a aula.",
-          },
-        });
-      }
-      if (data.observations) {
-        await prisma.notification.create({
-          data: {
-            userId: student.userId,
-            type: "TEACHER_OBSERVATION",
-            title: "Nova observação do professor",
-            message: "Seu professor deixou uma observação sobre sua última aula.",
-          },
-        });
-      }
+      await prisma.notification.create({
+        data: {
+          userId: student.userId,
+          type: "TEACHER_OBSERVATION",
+          title: "Nova observação do professor",
+          message: "Seu professor deixou uma observação sobre sua última aula.",
+        },
+      });
     }
   }
 
