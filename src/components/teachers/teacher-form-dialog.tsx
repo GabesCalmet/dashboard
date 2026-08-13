@@ -17,6 +17,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createTeacher, updateTeacher } from "@/server/actions/teachers";
 import { useActionToast } from "@/hooks/use-action-toast";
+import {
+  MonthlyValueHistoryEditor,
+  type ValueHistoryEntry,
+} from "@/components/students/monthly-value-history-editor";
 
 type TeacherDefaults = {
   id: string;
@@ -26,7 +30,9 @@ type TeacherDefaults = {
   phone?: string | null;
   specialties: string[];
   hourlyRate: number;
+  hourlyRateHistory?: ValueHistoryEntry[];
   admissionDate?: string;
+  endDate?: string;
   notes?: string | null;
 };
 
@@ -92,18 +98,18 @@ export function TeacherFormDialog({ teacher }: { teacher?: TeacherDefaults }) {
             <Label htmlFor="admissionDate">Data de admissão</Label>
             <Input id="admissionDate" name="admissionDate" type="date" defaultValue={teacher?.admissionDate} />
           </div>
-
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="hourlyRate">Valor por hora (R$)</Label>
-            <Input
-              id="hourlyRate"
-              name="hourlyRate"
-              type="number"
-              step="0.01"
-              defaultValue={teacher?.hourlyRate}
-              required
-            />
+          <div className="space-y-1.5">
+            <Label htmlFor="endDate">Data de término (opcional)</Label>
+            <Input id="endDate" name="endDate" type="date" defaultValue={teacher?.endDate} />
           </div>
+
+          <MonthlyValueHistoryEditor
+            label="Valor por hora (R$)"
+            amountFieldName="hourlyRate"
+            historyFieldName="hourlyRateHistory"
+            defaultAmount={teacher?.hourlyRate ?? 0}
+            defaultHistory={teacher?.hourlyRateHistory ?? []}
+          />
 
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="specialties">Especialidades (separadas por vírgula)</Label>

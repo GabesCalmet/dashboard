@@ -166,11 +166,19 @@ model TeacherProfile {
   specialties   String[]
   availability  Json? // { mon: ["09:00-12:00"], tue: [...] }
   hourlyRate    Decimal  @db.Decimal(10, 2)
+  // History of hourlyRate changes over time, same shape/sync rule as
+  // StudentProfile.monthlyValueHistory — hourlyRate always mirrors
+  // whichever entry is in effect today (or the most recent one), kept in
+  // sync on every edit. Record-keeping only; no calculation currently
+  // resolves a rate for a specific past month.
+  hourlyRateHistory Json @default("[]")
   // Deprecated — no longer collected at cadastro; actual monthly class load
   // is computed instead (see server/queries/teachers.ts). Kept only so
   // existing rows don't need a backfill; new rows just get the default.
   weeklyHours   Int      @default(0)
   admissionDate DateTime
+  // Optional — this teacher's employment end date, if known.
+  endDate       DateTime?
   notes         String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

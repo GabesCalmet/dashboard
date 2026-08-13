@@ -19,7 +19,29 @@ export const teacherFormSchema = z.object({
   phone: z.string().optional(),
   specialties: z.string().optional(), // comma-separated
   hourlyRate: z.coerce.number().min(0),
+  // Submitted by MonthlyValueHistoryEditor as a JSON string, e.g.
+  // '[{"amount":30,"from":"2026-01-01","until":"2026-06-30"}]'.
+  hourlyRateHistory: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val) return [];
+      try {
+        const parsed = JSON.parse(val);
+        if (!Array.isArray(parsed)) return [];
+        return parsed
+          .filter((e) => e && typeof e.amount === "number")
+          .map((e) => ({
+            amount: e.amount,
+            from: typeof e.from === "string" && e.from ? e.from : undefined,
+            until: typeof e.until === "string" && e.until ? e.until : undefined,
+          }));
+      } catch {
+        return [];
+      }
+    }),
   admissionDate: z.string().optional(),
+  endDate: z.string().optional(),
   notes: z.string().optional(),
 });
 

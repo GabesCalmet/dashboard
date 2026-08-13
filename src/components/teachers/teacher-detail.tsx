@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/shared/stat-card";
 import { TeacherFormDialog } from "@/components/teachers/teacher-form-dialog";
+import type { ValueHistoryEntry } from "@/components/students/monthly-value-history-editor";
 import { DeleteTeacherButton } from "@/components/teachers/delete-teacher-button";
 import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
 import { SetPasswordButton } from "@/components/shared/set-password-button";
@@ -70,7 +71,9 @@ export function TeacherDetailView({
                   phone: teacher.user.phone,
                   specialties: teacher.specialties,
                   hourlyRate: Number(teacher.hourlyRate),
+                  hourlyRateHistory: parseValueHistory(teacher.hourlyRateHistory),
                   admissionDate: teacher.admissionDate.toISOString().slice(0, 10),
+                  endDate: teacher.endDate?.toISOString().slice(0, 10),
                   notes: teacher.notes,
                 }}
               />
@@ -147,6 +150,7 @@ export function TeacherDetailView({
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <Row label="Admissão" value={formatDate(teacher.admissionDate)} />
+            <Row label="Término" value={teacher.endDate ? formatDate(teacher.endDate) : "—"} />
             <Row label="Observações" value={teacher.notes || "—"} />
           </CardContent>
         </Card>
@@ -162,4 +166,18 @@ function Row({ label, value }: { label: string; value: string }) {
       <p className="font-medium">{value}</p>
     </div>
   );
+}
+
+function parseValueHistory(value: unknown): ValueHistoryEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (e): e is { amount: number; from?: string; until?: string } =>
+        typeof e === "object" && e !== null && typeof (e as Record<string, unknown>).amount === "number"
+    )
+    .map((e) => ({
+      amount: e.amount,
+      from: typeof e.from === "string" && e.from ? e.from : undefined,
+      until: typeof e.until === "string" && e.until ? e.until : undefined,
+    }));
 }

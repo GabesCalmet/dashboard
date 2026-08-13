@@ -23,11 +23,13 @@ function resolveCurrentAmount(entries: ValueHistoryEntry[]): number {
 }
 
 export function MonthlyValueHistoryEditor({
+  label = "Valor mensal (R$)",
   amountFieldName,
   historyFieldName,
   defaultAmount,
   defaultHistory = [],
 }: {
+  label?: string;
   amountFieldName: string;
   historyFieldName: string;
   defaultAmount: number;
@@ -66,7 +68,7 @@ export function MonthlyValueHistoryEditor({
 
   return (
     <div className="space-y-2 sm:col-span-2">
-      <Label>Valor mensal (R$)</Label>
+      <Label>{label}</Label>
       <input type="hidden" name={amountFieldName} value={currentAmount} />
       <input type="hidden" name={historyFieldName} value={JSON.stringify(history)} />
 
