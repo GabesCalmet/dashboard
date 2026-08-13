@@ -23,6 +23,7 @@ import { StudentPaymentsTable } from "@/components/students/student-payments-tab
 import { StudentFormDialog } from "@/components/students/student-form-dialog";
 import type { ScheduleEntry } from "@/components/students/lesson-schedule-editor";
 import type { ValueHistoryEntry } from "@/components/students/monthly-value-history-editor";
+import type { SelectHistoryEntry } from "@/components/students/select-history-editor";
 import { DeleteStudentButton } from "@/components/students/delete-student-button";
 import { ResyncLessonsButton } from "@/components/students/resync-lessons-button";
 import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
@@ -157,8 +158,11 @@ export function StudentDetailView({
                   birthDate: student.birthDate?.toISOString().slice(0, 10),
                   address: student.address,
                   teacherId: student.teacherId,
+                  teacherHistory: parseSelectHistory(student.teacherHistory),
                   courseId: student.courseId,
+                  courseHistory: parseSelectHistory(student.courseHistory),
                   planId: student.planId,
+                  planHistory: parseSelectHistory(student.planHistory),
                   monthlyValue: Number(student.monthlyValue),
                   monthlyValueHistory: parseValueHistory(student.monthlyValueHistory),
                   bankAccount: student.bankAccount,
@@ -345,6 +349,20 @@ export function StudentDetailView({
 }
 
 const WEEKDAY_ABBR = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+function parseSelectHistory(value: unknown): SelectHistoryEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (e): e is { id: string; from?: string; until?: string } =>
+        typeof e === "object" && e !== null && typeof (e as Record<string, unknown>).id === "string"
+    )
+    .map((e) => ({
+      id: e.id,
+      from: typeof e.from === "string" && e.from ? e.from : undefined,
+      until: typeof e.until === "string" && e.until ? e.until : undefined,
+    }));
+}
 
 function parseValueHistory(value: unknown): ValueHistoryEntry[] {
   if (!Array.isArray(value)) return [];

@@ -39,6 +39,38 @@ function durationFromTimes(start: string, end: string) {
   return minutes > 0 ? minutes : 50;
 }
 
+type SelectHistoryEntry = { id: string; from?: string; until?: string };
+
+function parseSelectHistory(value: unknown): SelectHistoryEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (e): e is SelectHistoryEntry =>
+        typeof e === "object" && e !== null && typeof (e as Record<string, unknown>).id === "string"
+    )
+    .map((e) => ({
+      id: e.id,
+      from: typeof e.from === "string" && e.from ? e.from : undefined,
+      until: typeof e.until === "string" && e.until ? e.until : undefined,
+    }));
+}
+
+// Resolves which teacher a lesson on a given date should be assigned to —
+// using the historical entry in effect then, if a teacher change was
+// recorded, falling back to the student's current teacherId for any date
+// no history entry covers.
+function resolveTeacherId(defaultTeacherId: string, history: SelectHistoryEntry[], date: Date) {
+  if (history.length === 0) return defaultTeacherId;
+  const match = history.find((e) => {
+    const from = e.from ? new Date(e.from) : null;
+    const until = e.until ? new Date(e.until) : null;
+    if (from && date < from) return false;
+    if (until && date > until) return false;
+    return true;
+  });
+  return match ? match.id : defaultTeacherId;
+}
+
 // Regenerates a student's recurring lessons (from their enrollment start
 // date through the last class on/before the 15th of the month closing out
 // the next ~HORIZON_WEEKS, or their course end date if that comes sooner)
@@ -77,6 +109,7 @@ export async function syncRecurringLessons(studentId: string) {
     select: { scheduledAt: true },
   });
   const existingTimes = new Set(existingLessons.map((l) => l.scheduledAt.getTime()));
+  const teacherHistory = parseSelectHistory(student.teacherHistory);
 
   const now = new Date();
   // The earliest day to schedule from is always the enrollment start date —
@@ -134,7 +167,7 @@ export async function syncRecurringLessons(studentId: string) {
       if (!existingTimes.has(cursor.getTime())) {
         toCreate.push({
           studentId,
-          teacherId: student.teacherId,
+          teacherId: resolveTeacherId(student.teacherId, teacherHistory, cursor),
           scheduledAt: new Date(cursor),
           durationMin: durationFromTimes(entry.start, entry.end),
           isRecurring: true,

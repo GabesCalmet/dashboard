@@ -190,10 +190,21 @@ model StudentProfile {
   address           String?
   teacherId         String?
   teacher           TeacherProfile? @relation("StudentProfile_teacher", fields: [teacherId], references: [id])
+  // History of teacher changes — [{ "id": "<teacherId>", "from": "...", "until": "..." }, ...].
+  // teacherId always mirrors whichever entry is in effect today (or the
+  // most recent one), and syncRecurringLessons resolves the
+  // historically-correct teacher per generated lesson from this instead.
+  teacherHistory    Json            @default("[]")
   courseId          String?
   course            Course?         @relation(fields: [courseId], references: [id])
+  // Record of past courses, same shape as teacherHistory — informational
+  // only, doesn't drive any generation logic.
+  courseHistory     Json            @default("[]")
   planId            String?
   plan              Plan?           @relation(fields: [planId], references: [id])
+  // Record of past plans, same shape as teacherHistory — informational
+  // only, doesn't drive any generation logic.
+  planHistory       Json            @default("[]")
   monthlyValue      Decimal         @db.Decimal(10, 2)
   // History of monthlyValue changes over time —
   // [{ "amount": 141.02, "from": "2026-01-01", "until": "2026-06-30" }, ...].

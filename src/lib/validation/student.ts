@@ -12,6 +12,28 @@ const usernameField = z
 
 const passwordField = z.string().min(6, "A senha deve ter ao menos 6 caracteres");
 
+// Submitted by SelectHistoryEditor as a JSON string, e.g.
+// '[{"id":"<teacherId>","from":"2026-01-01","until":"2026-06-30"}]'.
+const selectHistoryField = z
+  .string()
+  .optional()
+  .transform((val) => {
+    if (!val) return [];
+    try {
+      const parsed = JSON.parse(val);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter((e) => e && typeof e.id === "string" && e.id)
+        .map((e) => ({
+          id: e.id,
+          from: typeof e.from === "string" && e.from ? e.from : undefined,
+          until: typeof e.until === "string" && e.until ? e.until : undefined,
+        }));
+    } catch {
+      return [];
+    }
+  });
+
 export const studentFormSchema = z.object({
   name: z.string().min(2, "Informe o nome completo"),
   username: usernameField,
@@ -23,8 +45,11 @@ export const studentFormSchema = z.object({
   birthDate: z.string().optional(),
   address: z.string().optional(),
   teacherId: z.string().optional(),
+  teacherHistory: selectHistoryField,
   courseId: z.string().optional(),
+  courseHistory: selectHistoryField,
   planId: z.string().optional(),
+  planHistory: selectHistoryField,
   monthlyValue: z.coerce.number().min(0, "Valor inválido"),
   // Submitted by MonthlyValueHistoryEditor as a JSON string, e.g.
   // '[{"amount":141.02,"from":"2026-01-01","until":"2026-06-30"}]'.

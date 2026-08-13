@@ -30,6 +30,10 @@ import {
   MonthlyValueHistoryEditor,
   type ValueHistoryEntry,
 } from "@/components/students/monthly-value-history-editor";
+import {
+  SelectHistoryEditor,
+  type SelectHistoryEntry,
+} from "@/components/students/select-history-editor";
 import { levelLabel, bankAccountLabel } from "@/lib/labels";
 import type { CourseLevel, StudentStatus, BankAccount } from "@prisma/client";
 
@@ -45,8 +49,11 @@ type StudentDefaults = {
   birthDate?: string;
   address?: string | null;
   teacherId?: string | null;
+  teacherHistory?: SelectHistoryEntry[];
   courseId?: string | null;
+  courseHistory?: SelectHistoryEntry[];
   planId?: string | null;
+  planHistory?: SelectHistoryEntry[];
   monthlyValue: number;
   monthlyValueHistory?: ValueHistoryEntry[];
   bankAccount?: BankAccount;
@@ -157,53 +164,32 @@ export function StudentFormDialog({
             <Input id="address" name="address" defaultValue={student?.address ?? ""} />
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Professor</Label>
-            <Select name="teacherId" defaultValue={student?.teacherId ?? undefined}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {teachers.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <SelectHistoryEditor
+            label="Professor"
+            valueFieldName="teacherId"
+            historyFieldName="teacherHistory"
+            options={teachers}
+            defaultValue={student?.teacherId}
+            defaultHistory={student?.teacherHistory ?? []}
+          />
 
-          <div className="space-y-1.5">
-            <Label>Curso</Label>
-            <Select name="courseId" defaultValue={student?.courseId ?? undefined}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {courses.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <SelectHistoryEditor
+            label="Curso"
+            valueFieldName="courseId"
+            historyFieldName="courseHistory"
+            options={courses}
+            defaultValue={student?.courseId}
+            defaultHistory={student?.courseHistory ?? []}
+          />
 
-          <div className="space-y-1.5">
-            <Label>Plano</Label>
-            <Select name="planId" defaultValue={student?.planId ?? undefined}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {plans.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <SelectHistoryEditor
+            label="Plano"
+            valueFieldName="planId"
+            historyFieldName="planHistory"
+            options={plans}
+            defaultValue={student?.planId}
+            defaultHistory={student?.planHistory ?? []}
+          />
 
           <MonthlyValueHistoryEditor
             amountFieldName="monthlyValue"
