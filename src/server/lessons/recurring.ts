@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { BRAZIL_UTC_OFFSET_MS } from "@/lib/timezone";
 
 const HORIZON_WEEKS = 12;
 
@@ -160,7 +161,12 @@ export async function syncRecurringLessons(studentId: string) {
     cursor.setHours(0, 0, 0, 0);
     const daysUntilTarget = (entry.weekday - cursor.getDay() + 7) % 7;
     cursor.setDate(cursor.getDate() + daysUntilTarget);
+    // setHours operates in the server's local time, which on Vercel is
+    // always UTC regardless of deployment region — so this sets hour:minute
+    // as if it were already UTC. Shift by the Brazil offset to get the
+    // instant that's actually hour:minute in Brazil wall-clock time.
     cursor.setHours(hour, minute, 0, 0);
+    cursor.setTime(cursor.getTime() + BRAZIL_UTC_OFFSET_MS);
     if (cursor < rangeStart) cursor.setDate(cursor.getDate() + 7);
 
     while (cursor <= rangeEnd) {

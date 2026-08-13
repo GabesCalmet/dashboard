@@ -13,6 +13,7 @@ import {
   reschedulableStatuses,
 } from "@/lib/validation/lesson";
 import type { ActionState } from "@/server/actions/students";
+import { brazilDateTime } from "@/lib/timezone";
 
 export async function scheduleLesson(
   _prev: ActionState,
@@ -25,7 +26,7 @@ export async function scheduleLesson(
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
   const data = parsed.data;
-  const scheduledAt = new Date(`${data.date}T${data.time}:00`);
+  const scheduledAt = brazilDateTime(data.date, data.time);
 
   const lesson = await prisma.lesson.create({
     data: {
@@ -67,7 +68,7 @@ export async function submitLessonReport(
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
   const data = parsed.data;
-  const scheduledAt = new Date(`${data.date}T${data.time}:00`);
+  const scheduledAt = brazilDateTime(data.date, data.time);
 
   await prisma.lesson.update({
     where: { id: lessonId },
@@ -252,7 +253,7 @@ export async function scheduleLessonReschedule(
     throw new Error(parsed.error.issues[0]?.message ?? "Dados inválidos.");
   }
   const { actor, lesson } = await requireLessonEditAccess(lessonId);
-  const scheduledAt = new Date(`${parsed.data.date}T${parsed.data.time}:00`);
+  const scheduledAt = brazilDateTime(parsed.data.date, parsed.data.time);
   const durationMin = durationFromTimes(parsed.data.time, parsed.data.endTime) ?? lesson.durationMin;
 
   const existing = await prisma.lesson.findUnique({ where: { rescheduledFromId: lessonId } });
