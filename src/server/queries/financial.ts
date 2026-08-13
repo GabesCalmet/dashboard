@@ -300,3 +300,70 @@ export async function getFinancialSummary() {
     totalContributors,
   };
 }
+
+// Full billing picture for one student's own Financeiro tab — every real
+// generated Payment plus a live placeholder (same rule the Cobranças table
+// uses) for any month since enrollment that hasn't been generated yet, so
+// the tab doesn't only show whichever months an admin happened to click
+// "Gerar cobranças" for. Placeholders stop once the student isn't ACTIVE
+// (nothing new is expected), but real past rows for a since-paused/
+// canceled student are always included regardless.
+export async function getStudentPaymentHistory(studentId: string) {
+  const student = await prisma.studentProfile.findUniqueOrThrow({ where: { id: studentId } });
+  const realPayments = await prisma.payment.findMany({ where: { studentId } });
+  const paymentBySlot = new Map(
+    realPayments.map((p) => [`${p.referenceMonth.toISOString().slice(0, 7)}::${p.payerName ?? ""}`, p])
+  );
+
+  const now = new Date();
+  const cursor = new Date(student.startDate.getFullYear(), student.startDate.getMonth(), 1);
+  const end = new Date(now.getFullYear() + 1, 11, 1);
+
+  const rows: {
+    id: string | null;
+    payerName: string | null;
+    amount: number;
+    referenceMonth: Date;
+    dueDate: Date;
+    paidAt: Date | null;
+    status: PaymentStatus;
+    bankAccount: BankAccount;
+  }[] = [];
+
+  while (cursor <= end) {
+    const monthKey = cursor.toISOString().slice(0, 7);
+    const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
+
+    for (const slot of getBillingSlots(student, cursor)) {
+      const real = paymentBySlot.get(`${monthKey}::${slot.payerName ?? ""}`);
+      if (real) {
+        rows.push({
+          id: real.id,
+          payerName: real.payerName,
+          amount: Number(real.amount),
+          referenceMonth: real.referenceMonth,
+          dueDate: real.dueDate,
+          paidAt: real.paidAt,
+          status: real.status,
+          bankAccount: slot.bankAccount,
+        });
+      } else if (student.status === "ACTIVE") {
+        const dueDate = new Date(cursor.getFullYear(), cursor.getMonth(), Math.min(slot.dueDay, daysInMonth));
+        rows.push({
+          id: null,
+          payerName: slot.payerName,
+          amount: slot.amount,
+          referenceMonth: new Date(cursor),
+          dueDate,
+          paidAt: null,
+          status: dueDate < now ? "LATE" : "PENDING",
+          bankAccount: slot.bankAccount,
+        });
+      }
+    }
+
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  return rows.sort((a, b) => b.referenceMonth.getTime() - a.referenceMonth.getTime());
+}

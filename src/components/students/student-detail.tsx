@@ -19,7 +19,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { MonthNav } from "@/components/financial/month-nav";
 import { LevelProgressCard } from "@/components/students/level-progress-card";
 import { LessonHistoryTable } from "@/components/students/lesson-history-table";
-import { StudentPaymentsTable } from "@/components/students/student-payments-table";
+import { StudentPaymentsTable, type PaymentHistoryRow } from "@/components/students/student-payments-table";
 import { StudentFormDialog } from "@/components/students/student-form-dialog";
 import type { ScheduleEntry } from "@/components/students/lesson-schedule-editor";
 import type { ValueHistoryEntry } from "@/components/students/monthly-value-history-editor";
@@ -48,9 +48,13 @@ export function StudentDetailView({
   editOptions,
   auditEntries = [],
   monthNav,
+  paymentHistory = [],
 }: {
   student: Student;
   basePath: string;
+  // Full billing picture (real + placeholder) for the Financeiro tab —
+  // only fetched/passed by pages that set permissions.showFinancial.
+  paymentHistory?: PaymentHistoryRow[];
   // Lets "Aulas contratadas/mês" be checked for a past month instead of
   // only the real current one. selfPath is this same page's URL (no query),
   // used to build the ?month=YYYY-MM prev/next links.
@@ -300,7 +304,7 @@ export function StudentDetailView({
 
             {permissions.showFinancial && (
               <TabsContent value="financial" className="mt-4">
-                <StudentPaymentsTable payments={student.payments} />
+                <StudentPaymentsTable payments={paymentHistory} />
               </TabsContent>
             )}
 

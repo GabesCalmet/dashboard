@@ -7,6 +7,7 @@ import {
   listPlansForSelect,
 } from "@/server/queries/students";
 import { getAuditTrail } from "@/server/audit";
+import { getStudentPaymentHistory } from "@/server/queries/financial";
 import { parseMonthParam } from "@/lib/month-param";
 
 export default async function AdminStudentDetailPage({
@@ -19,12 +20,13 @@ export default async function AdminStudentDetailPage({
   const { id } = await params;
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
-  const [student, teachers, courses, plans, audit] = await Promise.all([
+  const [student, teachers, courses, plans, audit, paymentHistory] = await Promise.all([
     getStudentDetail(id),
     listActiveTeachersForSelect(),
     listCoursesForSelect(),
     listPlansForSelect(),
     getAuditTrail("StudentProfile", id),
+    getStudentPaymentHistory(id),
   ]);
 
   if (!student) notFound();
@@ -34,6 +36,7 @@ export default async function AdminStudentDetailPage({
       student={student}
       basePath="/admin/students"
       monthNav={{ year, month, selfPath: `/admin/students/${id}` }}
+      paymentHistory={paymentHistory}
       permissions={{
         canEdit: true,
         canDelete: true,

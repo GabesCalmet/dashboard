@@ -14,9 +14,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCurrency, formatDate, paymentStatusLabel, paymentStatusVariant } from "@/lib/labels";
-import type { Payment } from "@prisma/client";
+import type { PaymentStatus, BankAccount } from "@prisma/client";
 
-export function StudentPaymentsTable({ payments }: { payments: Payment[] }) {
+export type PaymentHistoryRow = {
+  id: string | null;
+  payerName: string | null;
+  amount: number;
+  referenceMonth: Date;
+  dueDate: Date;
+  paidAt: Date | null;
+  status: PaymentStatus;
+  bankAccount: BankAccount;
+};
+
+export function StudentPaymentsTable({ payments }: { payments: PaymentHistoryRow[] }) {
   const [year, setYear] = useState(() => new Date().getFullYear());
   const filteredPayments = payments.filter(
     (p) => new Date(p.referenceMonth).getFullYear() === year
@@ -46,6 +57,7 @@ export function StudentPaymentsTable({ payments }: { payments: Payment[] }) {
           <TableHeader>
             <TableRow>
               <TableHead>Referência</TableHead>
+              <TableHead>Pagador</TableHead>
               <TableHead>Valor</TableHead>
               <TableHead>Vencimento</TableHead>
               <TableHead>Pago em</TableHead>
@@ -54,13 +66,16 @@ export function StudentPaymentsTable({ payments }: { payments: Payment[] }) {
           </TableHeader>
           <TableBody>
             {filteredPayments.map((p) => (
-              <TableRow key={p.id}>
+              <TableRow key={p.id ?? `${p.referenceMonth.toISOString()}::${p.payerName ?? ""}`}>
                 <TableCell>
                   {new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(
                     p.referenceMonth
                   )}
                 </TableCell>
-                <TableCell>{formatCurrency(p.amount.toString())}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {p.payerName ?? "Aluno"}
+                </TableCell>
+                <TableCell>{formatCurrency(p.amount)}</TableCell>
                 <TableCell>{formatDate(p.dueDate)}</TableCell>
                 <TableCell>{p.paidAt ? formatDate(p.paidAt) : "—"}</TableCell>
                 <TableCell>
@@ -72,7 +87,7 @@ export function StudentPaymentsTable({ payments }: { payments: Payment[] }) {
             ))}
             {filteredPayments.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                   Nenhum pagamento registrado neste ano.
                 </TableCell>
               </TableRow>
