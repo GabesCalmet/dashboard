@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PaymentStatusSelect } from "@/components/financial/payment-status-select";
 import { formatCurrency, formatDate, paymentStatusLabel, paymentStatusVariant } from "@/lib/labels";
 import type { PaymentStatus, BankAccount } from "@prisma/client";
 
@@ -27,7 +28,18 @@ export type PaymentHistoryRow = {
   bankAccount: BankAccount;
 };
 
-export function StudentPaymentsTable({ payments }: { payments: PaymentHistoryRow[] }) {
+export function StudentPaymentsTable({
+  payments,
+  studentId,
+  editable = false,
+}: {
+  payments: PaymentHistoryRow[];
+  studentId: string;
+  // Lets an admin change a cobrança's status directly from the student's
+  // own page — same action (setCobrancaStatus) the admin Cobranças table
+  // uses, so it works for both real rows and not-yet-generated placeholders.
+  editable?: boolean;
+}) {
   const [year, setYear] = useState(() => new Date().getFullYear());
   const filteredPayments = payments.filter(
     (p) => new Date(p.referenceMonth).getFullYear() === year
@@ -79,9 +91,18 @@ export function StudentPaymentsTable({ payments }: { payments: PaymentHistoryRow
                 <TableCell>{formatDate(p.dueDate)}</TableCell>
                 <TableCell>{p.paidAt ? formatDate(p.paidAt) : "—"}</TableCell>
                 <TableCell>
-                  <Badge variant={paymentStatusVariant[p.status]}>
-                    {paymentStatusLabel[p.status]}
-                  </Badge>
+                  {editable ? (
+                    <PaymentStatusSelect
+                      studentId={studentId}
+                      payerName={p.payerName}
+                      status={p.status}
+                      referenceMonth={p.referenceMonth}
+                    />
+                  ) : (
+                    <Badge variant={paymentStatusVariant[p.status]}>
+                      {paymentStatusLabel[p.status]}
+                    </Badge>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

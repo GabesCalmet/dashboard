@@ -304,7 +304,11 @@ export function StudentDetailView({
 
             {permissions.showFinancial && (
               <TabsContent value="financial" className="mt-4">
-                <StudentPaymentsTable payments={paymentHistory} />
+                <StudentPaymentsTable
+                  payments={paymentHistory}
+                  studentId={student.id}
+                  editable={permissions.canEdit}
+                />
               </TabsContent>
             )}
 
