@@ -90,26 +90,6 @@ export function LessonReportForm({
         <Label htmlFor="contentTaught">Conteúdo ensinado</Label>
         <Textarea id="contentTaught" name="contentTaught" defaultValue={lesson.contentTaught ?? ""} />
       </div>
-      <div className="space-y-1.5 sm:col-span-2">
-        <Label htmlFor="observations">Observações</Label>
-        <Textarea id="observations" name="observations" defaultValue={lesson.observations ?? ""} />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="difficulties">Dificuldades encontradas</Label>
-        <Textarea id="difficulties" name="difficulties" />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="nextTopics">Próximos tópicos</Label>
-        <Textarea id="nextTopics" name="nextTopics" />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="materialUsed">Material utilizado</Label>
-        <Input id="materialUsed" name="materialUsed" />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="recordingUrl">Link da gravação (opcional)</Label>
-        <Input id="recordingUrl" name="recordingUrl" type="url" placeholder="https://..." />
-      </div>
 
       <div className="sm:col-span-2">
         <Button type="submit" disabled={isPending} className="w-full">

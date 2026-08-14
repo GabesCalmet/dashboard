@@ -22,7 +22,7 @@ export type CalendarLessonEvent = {
   durationMin: number;
   contentTaught: string | null;
   homework: string | null;
-  observations: string | null;
+  meetLink: string | null;
   start: string;
 };
 
@@ -49,7 +49,7 @@ export function CalendarView({
       durationMin: props.durationMin,
       contentTaught: props.contentTaught,
       homework: props.homework,
-      observations: props.observations,
+      meetLink: props.meetLink,
       start: arg.event.startStr,
     });
   }

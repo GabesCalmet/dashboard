@@ -161,6 +161,7 @@ export function StudentDetailView({
                   phone: student.user.phone,
                   birthDate: student.birthDate?.toISOString().slice(0, 10),
                   address: student.address,
+                  meetLink: student.meetLink,
                   teacherId: student.teacherId,
                   teacherHistory: parseSelectHistory(student.teacherHistory),
                   courseId: student.courseId,
@@ -251,6 +252,7 @@ export function StudentDetailView({
                     value={student.birthDate ? formatDate(student.birthDate) : "—"}
                   />
                   <InfoRow label="Endereço" value={student.address ?? "—"} />
+                  <InfoRow label="Link do Meet" value={student.meetLink ?? "—"} />
                   <InfoRow label="Início do curso" value={formatDate(student.startDate)} />
                   <InfoRow
                     label="Término previsto"

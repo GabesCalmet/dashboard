@@ -77,28 +77,9 @@ export async function submitLessonReport(
       durationMin: data.durationMin,
       status: data.status,
       contentTaught: data.contentTaught,
-      observations: data.observations,
-      difficulties: data.difficulties,
-      nextTopics: data.nextTopics,
-      materialUsed: data.materialUsed,
-      recordingUrl: data.recordingUrl,
       reportedAt: new Date(),
     },
   });
-
-  if (data.observations) {
-    const student = await prisma.studentProfile.findUnique({ where: { id: lesson.studentId } });
-    if (student) {
-      await prisma.notification.create({
-        data: {
-          userId: student.userId,
-          type: "TEACHER_OBSERVATION",
-          title: "Nova observação do professor",
-          message: "Seu professor deixou uma observação sobre sua última aula.",
-        },
-      });
-    }
-  }
 
   await recordAudit({
     entityType: "Lesson",

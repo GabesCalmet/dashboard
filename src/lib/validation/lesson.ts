@@ -27,11 +27,6 @@ export const lessonReportSchema = z.object({
     "PAUSED",
   ]),
   contentTaught: z.string().optional(),
-  observations: z.string().optional(),
-  difficulties: z.string().optional(),
-  nextTopics: z.string().optional(),
-  materialUsed: z.string().optional(),
-  recordingUrl: z.string().optional(),
 });
 
 export type LessonReportValues = z.infer<typeof lessonReportSchema>;

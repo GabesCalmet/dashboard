@@ -48,6 +48,7 @@ type StudentDefaults = {
   phone?: string | null;
   birthDate?: string;
   address?: string | null;
+  meetLink?: string | null;
   teacherId?: string | null;
   teacherHistory?: SelectHistoryEntry[];
   courseId?: string | null;
@@ -162,6 +163,17 @@ export function StudentFormDialog({
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="address">Endereço</Label>
             <Input id="address" name="address" defaultValue={student?.address ?? ""} />
+          </div>
+
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="meetLink">Link do Google Meet (opcional)</Label>
+            <Input
+              id="meetLink"
+              name="meetLink"
+              type="url"
+              placeholder="https://meet.google.com/..."
+              defaultValue={student?.meetLink ?? ""}
+            />
           </div>
 
           <SelectHistoryEditor

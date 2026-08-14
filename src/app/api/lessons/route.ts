@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       durationMin: l.durationMin,
       contentTaught: l.contentTaught,
       homework: l.homework,
-      observations: l.observations,
+      meetLink: l.student.meetLink,
     },
   }));
 

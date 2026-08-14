@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Video } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { LessonReportForm } from "@/components/agenda/lesson-report-form";
 import { lessonStatusBadgeVariant } from "@/lib/labels";
 import type { CalendarLessonEvent } from "@/components/agenda/calendar-view";
@@ -44,6 +46,14 @@ export function LessonDetailDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {lesson.meetLink && (
+          <Button asChild variant="outline" className="w-full">
+            <a href={lesson.meetLink} target="_blank" rel="noopener noreferrer">
+              <Video /> Entrar na aula
+            </a>
+          </Button>
+        )}
+
         {isTeacherView ? (
           <LessonReportForm
             lesson={lesson}
@@ -56,7 +66,6 @@ export function LessonDetailDialog({
           <div className="space-y-3 text-sm">
             <DetailRow label="Conteúdo ensinado" value={lesson.contentTaught} />
             <DetailRow label="Homework" value={lesson.homework} />
-            <DetailRow label="Observações" value={lesson.observations} />
             {!canManage && (
               <p className="text-xs text-muted-foreground">
                 Apenas o professor responsável pode editar o relatório desta aula.

@@ -196,6 +196,10 @@ model StudentProfile {
   cpf               String?         @unique
   birthDate         DateTime?
   address           String?
+  // Google Meet (or any video call) link for this student's classes — set
+  // once on the cadastro instead of per lesson, shown as a "Entrar na aula"
+  // button when a teacher or the student opens a class on their calendar.
+  meetLink          String?
   teacherId         String?
   teacher           TeacherProfile? @relation("StudentProfile_teacher", fields: [teacherId], references: [id])
   // History of teacher changes — [{ "id": "<teacherId>", "from": "...", "until": "..." }, ...].

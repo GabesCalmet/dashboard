@@ -44,6 +44,7 @@ export const studentFormSchema = z.object({
   phone: z.string().optional(),
   birthDate: z.string().optional(),
   address: z.string().optional(),
+  meetLink: z.string().url("Link inválido").optional().or(z.literal("")),
   teacherId: z.string().optional(),
   teacherHistory: selectHistoryField,
   courseId: z.string().optional(),

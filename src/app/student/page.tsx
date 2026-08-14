@@ -5,12 +5,14 @@ import {
   CheckCircle2,
   ClipboardList,
   GraduationCap,
+  Video,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
 import { getStudentDashboardData } from "@/server/queries/student-dashboard";
 import { formatDateTime, levelLabel } from "@/lib/labels";
@@ -55,6 +57,14 @@ export default async function StudentDashboardPage() {
         <StatCard label="Aulas realizadas (total)" value={String(data.completedTotal)} icon={CheckCircle2} />
         <StatCard label="Aulas no mês" value={String(data.completedThisMonth)} icon={GraduationCap} />
       </div>
+
+      {data.nextLesson && data.student.meetLink && (
+        <Button asChild className="mt-4">
+          <a href={data.student.meetLink} target="_blank" rel="noopener noreferrer">
+            <Video /> Entrar na próxima aula
+          </a>
+        </Button>
+      )}
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
