@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { Users, GraduationCap, CalendarCheck2, CalendarClock, CheckCircle2 } from "lucide-react";
+import { Users, GraduationCap, CalendarCheck2, CalendarClock, CheckCircle2, BookOpen } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
 import { getTeacherDashboardData } from "@/server/queries/teacher-dashboard";
 import { formatDateTime } from "@/lib/labels";
@@ -15,7 +16,21 @@ export default async function TeacherDashboardPage() {
 
   return (
     <div>
-      <PageHeader title={`Olá, ${user.name.split(" ")[0]}`} description="Seu painel de aulas." />
+      <PageHeader
+        title={`Olá, ${user.name.split(" ")[0]}`}
+        description="Seu painel de aulas."
+        actions={
+          <Button asChild variant="outline">
+            <a
+              href="https://upfrontidiomas.com.br/newportal/upfront-A1.html"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <BookOpen /> Material didático
+            </a>
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total de alunos" value={String(data.totalStudents)} icon={Users} />
