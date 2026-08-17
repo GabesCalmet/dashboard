@@ -1,6 +1,7 @@
-import { FileText, Headphones, Video } from "lucide-react";
+import { FileText, Headphones, Video, BookOpen } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -24,6 +25,17 @@ export default async function StudentMaterialsPage() {
       <PageHeader
         title="Materiais"
         description="Biblioteca de materiais didáticos do seu nível e curso."
+        actions={
+          <Button asChild variant="outline">
+            <a
+              href="https://upfrontidiomas.com.br/newportal/upfront-A1.html"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <BookOpen /> Portal de materiais
+            </a>
+          </Button>
+        }
       />
 
       {materials.length === 0 ? (
