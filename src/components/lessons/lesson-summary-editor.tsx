@@ -13,18 +13,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { updateLessonSummary } from "@/server/actions/lessons";
-import { curriculumUnits, classFocusOptions } from "@/lib/curriculum";
+import { curriculumUnits } from "@/lib/curriculum";
+import { CurriculumPicker } from "@/components/lessons/curriculum-picker";
 
 export function LessonSummaryEditor({
   lessonId,
@@ -76,50 +67,16 @@ export function LessonSummaryEditor({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={mode} onValueChange={(v) => setMode(v as "text" | "unit")}>
-          <TabsList>
-            <TabsTrigger value="text">Escrever</TabsTrigger>
-            <TabsTrigger value="unit">Selecionar aula do material</TabsTrigger>
-          </TabsList>
-          <TabsContent value="text" className="mt-3">
-            <Textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Descreva o conteúdo da aula..."
-              rows={4}
-            />
-          </TabsContent>
-          <TabsContent value="unit" className="mt-3">
-            <Select value={unit} onValueChange={setUnit}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione a aula ou teste" />
-              </SelectTrigger>
-              <SelectContent>
-                {curriculumUnits.map((u) => (
-                  <SelectItem key={u} value={u}>
-                    {u}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </TabsContent>
-        </Tabs>
-
-        <div className="space-y-1.5">
-          <Label>Foco da aula (opcional)</Label>
-          <Select value={focus} onValueChange={setFocus}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Selecione o foco" />
-            </SelectTrigger>
-            <SelectContent>
-              {classFocusOptions.map((f) => (
-                <SelectItem key={f} value={f}>
-                  {f}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <CurriculumPicker
+          mode={mode}
+          onModeChange={setMode}
+          text={text}
+          onTextChange={setText}
+          unit={unit}
+          onUnitChange={setUnit}
+          focus={focus}
+          onFocusChange={setFocus}
+        />
 
         <DialogFooter>
           <Button onClick={submit} disabled={isPending}>

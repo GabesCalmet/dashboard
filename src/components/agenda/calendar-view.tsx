@@ -21,6 +21,7 @@ export type CalendarLessonEvent = {
   statusLabel: string;
   durationMin: number;
   contentTaught: string | null;
+  classFocus: string | null;
   homework: string | null;
   meetLink: string | null;
   start: string;
@@ -48,6 +49,7 @@ export function CalendarView({
       statusLabel: props.statusLabel,
       durationMin: props.durationMin,
       contentTaught: props.contentTaught,
+      classFocus: props.classFocus,
       homework: props.homework,
       meetLink: props.meetLink,
       start: arg.event.startStr,

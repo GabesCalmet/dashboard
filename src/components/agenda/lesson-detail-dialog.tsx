@@ -65,6 +65,7 @@ export function LessonDetailDialog({
         ) : (
           <div className="space-y-3 text-sm">
             <DetailRow label="Conteúdo ensinado" value={lesson.contentTaught} />
+            <DetailRow label="Etapa / Foco" value={lesson.classFocus} />
             <DetailRow label="Homework" value={lesson.homework} />
             {!canManage && (
               <p className="text-xs text-muted-foreground">

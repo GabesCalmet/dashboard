@@ -77,6 +77,7 @@ export async function submitLessonReport(
       durationMin: data.durationMin,
       status: data.status,
       contentTaught: data.contentTaught,
+      classFocus: data.classFocus,
       reportedAt: new Date(),
     },
   });

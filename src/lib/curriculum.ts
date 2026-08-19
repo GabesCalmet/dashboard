@@ -23,3 +23,11 @@ export const classFocusOptions = [
   "Etapa 3",
   "Gramática",
 ] as const;
+
+export const etapaOptions = ["Etapa 1", "Etapa 2", "Etapa 3"] as const;
+
+// "Teste N" entries are evaluations, not staged lessons — they don't get
+// broken down into etapas.
+export function isEvaluationUnit(unit: string) {
+  return unit.startsWith("Teste");
+}

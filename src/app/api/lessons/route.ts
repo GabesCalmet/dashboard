@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
       statusLabel: lessonStatusLabel[l.status],
       durationMin: l.durationMin,
       contentTaught: l.contentTaught,
+      classFocus: l.classFocus,
       homework: l.homework,
       meetLink: l.student.meetLink,
     },

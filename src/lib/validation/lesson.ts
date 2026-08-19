@@ -27,6 +27,7 @@ export const lessonReportSchema = z.object({
     "PAUSED",
   ]),
   contentTaught: z.string().optional(),
+  classFocus: z.string().optional(),
 });
 
 export type LessonReportValues = z.infer<typeof lessonReportSchema>;
