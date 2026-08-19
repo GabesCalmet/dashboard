@@ -1,12 +1,14 @@
-import { Users, GraduationCap, UsersRound, CalendarCheck2, Ban, Repeat } from "lucide-react";
+import { Users, GraduationCap, UsersRound, CalendarCheck2, Ban, Repeat, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { GrowthChart } from "@/components/shared/growth-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAdminDashboardData } from "@/server/queries/dashboard";
+import { getAttendanceAlerts } from "@/server/queries/alerts";
 
 export default async function CoordinatorDashboardPage() {
-  const data = await getAdminDashboardData();
+  const [data, alerts] = await Promise.all([getAdminDashboardData(), getAttendanceAlerts()]);
+  const hasRedAlert = alerts.some((a) => a.severity === "RED");
 
   return (
     <div>
@@ -19,6 +21,13 @@ export default async function CoordinatorDashboardPage() {
         <StatCard label="Aulas realizadas (mês)" value={String(data.lessonsThisMonth)} icon={CalendarCheck2} />
         <StatCard label="Cancelamentos (mês)" value={String(data.cancellationsThisMonth)} icon={Ban} />
         <StatCard label="Reposições (mês)" value={String(data.makeupsThisMonth)} icon={Repeat} />
+        <StatCard
+          label="Alertas de frequência"
+          value={String(alerts.length)}
+          icon={AlertTriangle}
+          tone={alerts.length === 0 ? undefined : hasRedAlert ? "danger" : "warning"}
+          href="/coordinator/alerts"
+        />
       </div>
 
       <Card className="mt-6">

@@ -259,8 +259,25 @@ model StudentProfile {
   quizAttempts     QuizAttempt[]
   achievements     StudentAchievement[]
   leadInteractions LeadInteraction[]
+  alertDismissals  StudentAlertDismissal[]
 
   @@map("student_profiles")
+}
+
+// Marks the point in time a coordinator/admin last reviewed and dismissed
+// this student's attendance alert (2+ CA/NC/CP in a month, or 2 in a row).
+// Only lessons after the latest dismissal count toward re-triggering it, so
+// resolving an alert clears it without erasing the lessons that caused it.
+model StudentAlertDismissal {
+  id          String         @id @default(uuid())
+  studentId   String
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  note        String?
+  dismissedBy String // actor name snapshot
+  dismissedAt DateTime       @default(now())
+
+  @@index([studentId])
+  @@map("student_alert_dismissals")
 }
 
 model LevelHistory {
