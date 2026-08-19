@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { BRAZIL_UTC_OFFSET_MS } from "@/lib/timezone";
+import { BRAZIL_UTC_OFFSET_MS, endOfBrazilDay } from "@/lib/timezone";
 
 const HORIZON_WEEKS = 12;
 
@@ -64,7 +64,7 @@ function resolveTeacherId(defaultTeacherId: string, history: SelectHistoryEntry[
   if (history.length === 0) return defaultTeacherId;
   const match = history.find((e) => {
     const from = e.from ? new Date(e.from) : null;
-    const until = e.until ? new Date(e.until) : null;
+    const until = e.until ? endOfBrazilDay(new Date(e.until)) : null;
     if (from && date < from) return false;
     if (until && date > until) return false;
     return true;
@@ -133,7 +133,9 @@ export async function syncRecurringLessons(studentId: string) {
   // that exact date — overriding the rolling ~12-week/15th window entirely,
   // since the whole point of setting it is to define that course's real
   // generation window (which may run shorter or longer than the default).
-  const horizonEnd = student.endDate ?? snappedHorizonEnd;
+  // endOfBrazilDay so a class later that same day in Brazil time (which,
+  // after the timezone fix, lands after UTC midnight) isn't excluded.
+  const horizonEnd = student.endDate ? endOfBrazilDay(student.endDate) : snappedHorizonEnd;
   const toCreate: {
     studentId: string;
     teacherId: string;
@@ -152,7 +154,11 @@ export async function syncRecurringLessons(studentId: string) {
     // a schedule change gets an "until" so it stops generating past the
     // date it was replaced, while the new entry's "from" picks up after it.
     const entryFrom = entry.from ? new Date(entry.from) : null;
-    const entryUntil = entry.until ? new Date(entry.until) : null;
+    // endOfBrazilDay — otherwise a class later that same day in Brazil time
+    // (which lands after UTC midnight, post timezone fix) gets excluded by
+    // an "until" set to that exact day, as happened for a Saturday 08:00
+    // class landing at 11:00 UTC against an "until" of UTC midnight.
+    const entryUntil = entry.until ? endOfBrazilDay(new Date(entry.until)) : null;
     const rangeStart = entryFrom && entryFrom > anchor ? entryFrom : anchor;
     const rangeEnd = entryUntil && entryUntil < horizonEnd ? entryUntil : horizonEnd;
     if (rangeStart > rangeEnd) continue;
