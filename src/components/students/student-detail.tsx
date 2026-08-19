@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   GraduationCap,
   Repeat,
-  Target,
   UserX,
   XCircle,
 } from "lucide-react";
@@ -198,12 +197,12 @@ export function StudentDetailView({
       </div>
 
       {monthNav && (
-        <div className="mb-3 flex justify-end">
+        <div className="mb-3 flex justify-start">
           <MonthNav basePath={monthNav.selfPath} year={monthNav.year} month={monthNav.month} />
         </div>
       )}
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           label="Aulas contratadas/mês"
           value={String(contractedLessonsThisMonth)}
@@ -215,7 +214,6 @@ export function StudentDetailView({
           value={nextLesson ? formatDateTime(nextLesson.scheduledAt) : "—"}
           icon={CalendarClock}
         />
-        <StatCard label="Objetivo" value={student.objective || "—"} icon={Target} />
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-5">
