@@ -7,10 +7,16 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { curriculumUnits, classFocusOptions, etapaOptions, isEvaluationUnit } from "@/lib/curriculum";
+
+// Sentinel for the "clear selection" item — Radix Select doesn't allow an
+// item with value="", so a mistaken pick is undone by mapping this back to
+// "" instead, which resets the field to its empty/placeholder state.
+const CLEAR = "__clear__";
 
 // Shared "Resumo da aula" content picker — free text or a curriculum unit
 // pulled from the material. Picking a specific "Aula" (not a "Teste")
@@ -56,11 +62,19 @@ export function CurriculumPicker({
           />
         </TabsContent>
         <TabsContent value="unit" className="mt-3">
-          <Select value={unit} onValueChange={onUnitChange}>
+          <Select value={unit} onValueChange={(v) => onUnitChange(v === CLEAR ? "" : v)}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Selecione a aula ou teste" />
             </SelectTrigger>
             <SelectContent>
+              {unit && (
+                <>
+                  <SelectItem value={CLEAR} className="text-muted-foreground">
+                    Nenhum (limpar seleção)
+                  </SelectItem>
+                  <SelectSeparator />
+                </>
+              )}
               {curriculumUnits.map((u) => (
                 <SelectItem key={u} value={u}>
                   {u}
@@ -74,11 +88,19 @@ export function CurriculumPicker({
       {showFocus && (
         <div className="space-y-1.5">
           <Label>{focusLabel}</Label>
-          <Select value={focus} onValueChange={onFocusChange}>
+          <Select value={focus} onValueChange={(v) => onFocusChange(v === CLEAR ? "" : v)}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder={mode === "unit" ? "Selecione a etapa" : "Selecione o foco"} />
             </SelectTrigger>
             <SelectContent>
+              {focus && (
+                <>
+                  <SelectItem value={CLEAR} className="text-muted-foreground">
+                    Nenhum (limpar seleção)
+                  </SelectItem>
+                  <SelectSeparator />
+                </>
+              )}
               {focusOptions.map((f) => (
                 <SelectItem key={f} value={f}>
                   {f}
