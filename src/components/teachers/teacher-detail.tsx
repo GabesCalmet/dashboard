@@ -118,6 +118,11 @@ export function TeacherDetailView({
           value={`${teacher.hoursTaughtThisMonth.toFixed(1)}h`}
           icon={Clock}
         />
+        <StatCard
+          label="Aulas realizadas (total)"
+          value={String(teacher.completedTotal)}
+          icon={GraduationCap}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
