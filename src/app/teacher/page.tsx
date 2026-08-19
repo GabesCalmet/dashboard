@@ -9,10 +9,18 @@ import { requireRole } from "@/lib/auth";
 import { getTeacherDashboardData } from "@/server/queries/teacher-dashboard";
 import { formatDateTime } from "@/lib/labels";
 import { LessonStatusSelect } from "@/components/lessons/lesson-status-select";
+import { MonthNav } from "@/components/financial/month-nav";
+import { parseMonthParam } from "@/lib/month-param";
 
-export default async function TeacherDashboardPage() {
+export default async function TeacherDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
   const user = await requireRole("TEACHER");
-  const data = await getTeacherDashboardData(user.teacherProfile!.id);
+  const { month: monthParamValue } = await searchParams;
+  const { year, month } = parseMonthParam(monthParamValue);
+  const data = await getTeacherDashboardData(user.teacherProfile!.id, { year, month });
 
   return (
     <div>
@@ -31,6 +39,10 @@ export default async function TeacherDashboardPage() {
           </Button>
         }
       />
+
+      <div className="mb-3 flex justify-start">
+        <MonthNav basePath="/teacher" year={year} month={month} />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total de alunos" value={String(data.totalStudents)} icon={Users} />

@@ -1,8 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
 
-export async function getTeacherDashboardData(teacherId: string) {
+export async function getTeacherDashboardData(
+  teacherId: string,
+  referenceMonth: { year: number; month: number }
+) {
   const now = new Date();
+  const monthDate = new Date(referenceMonth.year, referenceMonth.month, 1);
 
   const [totalStudents, activeStudents, todayLessons, upcomingLessons, completedLessonsThisMonth] =
     await Promise.all([
@@ -23,7 +27,7 @@ export async function getTeacherDashboardData(teacherId: string) {
         where: {
           teacherId,
           status: "COMPLETED",
-          scheduledAt: { gte: startOfMonth(now), lte: endOfMonth(now) },
+          scheduledAt: { gte: startOfMonth(monthDate), lte: endOfMonth(monthDate) },
         },
       }),
     ]);
