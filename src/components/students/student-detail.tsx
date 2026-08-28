@@ -48,9 +48,13 @@ export function StudentDetailView({
   auditEntries = [],
   monthNav,
   paymentHistory = [],
+  initialTab,
 }: {
   student: Student;
   basePath: string;
+  // Opens a specific tab on load — e.g. "financial" when arriving from the
+  // global search while browsing the Financeiro section.
+  initialTab?: string;
   // Full billing picture (real + placeholder) for the Financeiro tab —
   // only fetched/passed by pages that set permissions.showFinancial.
   paymentHistory?: PaymentHistoryRow[];
@@ -226,7 +230,15 @@ export function StudentDetailView({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <Tabs defaultValue={permissions.showOverview === false ? "lessons" : "overview"}>
+          <Tabs
+            defaultValue={
+              initialTab === "financial" && permissions.showFinancial
+                ? "financial"
+                : permissions.showOverview === false
+                  ? "lessons"
+                  : "overview"
+            }
+          >
             <TabsList>
               {permissions.showOverview !== false && (
                 <TabsTrigger value="overview">Visão geral</TabsTrigger>

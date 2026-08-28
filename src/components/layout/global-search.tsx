@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Search, GraduationCap, User, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,8 @@ export function GlobalSearch() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
+  const inFinancialSection = pathname.startsWith("/admin/financial");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   useEffect(() => {
@@ -89,7 +91,9 @@ export function GlobalSearch() {
                 onClick={() => {
                   setOpen(false);
                   setQuery("");
-                  router.push(r.href);
+                  const href =
+                    r.type === "Aluno" && inFinancialSection ? `${r.href}?tab=financial` : r.href;
+                  router.push(href);
                 }}
                 className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-secondary"
               >

@@ -15,10 +15,10 @@ export default async function AdminStudentDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; tab?: string }>;
 }) {
   const { id } = await params;
-  const { month: monthParamValue } = await searchParams;
+  const { month: monthParamValue, tab } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
   const [student, teachers, courses, plans, audit, paymentHistory] = await Promise.all([
     getStudentDetail(id),
@@ -37,6 +37,7 @@ export default async function AdminStudentDetailPage({
       basePath="/admin/students"
       monthNav={{ year, month, selfPath: `/admin/students/${id}` }}
       paymentHistory={paymentHistory}
+      initialTab={tab}
       permissions={{
         canEdit: true,
         canDelete: true,
