@@ -79,6 +79,7 @@ export async function getFinancialOverview(year?: number, month?: number) {
   const receivedTotal = Number(received._sum.amount ?? 0);
   const delinquencyRate =
     expectedTotal > 0 ? ((expectedTotal - receivedTotal) / expectedTotal) * 100 : 0;
+  const paidCount = rows.filter((r) => r.status === "PAID").length;
   const pendingCount = rows.filter((r) => r.status === "PENDING").length;
   const lateCount = rows.filter((r) => r.status === "LATE").length;
   const pausedCount = rows.filter((r) => r.status === "PAUSED").length;
@@ -118,6 +119,7 @@ export async function getFinancialOverview(year?: number, month?: number) {
   return {
     monthlyRevenueExpected: expectedTotal,
     monthlyRevenueReceived: receivedTotal,
+    paidCount,
     pendingCount,
     lateCount,
     pausedCount,

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Wallet, TrendingUp, AlertTriangle, Clock3 } from "lucide-react";
+import { ArrowLeft, Wallet, TrendingUp, AlertTriangle, Clock3, CheckCircle2, Ban, PauseCircle } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +60,9 @@ export default async function AdminFinancialReceitaPage({
           value={`${data.delinquencyRate.toFixed(1)}%`}
           icon={AlertTriangle}
         />
+        <StatCard label="Pagos" value={String(data.paidCount)} icon={CheckCircle2} accent />
+        <StatCard label="Atrasados" value={String(data.lateCount)} icon={Ban} tone={data.lateCount > 0 ? "danger" : undefined} />
+        <StatCard label="Pausados" value={String(data.pausedCount)} icon={PauseCircle} />
       </div>
 
       <Card className="mt-6">
