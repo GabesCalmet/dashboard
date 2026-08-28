@@ -18,6 +18,7 @@ type Row = {
   dueDate: Date;
   status: PaymentStatus;
   studentName: string;
+  teacherName: string | null;
   bankAccount: BankAccount;
 };
 
@@ -36,6 +37,7 @@ export function PaymentsTable({
         <TableHeader>
           <TableRow>
             <TableHead>Aluno</TableHead>
+            <TableHead>Professor</TableHead>
             <TableHead>Pagador</TableHead>
             <TableHead>Valor</TableHead>
             <TableHead>Vencimento</TableHead>
@@ -47,6 +49,7 @@ export function PaymentsTable({
           {payments.map((p) => (
             <TableRow key={`${p.studentId}::${p.payerName ?? ""}`}>
               <TableCell>{p.studentName}</TableCell>
+              <TableCell className="text-sm text-muted-foreground">{p.teacherName ?? "—"}</TableCell>
               <TableCell className="text-sm text-muted-foreground">
                 {p.payerName ?? "Aluno"}
               </TableCell>
@@ -67,7 +70,7 @@ export function PaymentsTable({
           ))}
           {payments.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+              <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                 Nenhum aluno ativo no momento.
               </TableCell>
             </TableRow>

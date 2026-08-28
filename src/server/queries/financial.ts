@@ -18,7 +18,7 @@ export async function getFinancialOverview(year?: number, month?: number) {
     }),
     prisma.studentProfile.findMany({
       where: { status: "ACTIVE" },
-      include: { user: true },
+      include: { user: true, teacher: { include: { user: true } } },
     }),
     prisma.payment.findMany({
       where: { referenceMonth: monthStart },
@@ -47,6 +47,7 @@ export async function getFinancialOverview(year?: number, month?: number) {
             id: payment.id,
             studentId: s.id,
             studentName: s.user.name,
+            teacherName: s.teacher?.user.name ?? null,
             payerName: payment.payerName,
             amount: Number(payment.amount),
             dueDate: payment.dueDate,
@@ -60,6 +61,7 @@ export async function getFinancialOverview(year?: number, month?: number) {
           id: null,
           studentId: s.id,
           studentName: s.user.name,
+          teacherName: s.teacher?.user.name ?? null,
           payerName: slot.payerName,
           amount: slot.amount,
           dueDate,
