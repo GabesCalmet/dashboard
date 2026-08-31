@@ -153,6 +153,24 @@ export function formatDate(date: Date | string) {
   );
 }
 
+// For calendar-only values (dueDate, referenceMonth, birthDate, etc.) that
+// are always constructed server-side as UTC midnight of the intended day.
+// Formatting those with formatDate() in a client component (which runs in
+// the viewer's real Brazil browser timezone, UTC-3) rolls them back to the
+// previous day/month — pinning to UTC here recovers the intended calendar
+// date regardless of where it's rendered.
+export function formatCalendarDate(date: Date | string) {
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeZone: "UTC" }).format(
+    new Date(date)
+  );
+}
+
+export function formatCalendarMonthYear(date: Date | string) {
+  return new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(
+    new Date(date)
+  );
+}
+
 export function formatDateTime(date: Date | string) {
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",

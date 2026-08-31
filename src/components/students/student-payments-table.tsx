@@ -14,7 +14,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PaymentStatusSelect } from "@/components/financial/payment-status-select";
-import { formatCurrency, formatDate, paymentStatusLabel, paymentStatusVariant } from "@/lib/labels";
+import {
+  formatCurrency,
+  formatDate,
+  formatCalendarDate,
+  formatCalendarMonthYear,
+  paymentStatusLabel,
+  paymentStatusVariant,
+} from "@/lib/labels";
 import type { PaymentStatus, BankAccount } from "@prisma/client";
 
 export type PaymentHistoryRow = {
@@ -42,7 +49,7 @@ export function StudentPaymentsTable({
 }) {
   const [year, setYear] = useState(() => new Date().getFullYear());
   const filteredPayments = payments.filter(
-    (p) => new Date(p.referenceMonth).getFullYear() === year
+    (p) => new Date(p.referenceMonth).getUTCFullYear() === year
   );
 
   return (
@@ -79,16 +86,12 @@ export function StudentPaymentsTable({
           <TableBody>
             {filteredPayments.map((p) => (
               <TableRow key={p.id ?? `${p.referenceMonth.toISOString()}::${p.payerName ?? ""}`}>
-                <TableCell>
-                  {new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(
-                    p.referenceMonth
-                  )}
-                </TableCell>
+                <TableCell>{formatCalendarMonthYear(p.referenceMonth)}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {p.payerName ?? "Aluno"}
                 </TableCell>
                 <TableCell>{formatCurrency(p.amount)}</TableCell>
-                <TableCell>{formatDate(p.dueDate)}</TableCell>
+                <TableCell>{formatCalendarDate(p.dueDate)}</TableCell>
                 <TableCell>{p.paidAt ? formatDate(p.paidAt) : "—"}</TableCell>
                 <TableCell>
                   {editable ? (

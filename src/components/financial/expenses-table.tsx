@@ -25,7 +25,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ExpenseFormDialog } from "@/components/financial/expense-form-dialog";
-import { formatCurrency, formatDate, expenseFrequencyLabel, bankAccountLabel } from "@/lib/labels";
+import {
+  formatCurrency,
+  formatCalendarDate,
+  expenseFrequencyLabel,
+  bankAccountLabel,
+} from "@/lib/labels";
 import { deleteExpense, endRecurringExpense } from "@/server/actions/expenses";
 import type { Expense, BankAccount } from "@prisma/client";
 
@@ -75,9 +80,9 @@ export function ExpensesTable({ expenses }: { expenses: Row[] }) {
                   <Badge variant="outline">{expenseFrequencyLabel[e.frequency]}</Badge>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {formatDate(e.occurrenceDate)}
+                  {formatCalendarDate(e.occurrenceDate)}
                   {e.frequency === "RECURRING" &&
-                    ` (recorrente${e.endDate ? `, até ${formatDate(e.endDate)}` : ""})`}
+                    ` (recorrente${e.endDate ? `, até ${formatCalendarDate(e.endDate)}` : ""})`}
                 </TableCell>
                 <TableCell>
                   {e.frequency === "RECURRING" ? (
