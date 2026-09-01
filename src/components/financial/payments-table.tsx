@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Search } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -41,36 +40,35 @@ export function PaymentsTable({
   // always target that month's cobrança, not whatever month "today" is in.
   referenceMonth: Date;
 }) {
-  const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState({
+    aluno: "",
+    professor: "",
+    vencimento: "",
+    conta: "",
+    status: "",
+  });
 
-  const q = query.trim().toLowerCase();
-  const filteredPayments = q
-    ? payments.filter((p) =>
-        [
-          p.studentName,
-          p.teacherName ?? "",
-          formatCalendarDate(p.dueDate),
-          bankAccountLabel[p.bankAccount],
-          paymentStatusLabel[p.status],
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(q)
-      )
-    : payments;
+  function setFilter(key: keyof typeof filters, value: string) {
+    setFilters((f) => ({ ...f, [key]: value }));
+  }
+
+  const filteredPayments = payments.filter((p) => {
+    const aluno = filters.aluno.trim().toLowerCase();
+    const professor = filters.professor.trim().toLowerCase();
+    const vencimento = filters.vencimento.trim().toLowerCase();
+    const conta = filters.conta.trim().toLowerCase();
+    const status = filters.status.trim().toLowerCase();
+    return (
+      (!aluno || p.studentName.toLowerCase().includes(aluno)) &&
+      (!professor || (p.teacherName ?? "").toLowerCase().includes(professor)) &&
+      (!vencimento || formatCalendarDate(p.dueDate).toLowerCase().includes(vencimento)) &&
+      (!conta || bankAccountLabel[p.bankAccount].toLowerCase().includes(conta)) &&
+      (!status || paymentStatusLabel[p.status].toLowerCase().includes(status))
+    );
+  });
 
   return (
     <div className="space-y-3">
-      <div className="relative max-w-xs">
-        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Pesquisar aluno, professor, vencimento, conta, status..."
-          className="pl-9"
-        />
-      </div>
-
       <div className="overflow-hidden rounded-xl border">
         <Table>
           <TableHeader>
@@ -82,6 +80,50 @@ export function PaymentsTable({
               <TableHead>Vencimento</TableHead>
               <TableHead>Conta</TableHead>
               <TableHead>Status</TableHead>
+            </TableRow>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="py-1.5">
+                <Input
+                  value={filters.aluno}
+                  onChange={(e) => setFilter("aluno", e.target.value)}
+                  placeholder="Pesquisar..."
+                  className="h-8 text-xs font-normal"
+                />
+              </TableHead>
+              <TableHead className="py-1.5">
+                <Input
+                  value={filters.professor}
+                  onChange={(e) => setFilter("professor", e.target.value)}
+                  placeholder="Pesquisar..."
+                  className="h-8 text-xs font-normal"
+                />
+              </TableHead>
+              <TableHead className="py-1.5" />
+              <TableHead className="py-1.5" />
+              <TableHead className="py-1.5">
+                <Input
+                  value={filters.vencimento}
+                  onChange={(e) => setFilter("vencimento", e.target.value)}
+                  placeholder="Pesquisar..."
+                  className="h-8 text-xs font-normal"
+                />
+              </TableHead>
+              <TableHead className="py-1.5">
+                <Input
+                  value={filters.conta}
+                  onChange={(e) => setFilter("conta", e.target.value)}
+                  placeholder="Pesquisar..."
+                  className="h-8 text-xs font-normal"
+                />
+              </TableHead>
+              <TableHead className="py-1.5">
+                <Input
+                  value={filters.status}
+                  onChange={(e) => setFilter("status", e.target.value)}
+                  placeholder="Pesquisar..."
+                  className="h-8 text-xs font-normal"
+                />
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -112,7 +154,7 @@ export function PaymentsTable({
                 <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                   {payments.length === 0
                     ? "Nenhum aluno ativo no momento."
-                    : "Nenhum resultado para essa pesquisa."}
+                    : "Nenhum resultado para esses filtros."}
                 </TableCell>
               </TableRow>
             )}
