@@ -28,10 +28,9 @@ de auditoria.
 | **Professor** | dashboard próprio, ficha dos seus alunos, preencher relatório após cada aula, agenda própria |
 | **Aluno** | dashboard próprio, progresso (nível, habilidades), histórico de aulas, estatísticas, materiais |
 
-O controle de acesso é reforçado em três camadas: `middleware.ts` (sessão e
-timeout de inatividade), `requireRole()`/`requireUser()` em cada
-layout/página, e validação novamente dentro de cada Server Action antes de
-tocar o banco.
+O controle de acesso é reforçado em três camadas: `middleware.ts` (sessão),
+`requireRole()`/`requireUser()` em cada layout/página, e validação
+novamente dentro de cada Server Action antes de tocar o banco.
 
 ## Configuração local
 
@@ -86,8 +85,6 @@ permanece intacto — conforme o requisito de nunca apagar histórico.
 
 - Senhas: gerenciadas inteiramente pelo Supabase Auth (nunca tocamos/hashamos
   senha na aplicação)
-- Sessão expira por inatividade (`SESSION_IDLE_TIMEOUT_MINUTES` no `.env`,
-  padrão 30 min), verificado no `middleware.ts`
 - Toda criação/edição/exclusão/promoção relevante gera um registro em
   `audit_logs` (com o nome/e-mail/papel do autor **denormalizados** no
   próprio registro, para que a trilha de auditoria sobreviva mesmo que a

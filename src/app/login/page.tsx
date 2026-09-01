@@ -6,7 +6,7 @@ import { LoginForm } from "./login-form";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ redirectTo?: string; reason?: string }>;
+  searchParams: Promise<{ redirectTo?: string }>;
 }) {
   const user = await getCurrentUser();
   if (user) redirect(roleHome(user.role));
@@ -35,12 +35,6 @@ export default async function LoginPage({
           <p className="mt-1.5 text-sm text-muted-foreground">
             Entre com suas credenciais para acessar o portal.
           </p>
-
-          {params.reason === "idle" && (
-            <div className="mt-4 rounded-md bg-warning/15 px-3 py-2 text-sm text-warning-foreground">
-              Sua sessão expirou por inatividade. Faça login novamente.
-            </div>
-          )}
 
           <LoginForm redirectTo={params.redirectTo} />
 
