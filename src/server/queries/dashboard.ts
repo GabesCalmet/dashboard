@@ -10,6 +10,7 @@ export async function getAdminDashboardData() {
   const [
     totalStudents,
     activeStudents,
+    pausedStudents,
     canceledStudents,
     totalTeachers,
     lessonsThisMonth,
@@ -21,6 +22,7 @@ export async function getAdminDashboardData() {
   ] = await Promise.all([
     prisma.studentProfile.count(),
     prisma.studentProfile.count({ where: { status: "ACTIVE" } }),
+    prisma.studentProfile.count({ where: { status: "PAUSED" } }),
     prisma.studentProfile.count({ where: { status: "CANCELED" } }),
     prisma.teacherProfile.count(),
     prisma.lesson.count({
@@ -98,6 +100,7 @@ export async function getAdminDashboardData() {
   return {
     totalStudents,
     activeStudents,
+    pausedStudents,
     canceledStudents,
     totalTeachers,
     lessonsThisMonth,

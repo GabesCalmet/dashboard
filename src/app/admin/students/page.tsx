@@ -8,7 +8,12 @@ import {
   listPlansForSelect,
 } from "@/server/queries/students";
 
-export default async function AdminStudentsPage() {
+export default async function AdminStudentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
+  const { status } = await searchParams;
   const [students, teachers, courses, plans] = await Promise.all([
     listStudents(),
     listActiveTeachersForSelect(),
@@ -40,7 +45,11 @@ export default async function AdminStudentsPage() {
           />
         }
       />
-      <StudentsTable rows={rows} basePath="/admin/students" />
+      <StudentsTable
+        rows={rows}
+        basePath="/admin/students"
+        initialStatus={["ACTIVE", "PAUSED", "CANCELED"].includes(status ?? "") ? status : "all"}
+      />
     </div>
   );
 }

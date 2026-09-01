@@ -34,9 +34,17 @@ type Row = {
   courseName?: string | null;
 };
 
-export function StudentsTable({ rows, basePath }: { rows: Row[]; basePath: string }) {
+export function StudentsTable({
+  rows,
+  basePath,
+  initialStatus = "all",
+}: {
+  rows: Row[];
+  basePath: string;
+  initialStatus?: string;
+}) {
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<string>("all");
+  const [status, setStatus] = useState<string>(initialStatus);
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {

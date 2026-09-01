@@ -1,6 +1,6 @@
 import {
-  Users,
   GraduationCap,
+  PauseCircle,
   UserX,
   UsersRound,
   CalendarCheck2,
@@ -20,10 +20,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAdminDashboardData } from "@/server/queries/dashboard";
 import { getAttendanceAlerts } from "@/server/queries/alerts";
 import { formatCurrency } from "@/lib/labels";
+import { monthParam } from "@/lib/month-param";
 
 export default async function AdminDashboardPage() {
   const [data, alerts] = await Promise.all([getAdminDashboardData(), getAttendanceAlerts()]);
   const hasRedAlert = alerts.some((a) => a.severity === "RED");
+  const now = new Date();
+  const thisMonth = monthParam(now.getFullYear(), now.getMonth());
 
   return (
     <div>
@@ -33,15 +36,31 @@ export default async function AdminDashboardPage() {
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total de alunos" value={String(data.totalStudents)} icon={Users} />
         <StatCard
           label="Alunos ativos"
           value={String(data.activeStudents)}
           icon={GraduationCap}
           accent
+          href="/admin/students?status=ACTIVE"
         />
-        <StatCard label="Alunos cancelados" value={String(data.canceledStudents)} icon={UserX} />
-        <StatCard label="Professores" value={String(data.totalTeachers)} icon={UsersRound} />
+        <StatCard
+          label="Alunos pausados"
+          value={String(data.pausedStudents)}
+          icon={PauseCircle}
+          href="/admin/students?status=PAUSED"
+        />
+        <StatCard
+          label="Alunos cancelados"
+          value={String(data.canceledStudents)}
+          icon={UserX}
+          href="/admin/students?status=CANCELED"
+        />
+        <StatCard
+          label="Professores"
+          value={String(data.totalTeachers)}
+          icon={UsersRound}
+          href="/admin/teachers"
+        />
 
         <StatCard
           label="Aulas realizadas (mês)"
@@ -49,8 +68,18 @@ export default async function AdminDashboardPage() {
           icon={CalendarCheck2}
         />
         <StatCard label="Horas lecionadas (mês)" value={`${data.hoursTaught}h`} icon={Clock} />
-        <StatCard label="Cancelamentos (mês)" value={String(data.cancellationsThisMonth)} icon={Ban} />
-        <StatCard label="Reposições (mês)" value={String(data.makeupsThisMonth)} icon={Repeat} />
+        <StatCard
+          label="Cancelamentos (mês)"
+          value={String(data.cancellationsThisMonth)}
+          icon={Ban}
+          href={`/admin/reports/lessons?month=${thisMonth}&statuses=CANCELED_BY_STUDENT,CANCELED_BY_TEACHER,CANCELED_HOLIDAY,NO_SHOW`}
+        />
+        <StatCard
+          label="Reposições (mês)"
+          value={String(data.makeupsThisMonth)}
+          icon={Repeat}
+          href={`/admin/reports/lessons?month=${thisMonth}&statuses=MAKEUP`}
+        />
         <StatCard
           label="Alertas de frequência"
           value={String(alerts.length)}
