@@ -34,18 +34,25 @@ type Row = {
 export function PaymentsTable({
   payments,
   referenceMonth,
+  initialStatus,
 }: {
   payments: Row[];
   // The month being viewed — passed through to status changes so they
   // always target that month's cobrança, not whatever month "today" is in.
   referenceMonth: Date;
+  // Pre-fills the Status filter — e.g. arriving from the "Pagos" stat card.
+  // Pass a `key` on this component tied to this value from the caller so a
+  // click on a different stat card actually resets the filter (a prop
+  // change alone won't re-run useState's initializer on an already-
+  // mounted instance).
+  initialStatus?: PaymentStatus;
 }) {
   const [filters, setFilters] = useState({
     aluno: "",
     professor: "",
     vencimento: "",
     conta: "",
-    status: "",
+    status: initialStatus ? paymentStatusLabel[initialStatus] : "",
   });
 
   function setFilter(key: keyof typeof filters, value: string) {

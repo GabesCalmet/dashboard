@@ -8,20 +8,25 @@ import { PaymentsTable } from "@/components/financial/payments-table";
 import { GenerateBillingButton } from "@/components/financial/generate-billing-button";
 import { MonthNav } from "@/components/financial/month-nav";
 import { getFinancialOverview } from "@/server/queries/financial";
-import { parseMonthParam } from "@/lib/month-param";
-import { formatCurrency } from "@/lib/labels";
+import { parseMonthParam, monthParam } from "@/lib/month-param";
+import { formatCurrency, paymentStatusLabel } from "@/lib/labels";
+import type { PaymentStatus } from "@prisma/client";
 
 export default async function AdminFinancialReceitaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; status?: string }>;
 }) {
-  const { month: monthParamValue } = await searchParams;
+  const { month: monthParamValue, status: statusParam } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
+  const initialStatus =
+    statusParam && statusParam in paymentStatusLabel ? (statusParam as PaymentStatus) : undefined;
   const data = await getFinancialOverview(year, month);
   const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(
     new Date(year, month, 1)
   );
+  const statusHref = (status: PaymentStatus) =>
+    `/admin/financial/receita?month=${monthParam(year, month)}&status=${status}#cobrancas`;
 
   return (
     <div>
@@ -60,9 +65,26 @@ export default async function AdminFinancialReceitaPage({
           value={`${data.delinquencyRate.toFixed(1)}%`}
           icon={AlertTriangle}
         />
-        <StatCard label="Pagos" value={String(data.paidCount)} icon={CheckCircle2} accent />
-        <StatCard label="Atrasados" value={String(data.lateCount)} icon={Ban} tone={data.lateCount > 0 ? "danger" : undefined} />
-        <StatCard label="Pausados" value={String(data.pausedCount)} icon={PauseCircle} />
+        <StatCard
+          label="Pagos"
+          value={String(data.paidCount)}
+          icon={CheckCircle2}
+          accent
+          href={statusHref("PAID")}
+        />
+        <StatCard
+          label="Atrasados"
+          value={String(data.lateCount)}
+          icon={Ban}
+          tone={data.lateCount > 0 ? "danger" : undefined}
+          href={statusHref("LATE")}
+        />
+        <StatCard
+          label="Pausados"
+          value={String(data.pausedCount)}
+          icon={PauseCircle}
+          href={statusHref("PAUSED")}
+        />
       </div>
 
       <Card className="mt-6">
@@ -93,9 +115,14 @@ export default async function AdminFinancialReceitaPage({
         </CardContent>
       </Card>
 
-      <div className="mt-6">
+      <div id="cobrancas" className="mt-6 scroll-mt-4">
         <h2 className="mb-3 text-sm font-semibold capitalize">Cobranças — {monthLabel}</h2>
-        <PaymentsTable payments={data.payments} referenceMonth={new Date(year, month, 1)} />
+        <PaymentsTable
+          key={`${monthParam(year, month)}-${initialStatus ?? ""}`}
+          payments={data.payments}
+          referenceMonth={new Date(year, month, 1)}
+          initialStatus={initialStatus}
+        />
       </div>
     </div>
   );
