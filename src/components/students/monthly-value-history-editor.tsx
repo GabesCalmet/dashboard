@@ -24,16 +24,27 @@ function resolveCurrentAmount(entries: ValueHistoryEntry[]): number {
 
 export function MonthlyValueHistoryEditor({
   label = "Valor mensal (R$)",
+  amountLabel = "Valor (R$)",
   amountFieldName,
   historyFieldName,
   defaultAmount,
   defaultHistory = [],
+  step = "0.01",
+  min,
+  max,
 }: {
   label?: string;
+  // Label shown on the numeric field itself — the outer `label` is just
+  // the group heading, which reads oddly reused per-row for non-currency
+  // fields like "Dia de vencimento" or "Aulas por mês".
+  amountLabel?: string;
   amountFieldName: string;
   historyFieldName: string;
   defaultAmount: number;
   defaultHistory?: ValueHistoryEntry[];
+  step?: string;
+  min?: number;
+  max?: number;
 }) {
   const [entries, setEntries] = useState<EditorEntry[]>(() =>
     defaultHistory.length > 0
@@ -75,10 +86,12 @@ export function MonthlyValueHistoryEditor({
       {entries.map((entry) => (
         <div key={entry._id} className="flex flex-wrap items-end gap-2 rounded-lg border p-3">
           <div className="w-32 space-y-1.5">
-            <Label className="text-xs font-normal text-muted-foreground">Valor (R$)</Label>
+            <Label className="text-xs font-normal text-muted-foreground">{amountLabel}</Label>
             <Input
               type="number"
-              step="0.01"
+              step={step}
+              min={min}
+              max={max}
               value={entry.amount}
               onChange={(e) => updateEntry(entry._id, "amount", e.target.value)}
             />

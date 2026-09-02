@@ -34,6 +34,28 @@ const selectHistoryField = z
     }
   });
 
+// Submitted by MonthlyValueHistoryEditor as a JSON string, e.g.
+// '[{"amount":141.02,"from":"2026-01-01","until":"2026-06-30"}]'.
+const numericHistoryField = z
+  .string()
+  .optional()
+  .transform((val) => {
+    if (!val) return [];
+    try {
+      const parsed = JSON.parse(val);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter((e) => e && typeof e.amount === "number")
+        .map((e) => ({
+          amount: e.amount,
+          from: typeof e.from === "string" && e.from ? e.from : undefined,
+          until: typeof e.until === "string" && e.until ? e.until : undefined,
+        }));
+    } catch {
+      return [];
+    }
+  });
+
 export const studentFormSchema = z.object({
   name: z.string().min(2, "Informe o nome completo"),
   username: usernameField,
@@ -52,29 +74,10 @@ export const studentFormSchema = z.object({
   planId: z.string().optional(),
   planHistory: selectHistoryField,
   monthlyValue: z.coerce.number().min(0, "Valor inválido"),
-  // Submitted by MonthlyValueHistoryEditor as a JSON string, e.g.
-  // '[{"amount":141.02,"from":"2026-01-01","until":"2026-06-30"}]'.
-  monthlyValueHistory: z
-    .string()
-    .optional()
-    .transform((val) => {
-      if (!val) return [];
-      try {
-        const parsed = JSON.parse(val);
-        if (!Array.isArray(parsed)) return [];
-        return parsed
-          .filter((e) => e && typeof e.amount === "number")
-          .map((e) => ({
-            amount: e.amount,
-            from: typeof e.from === "string" && e.from ? e.from : undefined,
-            until: typeof e.until === "string" && e.until ? e.until : undefined,
-          }));
-      } catch {
-        return [];
-      }
-    }),
+  monthlyValueHistory: numericHistoryField,
   bankAccount: z.enum(["GABES", "JOE", "ASAAS"]).default("JOE"),
   dueDay: z.coerce.number().int().min(1).max(31).default(10),
+  dueDayHistory: numericHistoryField,
   // Third party (e.g. a company) covering part or all of monthlyValue,
   // billed separately with its own due date. Only submitted by the form
   // when "tem pagador terceiro" is checked — absent otherwise, so these
@@ -84,6 +87,7 @@ export const studentFormSchema = z.object({
   thirdPartyDueDay: z.coerce.number().int().min(1).max(31).optional(),
   thirdPartyBankAccount: z.enum(["GABES", "JOE", "ASAAS"]).optional(),
   lessonsPerMonth: z.coerce.number().int().min(1).max(60),
+  lessonsPerMonthHistory: numericHistoryField,
   // Submitted by LessonScheduleEditor as a JSON string, e.g.
   // '[{"weekday":2,"start":"19:00","end":"19:50"}]'.
   lessonSchedule: z

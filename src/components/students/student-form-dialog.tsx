@@ -59,11 +59,13 @@ type StudentDefaults = {
   monthlyValueHistory?: ValueHistoryEntry[];
   bankAccount?: BankAccount;
   dueDay?: number;
+  dueDayHistory?: ValueHistoryEntry[];
   thirdPartyPayerName?: string | null;
   thirdPartyAmount?: number | null;
   thirdPartyDueDay?: number | null;
   thirdPartyBankAccount?: BankAccount | null;
   lessonsPerMonth: number;
+  lessonsPerMonthHistory?: ValueHistoryEntry[];
   lessonSchedule?: ScheduleEntry[];
   level: CourseLevel;
   startDate?: string;
@@ -292,29 +294,28 @@ export function StudentFormDialog({
             </Select>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="dueDay">Dia de vencimento do boleto</Label>
-            <Input
-              id="dueDay"
-              name="dueDay"
-              type="number"
-              min={1}
-              max={31}
-              defaultValue={student?.dueDay ?? 10}
-              required
-            />
-          </div>
+          <MonthlyValueHistoryEditor
+            label="Dia de vencimento do boleto"
+            amountLabel="Dia"
+            amountFieldName="dueDay"
+            historyFieldName="dueDayHistory"
+            defaultAmount={student?.dueDay ?? 10}
+            defaultHistory={student?.dueDayHistory ?? []}
+            step="1"
+            min={1}
+            max={31}
+          />
 
-          <div className="space-y-1.5">
-            <Label htmlFor="lessonsPerMonth">Aulas por mês</Label>
-            <Input
-              id="lessonsPerMonth"
-              name="lessonsPerMonth"
-              type="number"
-              defaultValue={student?.lessonsPerMonth ?? 4}
-              required
-            />
-          </div>
+          <MonthlyValueHistoryEditor
+            label="Aulas por mês"
+            amountLabel="Aulas"
+            amountFieldName="lessonsPerMonth"
+            historyFieldName="lessonsPerMonthHistory"
+            defaultAmount={student?.lessonsPerMonth ?? 4}
+            defaultHistory={student?.lessonsPerMonthHistory ?? []}
+            step="1"
+            min={1}
+          />
 
           <div className="space-y-1.5 sm:col-span-2">
             <Label>Dia(s) e horário(s) da(s) aula(s)</Label>

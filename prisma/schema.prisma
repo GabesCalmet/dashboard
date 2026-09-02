@@ -228,6 +228,11 @@ model StudentProfile {
   monthlyValueHistory Json          @default("[]")
   bankAccount       BankAccount     @default(JOE) // which of the school's 3 accounts receives this student's payments
   dueDay            Int             @default(10) // day of the month the invoice ("boleto") is due, 1-31
+  // History of dueDay changes over time, same shape/sync rule as
+  // monthlyValueHistory — dueDay always mirrors whichever entry is in
+  // effect today (or the most recent one); getBillingSlots resolves the
+  // historically-correct due day for a given reference month from this.
+  dueDayHistory     Json            @default("[]")
   // Optional third-party payer (e.g. a company) covering part or all of
   // monthlyValue, billed separately with its own due date. Null name means
   // no third party is configured — the student is billed the full amount.
@@ -236,6 +241,12 @@ model StudentProfile {
   thirdPartyDueDay     Int? // 1-31
   thirdPartyBankAccount BankAccount? // which account receives the third party's portion
   lessonsPerMonth   Int             @default(4)
+  // History of lessonsPerMonth changes over time, same shape/sync rule as
+  // monthlyValueHistory — informational record-keeping only, like
+  // teacherHistory/courseHistory/planHistory (doesn't drive any
+  // calculation, since actual monthly class load is computed from the
+  // real generated lessons instead).
+  lessonsPerMonthHistory Json       @default("[]")
   // One entry per scheduled day, each with its own time:
   // [{ "weekday": 2, "start": "19:00", "end": "19:50" }, ...] (weekday 0=Sun..6=Sat)
   lessonSchedule    Json            @default("[]")
