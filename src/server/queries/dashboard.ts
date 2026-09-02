@@ -20,6 +20,7 @@ export async function getAdminDashboardData(referenceMonth?: { year: number; mon
     monthlyRevenue,
     annualRevenue,
     completedLessonsAgg,
+    latePaymentsCount,
   ] = await Promise.all([
     prisma.studentProfile.count(),
     prisma.studentProfile.count({ where: { status: "ACTIVE" } }),
@@ -50,6 +51,9 @@ export async function getAdminDashboardData(referenceMonth?: { year: number; mon
       where: { scheduledAt: { gte: monthStart, lte: monthEnd }, status: "COMPLETED" },
       _sum: { durationMin: true },
     }),
+    // Not scoped to the browsed month — an overdue payment from any month
+    // still needs chasing down regardless of which month is on screen.
+    prisma.payment.count({ where: { status: "LATE" } }),
   ]);
 
   // Ticket médio = each course's real total (own portion + whatever a
@@ -109,6 +113,7 @@ export async function getAdminDashboardData(referenceMonth?: { year: number; mon
     makeupsThisMonth,
     monthlyRevenue: Number(monthlyRevenue._sum.amount ?? 0),
     annualRevenue: Number(annualRevenue._sum.amount ?? 0),
+    latePaymentsCount,
     avgTicket: Number(avgTicket),
     avgLessonsPerStudent: Number(avgLessonsPerStudent),
     hoursTaught: Math.round((completedLessonsAgg._sum.durationMin ?? 0) / 60),

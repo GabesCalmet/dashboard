@@ -12,6 +12,7 @@ import {
   Receipt,
   BarChart3,
   AlertTriangle,
+  CircleAlert,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -102,6 +103,13 @@ export default async function AdminDashboardPage({
           icon={AlertTriangle}
           tone={alerts.length === 0 ? undefined : hasRedAlert ? "danger" : "warning"}
           href="/admin/alerts"
+        />
+        <StatCard
+          label="Pagamentos atrasados"
+          value={String(data.latePaymentsCount)}
+          icon={CircleAlert}
+          tone={data.latePaymentsCount > 0 ? "danger" : undefined}
+          href="/admin/financial/atrasados"
         />
 
         <StatCard

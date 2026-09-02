@@ -376,3 +376,34 @@ export async function getStudentPaymentHistory(studentId: string) {
 
   return rows.sort((a, b) => b.referenceMonth.getTime() - a.referenceMonth.getTime());
 }
+
+// Every real cobrança currently marked LATE, across every student and
+// month — the "you need to chase these down" list, as opposed to the
+// Receita page's Cobranças table which only ever shows one month at a
+// time. Kept up to date by the daily mark-late-payments cron (see
+// /api/cron/mark-late-payments) plus whatever's set by hand.
+export async function getLatePayments() {
+  const payments = await prisma.payment.findMany({
+    where: { status: "LATE" },
+    include: { student: { include: { user: true, teacher: { include: { user: true } } } } },
+    orderBy: { dueDate: "asc" },
+  });
+
+  return payments.map((p) => ({
+    id: p.id,
+    studentId: p.studentId,
+    studentName: p.student.user.name,
+    teacherName: p.student.teacher?.user.name ?? null,
+    payerName: p.payerName,
+    amount: Number(p.amount),
+    dueDate: p.dueDate,
+    referenceMonth: p.referenceMonth,
+    // Not stored per-payment — resolved the same way getBillingSlots does:
+    // the third party's own account for their slot, the student's
+    // otherwise.
+    bankAccount:
+      p.payerName && p.payerName === p.student.thirdPartyPayerName
+        ? (p.student.thirdPartyBankAccount ?? p.student.bankAccount)
+        : p.student.bankAccount,
+  }));
+}
