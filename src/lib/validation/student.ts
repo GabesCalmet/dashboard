@@ -119,6 +119,10 @@ export const studentFormSchema = z.object({
     }),
   level: z.enum(["A1", "A2", "B1", "B2", "C1", "C2"]),
   startDate: z.string().optional(),
+  // When billing should start counting this student as billable — separate
+  // from startDate (when their classes start). Falls back to startDate
+  // when left blank.
+  billingStartDate: z.string().optional(),
   endDate: z.string().optional(),
   objective: z.string().optional(),
   notes: z.string().optional(),

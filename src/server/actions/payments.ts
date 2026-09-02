@@ -81,8 +81,10 @@ export async function generateMonthlyPayments(referenceMonth: Date) {
   const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
 
   for (const student of students) {
-    // Never bill a month before the student actually enrolled.
-    if (student.startDate > monthEnd) continue;
+    // Never bill a month before the student became billable — governed by
+    // billingStartDate when set, independent of when their classes
+    // actually started (startDate).
+    if ((student.billingStartDate ?? student.startDate) > monthEnd) continue;
     for (const slot of getBillingSlots(student, monthStart)) {
       const existing = await prisma.payment.findFirst({
         where: { studentId: student.id, referenceMonth: monthStart, payerName: slot.payerName },

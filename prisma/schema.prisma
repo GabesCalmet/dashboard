@@ -254,6 +254,12 @@ model StudentProfile {
   levelProgress     Int             @default(0) // 0-100
   lessonsContracted Int             @default(0)
   startDate         DateTime        @default(now())
+  // Optional — when billing should start counting a student as billable,
+  // independent of when their classes actually started (startDate). Falls
+  // back to startDate when unset. Exists because the two can genuinely
+  // differ — e.g. a class held on the last day of a month whose first
+  // charge is only due the 1st of the next one.
+  billingStartDate  DateTime?
   // Optional — when set, recurring lesson generation never schedules a
   // class past this date, and it's shown as the course's expected end.
   endDate           DateTime?

@@ -29,16 +29,18 @@ export async function getFinancialOverview(year?: number, month?: number) {
   const paymentBySlot = new Map(payments.map((p) => [`${p.studentId}::${p.payerName ?? ""}`, p]));
   const studentIdsWithPayment = new Set(payments.map((p) => p.studentId));
 
-  // Every active student who'd already enrolled by this month shows up
-  // here — one row per billing slot (their own portion, plus a separate
-  // one for a third-party payer if configured) — either the real cobrança
-  // for this month, or a placeholder (not yet billed) so nobody's missing
-  // just because "Gerar cobranças" hasn't been run yet. Students who
-  // start later don't get placeholders for months before they enrolled,
-  // even though "active" — a real Payment row (if one somehow exists) is
-  // never hidden, only the synthesized placeholder is skipped.
+  // Every active student billable by this month shows up here — one row
+  // per billing slot (their own portion, plus a separate one for a
+  // third-party payer if configured) — either the real cobrança for this
+  // month, or a placeholder (not yet billed) so nobody's missing just
+  // because "Gerar cobranças" hasn't been run yet. billingStartDate (when
+  // set) governs this independently of startDate — classes and billing
+  // don't have to start the same month. Students not yet billable don't
+  // get placeholders for months before that, even though "active" — a
+  // real Payment row (if one somehow exists) is never hidden, only the
+  // synthesized placeholder is skipped.
   const rows = activeStudents
-    .filter((s) => s.startDate <= monthEnd || studentIdsWithPayment.has(s.id))
+    .filter((s) => (s.billingStartDate ?? s.startDate) <= monthEnd || studentIdsWithPayment.has(s.id))
     .flatMap((s) =>
       getBillingSlots(s, monthStart).map((slot) => {
         const payment = paymentBySlot.get(`${s.id}::${slot.payerName ?? ""}`);
@@ -307,11 +309,13 @@ export async function getFinancialSummary() {
 
 // Full billing picture for one student's own Financeiro tab — every real
 // generated Payment plus a live placeholder (same rule the Cobranças table
-// uses) for any month since enrollment that hasn't been generated yet, so
-// the tab doesn't only show whichever months an admin happened to click
-// "Gerar cobranças" for. Placeholders stop once the student isn't ACTIVE
-// (nothing new is expected), but real past rows for a since-paused/
-// canceled student are always included regardless.
+// uses) for any month since they became billable that hasn't been
+// generated yet, so the tab doesn't only show whichever months an admin
+// happened to click "Gerar cobranças" for. Billing starts from
+// billingStartDate when set — independent of startDate, since classes and
+// billing don't have to start the same month. Placeholders stop once the
+// student isn't ACTIVE (nothing new is expected), but real past rows for a
+// since-paused/canceled student are always included regardless.
 export async function getStudentPaymentHistory(studentId: string) {
   const student = await prisma.studentProfile.findUniqueOrThrow({ where: { id: studentId } });
   const realPayments = await prisma.payment.findMany({ where: { studentId } });
@@ -320,7 +324,8 @@ export async function getStudentPaymentHistory(studentId: string) {
   );
 
   const now = new Date();
-  const cursor = new Date(student.startDate.getFullYear(), student.startDate.getMonth(), 1);
+  const billingStart = student.billingStartDate ?? student.startDate;
+  const cursor = new Date(billingStart.getFullYear(), billingStart.getMonth(), 1);
   const end = new Date(now.getFullYear() + 1, 11, 1);
 
   const rows: {

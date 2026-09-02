@@ -185,6 +185,7 @@ export function StudentDetailView({
                   lessonSchedule: parseLessonSchedule(student.lessonSchedule),
                   level: student.level,
                   startDate: student.startDate.toISOString().slice(0, 10),
+                  billingStartDate: student.billingStartDate?.toISOString().slice(0, 10),
                   endDate: student.endDate?.toISOString().slice(0, 10),
                   objective: student.objective,
                   notes: student.notes,
@@ -266,6 +267,14 @@ export function StudentDetailView({
                   <InfoRow label="Endereço" value={student.address ?? "—"} />
                   <InfoRow label="Link do Meet" value={student.meetLink ?? "—"} />
                   <InfoRow label="Início do curso" value={formatDate(student.startDate)} />
+                  <InfoRow
+                    label="Início da cobrança"
+                    value={
+                      student.billingStartDate
+                        ? formatDate(student.billingStartDate)
+                        : formatDate(student.startDate)
+                    }
+                  />
                   <InfoRow
                     label="Término previsto"
                     value={student.endDate ? formatDate(student.endDate) : "—"}

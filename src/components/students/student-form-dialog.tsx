@@ -69,6 +69,7 @@ type StudentDefaults = {
   lessonSchedule?: ScheduleEntry[];
   level: CourseLevel;
   startDate?: string;
+  billingStartDate?: string;
   endDate?: string;
   objective?: string | null;
   notes?: string | null;
@@ -154,8 +155,21 @@ export function StudentFormDialog({
             <Input id="birthDate" name="birthDate" type="date" defaultValue={student?.birthDate} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="startDate">Data de início</Label>
+            <Label htmlFor="startDate">Data de início das aulas</Label>
             <Input id="startDate" name="startDate" type="date" defaultValue={student?.startDate} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="billingStartDate">Início da cobrança (opcional)</Label>
+            <Input
+              id="billingStartDate"
+              name="billingStartDate"
+              type="date"
+              defaultValue={student?.billingStartDate}
+              placeholder="Mesma data das aulas"
+            />
+            <p className="text-xs text-muted-foreground">
+              Deixe em branco para cobrar a partir da data de início das aulas.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="endDate">Data de término (opcional)</Label>
