@@ -17,16 +17,28 @@ import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { GrowthChart } from "@/components/shared/growth-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MonthNav } from "@/components/financial/month-nav";
 import { getAdminDashboardData } from "@/server/queries/dashboard";
 import { getAttendanceAlerts } from "@/server/queries/alerts";
 import { formatCurrency } from "@/lib/labels";
-import { monthParam } from "@/lib/month-param";
+import { monthParam, parseMonthParam } from "@/lib/month-param";
 
-export default async function AdminDashboardPage() {
-  const [data, alerts] = await Promise.all([getAdminDashboardData(), getAttendanceAlerts()]);
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
+  const { month: monthParamValue } = await searchParams;
+  const { year, month } = parseMonthParam(monthParamValue);
+  const [data, alerts] = await Promise.all([
+    getAdminDashboardData({ year, month }),
+    getAttendanceAlerts(),
+  ]);
   const hasRedAlert = alerts.some((a) => a.severity === "RED");
-  const now = new Date();
-  const thisMonth = monthParam(now.getFullYear(), now.getMonth());
+  const viewedMonth = monthParam(year, month);
+  const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(
+    new Date(year, month, 1)
+  );
 
   return (
     <div>
@@ -34,6 +46,10 @@ export default async function AdminDashboardPage() {
         title="Dashboard"
         description="Visão geral da Upfront English School."
       />
+
+      <div className="mb-4">
+        <MonthNav basePath="/admin" year={year} month={month} />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -72,13 +88,13 @@ export default async function AdminDashboardPage() {
           label="Cancelamentos (mês)"
           value={String(data.cancellationsThisMonth)}
           icon={Ban}
-          href={`/admin/reports/lessons?month=${thisMonth}&statuses=CANCELED_BY_STUDENT,CANCELED_BY_TEACHER,CANCELED_HOLIDAY,NO_SHOW`}
+          href={`/admin/reports/lessons?month=${viewedMonth}&statuses=CANCELED_BY_STUDENT,CANCELED_BY_TEACHER,CANCELED_HOLIDAY,NO_SHOW`}
         />
         <StatCard
           label="Reposições (mês)"
           value={String(data.makeupsThisMonth)}
           icon={Repeat}
-          href={`/admin/reports/lessons?month=${thisMonth}&statuses=MAKEUP`}
+          href={`/admin/reports/lessons?month=${viewedMonth}&statuses=MAKEUP`}
         />
         <StatCard
           label="Alertas de frequência"
@@ -105,7 +121,7 @@ export default async function AdminDashboardPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Crescimento — últimos 6 meses</CardTitle>
+          <CardTitle className="capitalize">Crescimento — 6 meses até {monthLabel}</CardTitle>
         </CardHeader>
         <CardContent>
           <GrowthChart data={data.growth} />

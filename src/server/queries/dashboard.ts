@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 
-export async function getAdminDashboardData() {
+export async function getAdminDashboardData(referenceMonth?: { year: number; month: number }) {
   const now = new Date();
-  const monthStart = startOfMonth(now);
-  const monthEnd = endOfMonth(now);
+  const viewedMonth = referenceMonth ? new Date(referenceMonth.year, referenceMonth.month, 1) : now;
+  const monthStart = startOfMonth(viewedMonth);
+  const monthEnd = endOfMonth(viewedMonth);
   const yearStart = new Date(now.getFullYear(), 0, 1);
 
   const [
@@ -74,7 +75,7 @@ export async function getAdminDashboardData() {
       : 0;
 
   const monthlyBuckets = Array.from({ length: 6 }).map((_, i) => {
-    const d = subMonths(now, 5 - i);
+    const d = subMonths(viewedMonth, 5 - i);
     return { start: startOfMonth(d), end: endOfMonth(d), label: format(d, "MMM") };
   });
 
