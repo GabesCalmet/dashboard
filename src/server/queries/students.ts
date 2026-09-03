@@ -27,6 +27,7 @@ export async function getStudentDetail(studentId: string) {
       lessons: { orderBy: { scheduledAt: "asc" }, include: { rescheduledTo: true } },
       payments: { orderBy: { referenceMonth: "desc" } },
       levelHistory: { orderBy: { createdAt: "desc" } },
+      groupMembers: { include: { user: true }, orderBy: { createdAt: "asc" } },
     },
   });
 }

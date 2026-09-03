@@ -124,6 +124,10 @@ model User {
 
   teacherProfile   TeacherProfile?
   studentProfile   StudentProfile?
+  // Set only for an additional login belonging to a "grupo" student — see
+  // StudentGroupMember. Null for every ordinary (individual) student,
+  // teacher, and staff account.
+  groupMemberOf    StudentGroupMember?
   notifications    Notification[]
   leadInteractions LeadInteraction[] @relation("InteractionAuthor")
 
@@ -277,8 +281,34 @@ model StudentProfile {
   achievements     StudentAchievement[]
   leadInteractions LeadInteraction[]
   alertDismissals  StudentAlertDismissal[]
+  // Additional people sharing this one course/billing (a "grupo" student) —
+  // each gets their own separate login but sees the exact same shared
+  // profile (lessons, progress, billing) once signed in. The main
+  // user/userId above is just the first/primary member; empty for an
+  // ordinary individual student.
+  groupMembers     StudentGroupMember[]
 
   @@map("student_profiles")
+}
+
+// One additional login for a "grupo" student, beyond the primary
+// user/userId on StudentProfile — e.g. each participant in a family or
+// corporate account that shares one course and one bill but wants their
+// own username/password. Deleting the member's User cascades this row
+// away (see deleteStudent/removeStudentGroupMember, which delete the User
+// first); deleting the StudentProfile itself cascades this row away too,
+// but callers must still delete each member's own User/Supabase Auth
+// account explicitly first or it's left dangling with no profile to
+// resolve to.
+model StudentGroupMember {
+  id               String         @id @default(uuid())
+  studentProfileId String
+  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  userId           String         @unique
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt        DateTime       @default(now())
+
+  @@map("student_group_members")
 }
 
 // Marks the point in time a coordinator/admin last reviewed and dismissed

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Login handle chosen by the admin — not an email, shared uniqueness with
 // teachers since it's the login column on the same User table.
-const usernameField = z
+export const usernameField = z
   .string()
   .trim()
   .min(3, "Nome de usuário deve ter ao menos 3 caracteres")
@@ -10,7 +10,7 @@ const usernameField = z
   .regex(/^[a-zA-Z0-9._-]+$/, "Use apenas letras, números, ponto, hífen ou underline")
   .transform((v) => v.toLowerCase());
 
-const passwordField = z.string().min(6, "A senha deve ter ao menos 6 caracteres");
+export const passwordField = z.string().min(6, "A senha deve ter ao menos 6 caracteres");
 
 // Submitted by SelectHistoryEditor as a JSON string, e.g.
 // '[{"id":"<teacherId>","from":"2026-01-01","until":"2026-06-30"}]'.
@@ -56,10 +56,49 @@ const numericHistoryField = z
     }
   });
 
+// Submitted by GroupMembersEditor (create form only) as a JSON string, e.g.
+// '[{"name":"...","username":"...","password":"...","email":"...","phone":"..."}]'
+// — one additional login for a "grupo" student, beyond the primary
+// name/username/password above. Loose validation here (real uniqueness/
+// length checks happen per-member in provisionUsernameAccount, same as the
+// primary) since a malformed entry should just be dropped, not fail the
+// whole cadastro.
+const groupMembersField = z
+  .string()
+  .optional()
+  .transform((val) => {
+    if (!val) return [];
+    try {
+      const parsed = JSON.parse(val);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter(
+          (e) =>
+            e &&
+            typeof e.name === "string" &&
+            e.name.trim() &&
+            typeof e.username === "string" &&
+            e.username.trim() &&
+            typeof e.password === "string" &&
+            e.password.length >= 6
+        )
+        .map((e) => ({
+          name: e.name.trim(),
+          username: e.username.trim().toLowerCase(),
+          password: e.password,
+          email: typeof e.email === "string" && e.email ? e.email : undefined,
+          phone: typeof e.phone === "string" && e.phone ? e.phone : undefined,
+        }));
+    } catch {
+      return [];
+    }
+  });
+
 export const studentFormSchema = z.object({
   name: z.string().min(2, "Informe o nome completo"),
   username: usernameField,
   password: passwordField,
+  groupMembers: groupMembersField,
   // Contact email — optional, not used for login, can repeat across profiles.
   email: z.string().email("Email inválido").optional().or(z.literal("")),
   cpf: z.string().optional(),

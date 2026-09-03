@@ -19,6 +19,22 @@ export const getCurrentUser = cache(async () => {
     where: { id: userId },
     include: { teacherProfile: true, studentProfile: true },
   });
+  if (!dbUser) return null;
+
+  // A "grupo" member has no studentProfile of their own — their login
+  // shares the group's, reached via StudentGroupMember instead of the
+  // ordinary 1:1 User.studentProfile relation. Once resolved here, every
+  // downstream student page/action just reads user.studentProfile as
+  // usual and doesn't need to know a group is involved at all.
+  if (!dbUser.studentProfile && dbUser.role === "STUDENT") {
+    const membership = await prisma.studentGroupMember.findUnique({
+      where: { userId },
+      include: { studentProfile: true },
+    });
+    if (membership) {
+      return { ...dbUser, studentProfile: membership.studentProfile };
+    }
+  }
 
   return dbUser;
 });

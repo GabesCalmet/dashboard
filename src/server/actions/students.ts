@@ -1,11 +1,12 @@
 "use server";
 
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireRole, requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { provisionUsernameAccount, hardDeleteUserAccount } from "@/server/accounts";
 import { recordAudit } from "@/server/audit";
-import { studentFormSchema } from "@/lib/validation/student";
+import { studentFormSchema, usernameField, passwordField } from "@/lib/validation/student";
 import { levelOrder } from "@/lib/labels";
 import { syncRecurringLessons } from "@/server/lessons/recurring";
 
@@ -76,6 +77,25 @@ export async function createStudent(
       actor,
       changes: { name: data.name, username: data.username },
     });
+
+    // "Grupo" students — additional logins sharing this same profile
+    // (lessons, progress, billing). Created one at a time after the main
+    // profile so a failure here (e.g. a taken username) still leaves the
+    // primary student intact — the admin can add the missing member(s)
+    // later from the student's page.
+    for (const member of data.groupMembers) {
+      const { user: memberUser } = await provisionUsernameAccount({
+        name: member.name,
+        username: member.username,
+        password: member.password,
+        role: "STUDENT",
+        email: member.email,
+        phone: member.phone,
+      });
+      await prisma.studentGroupMember.create({
+        data: { studentProfileId: student.id, userId: memberUser.id },
+      });
+    }
 
     await syncRecurringLessons(student.id);
 
@@ -187,7 +207,10 @@ export async function resyncStudentLessons(studentId: string) {
 
 export async function deleteStudent(studentId: string) {
   const actor = await requireRole("ADMIN");
-  const student = await prisma.studentProfile.findUniqueOrThrow({ where: { id: studentId } });
+  const student = await prisma.studentProfile.findUniqueOrThrow({
+    where: { id: studentId },
+    include: { groupMembers: true },
+  });
 
   await recordAudit({
     entityType: "StudentProfile",
@@ -196,8 +219,88 @@ export async function deleteStudent(studentId: string) {
     actor,
   });
 
+  // Each group member's own login must be deleted explicitly — cascading
+  // from the StudentProfile only removes the StudentGroupMember link row,
+  // not the User/Supabase Auth account behind it, which would otherwise be
+  // left dangling with no profile to resolve to.
+  for (const member of student.groupMembers) {
+    await hardDeleteUserAccount(member.userId);
+  }
   await hardDeleteUserAccount(student.userId);
   revalidatePath("/admin/students");
+}
+
+// Adds one more login to an existing "grupo" student — same shared
+// profile (lessons, progress, billing) as every other member, just its own
+// username/password.
+export async function addStudentGroupMember(
+  studentId: string,
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = z
+    .object({
+      name: z.string().min(2, "Informe o nome completo"),
+      username: usernameField,
+      password: passwordField,
+      email: z.string().email("Email inválido").optional().or(z.literal("")),
+      phone: z.string().optional(),
+    })
+    .safeParse(raw);
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  const data = parsed.data;
+
+  try {
+    const { user } = await provisionUsernameAccount({
+      name: data.name,
+      username: data.username,
+      password: data.password,
+      role: "STUDENT",
+      email: data.email || undefined,
+      phone: data.phone,
+    });
+    await prisma.studentGroupMember.create({
+      data: { studentProfileId: studentId, userId: user.id },
+    });
+
+    await recordAudit({
+      entityType: "StudentProfile",
+      entityId: studentId,
+      action: "UPDATE",
+      actor,
+      changes: { groupMemberAdded: data.username },
+    });
+
+    revalidatePath(`/admin/students/${studentId}`);
+    revalidatePath(`/coordinator/students/${studentId}`);
+    return { success: "Membro do grupo adicionado." };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erro ao adicionar membro." };
+  }
+}
+
+// Removes one group member's login — the shared profile (lessons, billing)
+// stays intact for everyone else.
+export async function removeStudentGroupMember(memberId: string) {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+  const member = await prisma.studentGroupMember.findUniqueOrThrow({ where: { id: memberId } });
+
+  await recordAudit({
+    entityType: "StudentProfile",
+    entityId: member.studentProfileId,
+    action: "UPDATE",
+    actor,
+    changes: { groupMemberRemoved: memberId },
+  });
+
+  await hardDeleteUserAccount(member.userId);
+  revalidatePath(`/admin/students/${member.studentProfileId}`);
+  revalidatePath(`/coordinator/students/${member.studentProfileId}`);
 }
 
 export async function promoteStudentLevel(studentId: string) {

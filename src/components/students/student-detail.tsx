@@ -24,6 +24,7 @@ import type { ScheduleEntry } from "@/components/students/lesson-schedule-editor
 import type { ValueHistoryEntry } from "@/components/students/monthly-value-history-editor";
 import type { SelectHistoryEntry } from "@/components/students/select-history-editor";
 import { DeleteStudentButton } from "@/components/students/delete-student-button";
+import { GroupMembersCard } from "@/components/students/group-members-card";
 import { ResyncLessonsButton } from "@/components/students/resync-lessons-button";
 import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
 import { SetPasswordButton } from "@/components/shared/set-password-button";
@@ -348,6 +349,19 @@ export function StudentDetailView({
         </div>
 
         <div className="space-y-6">
+          {permissions.canEdit && (
+            <GroupMembersCard
+              studentId={student.id}
+              members={student.groupMembers.map((m) => ({
+                id: m.id,
+                userId: m.userId,
+                name: m.user.name,
+                username: m.user.username,
+              }))}
+              canManage={permissions.canEdit}
+            />
+          )}
+
           <LevelProgressCard
             studentId={student.id}
             level={student.level}

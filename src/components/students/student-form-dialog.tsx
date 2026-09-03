@@ -34,6 +34,7 @@ import {
   SelectHistoryEditor,
   type SelectHistoryEntry,
 } from "@/components/students/select-history-editor";
+import { GroupMembersEditor } from "@/components/students/group-members-editor";
 import { levelLabel, bankAccountLabel } from "@/lib/labels";
 import type { CourseLevel, StudentStatus, BankAccount } from "@prisma/client";
 
@@ -92,6 +93,7 @@ export function StudentFormDialog({
   const [state, formAction, isPending] = useActionState(action, undefined);
   const [open, setOpen] = useState(false);
   const [hasThirdParty, setHasThirdParty] = useState(Boolean(student?.thirdPartyAmount));
+  const [studentType, setStudentType] = useState<"individual" | "grupo">("individual");
   useActionToast(state, () => setOpen(false));
 
   return (
@@ -133,6 +135,35 @@ export function StudentFormDialog({
                 <Label htmlFor="password">Senha</Label>
                 <Input id="password" name="password" type="text" placeholder="Mínimo 6 caracteres" required />
               </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>Tipo de cadastro</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={studentType === "individual" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStudentType("individual")}
+                  >
+                    Individual
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={studentType === "grupo" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStudentType("grupo")}
+                  >
+                    Grupo
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Nome/usuário/senha acima são da primeira pessoa. Em um grupo, as aulas e o
+                  financeiro ficam ligados a um só cadastro, mas cada participante tem seu próprio
+                  login.
+                </p>
+              </div>
+
+              {studentType === "grupo" && <GroupMembersEditor />}
             </>
           )}
 
