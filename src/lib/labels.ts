@@ -5,6 +5,7 @@ import type {
   StudentStatus,
   BankAccount,
   ExpenseFrequency,
+  ExpenseCategory,
 } from "@prisma/client";
 
 export const levelLabel: Record<CourseLevel, string> = {
@@ -42,6 +43,13 @@ export const bankAccountLabel: Record<BankAccount, string> = {
 export const expenseFrequencyLabel: Record<ExpenseFrequency, string> = {
   ONE_TIME: "Único",
   RECURRING: "Recorrente",
+};
+
+export const expenseCategoryLabel: Record<ExpenseCategory, string> = {
+  PROFESSORES: "Professores",
+  MARKETING: "Marketing",
+  PARCEIROS: "Parceiros",
+  OUTROS: "Outros",
 };
 
 export const lessonStatusLabel: Record<LessonStatus, string> = {

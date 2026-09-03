@@ -5,6 +5,7 @@ export const expenseFormSchema = z
     description: z.string().min(2, "Informe uma descrição"),
     amount: z.coerce.number().min(0.01, "Valor inválido"),
     frequency: z.enum(["ONE_TIME", "RECURRING"]),
+    category: z.enum(["PROFESSORES", "MARKETING", "PARCEIROS", "OUTROS"]).default("OUTROS"),
     date: z.string().min(1, "Informe a data"),
     dayOfMonth: z.coerce.number().int().min(1).max(31).optional(),
     endDate: z.string().optional(),

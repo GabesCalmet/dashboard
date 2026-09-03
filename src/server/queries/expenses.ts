@@ -1,7 +1,31 @@
 import { prisma } from "@/lib/prisma";
+import { expenseTotalForMonth } from "@/server/queries/financial";
+import { expenseCategoryLabel } from "@/lib/labels";
+import type { ExpenseCategory } from "@prisma/client";
 
 export async function listExpenses() {
   return prisma.expense.findMany({ orderBy: { date: "desc" } });
+}
+
+// Per-category previsto (whole month's known/expected expenses) vs
+// realizado (only what's actually accrued by today) — the 4 boxes shown
+// on the Gastos page under each heading.
+export async function getExpenseCategoryTotals(year: number, month: number) {
+  const now = new Date();
+  const monthStart = new Date(year, month, 1);
+  const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
+
+  const expenses = await prisma.expense.findMany();
+
+  return (Object.keys(expenseCategoryLabel) as ExpenseCategory[]).map((category) => {
+    const categoryExpenses = expenses.filter((e) => e.category === category);
+    return {
+      category,
+      label: expenseCategoryLabel[category],
+      previsto: expenseTotalForMonth(categoryExpenses, monthStart, monthEnd),
+      realizado: expenseTotalForMonth(categoryExpenses, monthStart, monthEnd, now),
+    };
+  });
 }
 
 // Expenses relevant to a specific month/year: one-time expenses dated

@@ -146,7 +146,7 @@ function recurringActiveInMonth(e: Expense, monthStart: Date, monthEnd: Date) {
 // given, only counts an expense once its effective day in that month has
 // actually arrived (used for "realizado" vs "previsto" — previsto omits
 // the cutoff and counts the whole month's known/expected expenses).
-function expenseTotalForMonth(expenses: Expense[], monthStart: Date, monthEnd: Date, cutoff?: Date) {
+export function expenseTotalForMonth(expenses: Expense[], monthStart: Date, monthEnd: Date, cutoff?: Date) {
   return expenses.reduce((sum, e) => {
     if (e.frequency === "ONE_TIME") {
       if (e.date < monthStart || e.date > monthEnd) return sum;

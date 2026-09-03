@@ -29,16 +29,18 @@ import {
   formatCurrency,
   formatCalendarDate,
   expenseFrequencyLabel,
+  expenseCategoryLabel,
   bankAccountLabel,
 } from "@/lib/labels";
 import { deleteExpense, endRecurringExpense } from "@/server/actions/expenses";
-import type { Expense, BankAccount } from "@prisma/client";
+import type { Expense, ExpenseCategory, BankAccount } from "@prisma/client";
 
 type Row = {
   id: string;
   description: string;
   amount: number;
   frequency: Expense["frequency"];
+  category: ExpenseCategory;
   date: Date;
   // This month's actual date for the expense — same as `date` for ONE_TIME,
   // or dayOfMonth clamped into the viewed month for RECURRING.
@@ -59,6 +61,7 @@ export function ExpensesTable({ expenses }: { expenses: Row[] }) {
           <TableRow>
             <TableHead>Descrição</TableHead>
             <TableHead>Valor</TableHead>
+            <TableHead>Categoria</TableHead>
             <TableHead>Conta</TableHead>
             <TableHead>Tipo</TableHead>
             <TableHead>Data</TableHead>
@@ -73,6 +76,9 @@ export function ExpensesTable({ expenses }: { expenses: Row[] }) {
               <TableRow key={e.id}>
                 <TableCell className="font-medium">{e.description}</TableCell>
                 <TableCell>{formatCurrency(e.amount)}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {expenseCategoryLabel[e.category]}
+                </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {bankAccountLabel[e.bankAccount]}
                 </TableCell>
@@ -161,7 +167,7 @@ export function ExpensesTable({ expenses }: { expenses: Row[] }) {
           })}
           {expenses.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+              <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
                 Nenhum gasto neste mês.
               </TableCell>
             </TableRow>

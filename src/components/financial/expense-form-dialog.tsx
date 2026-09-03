@@ -24,14 +24,15 @@ import {
 } from "@/components/ui/select";
 import { createExpense, updateExpense } from "@/server/actions/expenses";
 import { useActionToast } from "@/hooks/use-action-toast";
-import { bankAccountLabel } from "@/lib/labels";
-import type { ExpenseFrequency, BankAccount } from "@prisma/client";
+import { bankAccountLabel, expenseCategoryLabel } from "@/lib/labels";
+import type { ExpenseFrequency, ExpenseCategory, BankAccount } from "@prisma/client";
 
 type ExpenseDefaults = {
   id: string;
   description: string;
   amount: number;
   frequency: ExpenseFrequency;
+  category?: ExpenseCategory;
   date: string;
   dayOfMonth?: number | null;
   endDate?: string;
@@ -98,6 +99,22 @@ export function ExpenseFormDialog({
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(bankAccountLabel).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Categoria</Label>
+            <Select name="category" defaultValue={expense?.category ?? "OUTROS"} required>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(expenseCategoryLabel).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}
                   </SelectItem>

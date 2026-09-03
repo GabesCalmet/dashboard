@@ -391,11 +391,19 @@ enum ExpenseFrequency {
   RECURRING
 }
 
+enum ExpenseCategory {
+  PROFESSORES
+  MARKETING
+  PARCEIROS
+  OUTROS
+}
+
 model Expense {
   id          String           @id @default(uuid())
   description String
   amount      Decimal          @db.Decimal(10, 2)
   frequency   ExpenseFrequency
+  category    ExpenseCategory  @default(OUTROS)
   // ONE_TIME: the date it happened/is due.
   // RECURRING: the date the recurring obligation started.
   date        DateTime
