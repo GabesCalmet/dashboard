@@ -71,6 +71,61 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
   return { rows, totals };
 }
 
+// Breaks one teacher's month down by lesson status — hours and pay
+// (hours × their hourly rate for that month) per status group, so the
+// previsto/realizado totals on the payroll list are traceable to exactly
+// which classes make them up.
+export async function getTeacherPayrollDetail(teacherId: string, year: number, month: number) {
+  const monthStart = new Date(year, month, 1);
+  const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
+
+  const teacher = await prisma.teacherProfile.findUnique({
+    where: { id: teacherId },
+    include: { user: true },
+  });
+  if (!teacher) return null;
+
+  const statusBreakdown = await prisma.lesson.groupBy({
+    by: ["status"],
+    where: { teacherId, scheduledAt: { gte: monthStart, lte: monthEnd } },
+    _count: { _all: true },
+    _sum: { durationMin: true },
+  });
+
+  const hourlyRate = resolveHistoricalAmount(teacher.hourlyRate, teacher.hourlyRateHistory, monthStart);
+
+  const groups = statusBreakdown
+    .filter((g) => g._count._all > 0)
+    .map((g) => {
+      const hours = (g._sum.durationMin ?? 0) / 60;
+      return {
+        status: g.status,
+        count: g._count._all,
+        hours,
+        pay: hours * hourlyRate,
+        countsAsPrevisto: !PREVISTO_EXCLUDED_STATUSES.includes(g.status),
+        countsAsRealizado: (REALIZED_STATUSES as readonly string[]).includes(g.status),
+      };
+    })
+    .sort((a, b) => b.hours - a.hours);
+
+  const totals = groups.reduce(
+    (acc, g) => ({
+      previsto: acc.previsto + (g.countsAsPrevisto ? g.pay : 0),
+      realizado: acc.realizado + (g.countsAsRealizado ? g.pay : 0),
+    }),
+    { previsto: 0, realizado: 0 }
+  );
+
+  return {
+    teacherId: teacher.id,
+    teacherName: teacher.user.name,
+    hourlyRate,
+    groups,
+    totals,
+  };
+}
+
 export async function listTeachers() {
   // Includes inactive teachers too (not just active) so admins can find and
   // reactivate them from the same list instead of only via Usuários.

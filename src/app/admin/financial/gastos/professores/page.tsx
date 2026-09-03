@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getTeacherPayrollForMonth } from "@/server/queries/teachers";
-import { parseMonthParam } from "@/lib/month-param";
+import { parseMonthParam, monthParam } from "@/lib/month-param";
 import { formatCurrency } from "@/lib/labels";
 
 export default async function AdminTeacherPayrollPage({
@@ -23,6 +23,7 @@ export default async function AdminTeacherPayrollPage({
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
   const { rows, totals } = await getTeacherPayrollForMonth(year, month);
+  const monthQuery = monthParam(year, month);
 
   return (
     <div>
@@ -56,7 +57,7 @@ export default async function AdminTeacherPayrollPage({
               <TableRow key={r.teacherId}>
                 <TableCell className="p-0">
                   <Link
-                    href={`/admin/teachers/${r.teacherId}`}
+                    href={`/admin/financial/gastos/professores/${r.teacherId}?month=${monthQuery}`}
                     className="block px-3 py-2.5 hover:underline"
                   >
                     {r.teacherName}
