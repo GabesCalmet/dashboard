@@ -102,6 +102,46 @@ export default async function AdminTeacherPayrollDetailPage({
           )}
         </Table>
       </div>
+
+      <h2 className="mt-6 mb-3 text-sm font-semibold">Por aluno</h2>
+      <div className="overflow-hidden rounded-xl border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Aluno</TableHead>
+              <TableHead>Aulas</TableHead>
+              <TableHead>Horas</TableHead>
+              <TableHead>Previsto</TableHead>
+              <TableHead>Realizado</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {detail.students.map((s) => (
+              <TableRow key={s.studentId}>
+                <TableCell className="p-0">
+                  <Link
+                    href={`/admin/students/${s.studentId}`}
+                    className="block px-3 py-2.5 hover:underline"
+                  >
+                    {s.studentName}
+                  </Link>
+                </TableCell>
+                <TableCell>{s.count}</TableCell>
+                <TableCell>{s.hours.toFixed(1)}h</TableCell>
+                <TableCell>{formatCurrency(s.previsto)}</TableCell>
+                <TableCell>{formatCurrency(s.realizado)}</TableCell>
+              </TableRow>
+            ))}
+            {detail.students.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                  Nenhum aluno neste mês.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
