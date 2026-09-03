@@ -6,7 +6,8 @@ import { ExpensesTable } from "@/components/financial/expenses-table";
 import { ExpenseFormDialog } from "@/components/financial/expense-form-dialog";
 import { MonthNav } from "@/components/financial/month-nav";
 import { listExpensesForMonth, getExpenseCategoryTotals } from "@/server/queries/expenses";
-import { parseMonthParam } from "@/lib/month-param";
+import { getTeacherPayrollForMonth } from "@/server/queries/teachers";
+import { parseMonthParam, monthParam } from "@/lib/month-param";
 import { formatCurrency } from "@/lib/labels";
 
 const categoryIcon = {
@@ -24,13 +25,25 @@ export default async function AdminFinancialGastosPage({
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
 
-  const [expenses, categoryTotals] = await Promise.all([
+  const [expenses, categoryTotals, payroll] = await Promise.all([
     listExpensesForMonth(year, month),
     getExpenseCategoryTotals(year, month),
+    getTeacherPayrollForMonth(year, month),
   ]);
 
   const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
   const defaultDate = new Date(year, month, 1).toISOString().slice(0, 10);
+  const payrollHref = `/admin/financial/gastos/professores?month=${monthParam(year, month)}`;
+
+  // "Professores" isn't a manually-typed expense — it's derived from
+  // actual lesson hours × hourly rate (see getTeacherPayrollForMonth), so
+  // its box overrides the (always-zero) expense-category total and links
+  // to the per-teacher breakdown instead.
+  const boxes = categoryTotals.map((c) =>
+    c.category === "PROFESSORES"
+      ? { ...c, previsto: payroll.totals.previsto, realizado: payroll.totals.realizado, href: payrollHref }
+      : { ...c, href: undefined }
+  );
 
   return (
     <div>
@@ -56,24 +69,26 @@ export default async function AdminFinancialGastosPage({
 
       <h2 className="mb-3 text-sm font-semibold">Previsão de gastos</h2>
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {categoryTotals.map((c) => (
+        {boxes.map((c) => (
           <StatCard
             key={`previsto-${c.category}`}
             label={c.label}
             value={formatCurrency(c.previsto)}
             icon={categoryIcon[c.category]}
+            href={c.href}
           />
         ))}
       </div>
 
       <h2 className="mb-3 text-sm font-semibold">Gastos reais</h2>
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {categoryTotals.map((c) => (
+        {boxes.map((c) => (
           <StatCard
             key={`realizado-${c.category}`}
             label={c.label}
             value={formatCurrency(c.realizado)}
             icon={categoryIcon[c.category]}
+            href={c.href}
             accent
           />
         ))}

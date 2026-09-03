@@ -35,7 +35,7 @@ function parseValueHistory(value: unknown): ValueHistoryEntry[] {
 // one was configured, falling back to the current flat value for any month
 // no history entry covers (which is every month for a student who's never
 // had a change recorded).
-function resolveHistoricalAmount(current: unknown, history: unknown, referenceMonth: Date) {
+export function resolveHistoricalAmount(current: unknown, history: unknown, referenceMonth: Date) {
   const entries = parseValueHistory(history);
   if (entries.length === 0) return Number(current);
 
