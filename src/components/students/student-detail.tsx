@@ -367,6 +367,12 @@ export function StudentDetailView({
           {permissions.canEdit && (
             <GroupMembersCard
               studentId={student.id}
+              primary={{
+                userId: student.userId,
+                name: student.user.name,
+                username: student.user.username,
+                monthlyValue: Number(student.monthlyValue),
+              }}
               members={student.groupMembers.map((m) => ({
                 id: m.id,
                 userId: m.userId,

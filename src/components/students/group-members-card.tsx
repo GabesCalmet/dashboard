@@ -52,10 +52,12 @@ type Member = {
 
 export function GroupMembersCard({
   studentId,
+  primary,
   members,
   canManage,
 }: {
   studentId: string;
+  primary: { userId: string; name: string; username: string | null; monthlyValue: number };
   members: Member[];
   canManage: boolean;
 }) {
@@ -68,6 +70,23 @@ export function GroupMembersCard({
         {canManage && <AddGroupMemberDialog studentId={studentId} />}
       </CardHeader>
       <CardContent className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2.5">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">
+              {primary.name} <span className="text-xs font-normal text-muted-foreground">(principal)</span>
+            </p>
+            <p className="truncate text-xs text-muted-foreground">{primary.username}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              Valor mensal: {formatCurrency(primary.monthlyValue)}
+            </p>
+          </div>
+          {canManage && (
+            <div className="flex flex-wrap gap-1.5">
+              <ViewCredentialsButton userId={primary.userId} size="sm" />
+              <SetPasswordButton userId={primary.userId} size="sm" />
+            </div>
+          )}
+        </div>
         {members.map((m) => (
           <div
             key={m.id}
