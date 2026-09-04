@@ -39,6 +39,10 @@ import {
   type TeacherHistoryEntry,
 } from "@/components/students/teacher-assignment-editor";
 import { GroupMembersEditor } from "@/components/students/group-members-editor";
+import {
+  GroupMemberFieldsEditor,
+  type GroupMemberFields,
+} from "@/components/students/group-member-fields-editor";
 import { levelLabel, bankAccountLabel } from "@/lib/labels";
 import type { CourseLevel, StudentStatus, BankAccount } from "@prisma/client";
 
@@ -52,6 +56,7 @@ type StudentDefaults = {
   // (and let the admin rename) the group's own name.
   groupName?: string | null;
   isGroup?: boolean;
+  groupMembers?: GroupMemberFields[];
   email?: string | null;
   cpf?: string | null;
   phone?: string | null;
@@ -211,6 +216,9 @@ export function StudentFormDialog({
           </div>
 
           {!isEdit && studentType === "grupo" && <GroupMembersEditor />}
+          {isEdit && student?.isGroup && (
+            <GroupMemberFieldsEditor members={student.groupMembers ?? []} />
+          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="startDate">Data de início das aulas</Label>

@@ -177,6 +177,13 @@ export function StudentDetailView({
                   username: student.user.username,
                   groupName: student.groupName,
                   isGroup: student.groupMembers.length > 0,
+                  groupMembers: student.groupMembers.map((m) => ({
+                    userId: m.userId,
+                    name: m.user.name,
+                    username: m.user.username,
+                    email: m.user.email,
+                    phone: m.user.phone,
+                  })),
                   email: student.user.email,
                   cpf: student.cpf,
                   phone: student.user.phone,

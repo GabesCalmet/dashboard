@@ -133,14 +133,27 @@ export async function updateStudent(
 
   const before = await prisma.studentProfile.findUniqueOrThrow({
     where: { id: studentId },
-    include: { user: true },
+    include: { user: true, groupMembers: true },
   });
+
+  // Only ever touch a member's own login if they actually belong to this
+  // student's group — data.groupMemberUpdates carries userIds from the
+  // form, not group-member ids, so this is the guard against an edit
+  // reaching a user outside this cadastro.
+  const memberUserIds = new Set(before.groupMembers.map((m) => m.userId));
+  const memberUpdates = data.groupMemberUpdates.filter((m) => memberUserIds.has(m.userId));
 
   await prisma.$transaction([
     prisma.user.update({
       where: { id: before.userId },
       data: { name: data.name, phone: data.phone, email: data.email || null },
     }),
+    ...memberUpdates.map((m) =>
+      prisma.user.update({
+        where: { id: m.userId },
+        data: { name: m.name, email: m.email ?? null, phone: m.phone },
+      })
+    ),
     prisma.studentProfile.update({
       where: { id: studentId },
       data: {

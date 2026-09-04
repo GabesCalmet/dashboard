@@ -119,6 +119,34 @@ const groupMembersField = z
     }
   });
 
+// Submitted by GroupMemberFieldsEditor (edit form only) as a JSON string,
+// e.g. '[{"userId":"...","name":"...","email":"...","phone":"..."}]' — lets
+// every participant's own basic info be edited from the same "Editar
+// aluno" dialog instead of needing a separate place per member. Username
+// and password aren't included here — those stay under Ver senha/Alterar
+// senha on the Membros do grupo card, same as before.
+const groupMemberUpdatesField = z
+  .string()
+  .optional()
+  .transform((val) => {
+    if (!val) return [];
+    try {
+      const parsed = JSON.parse(val);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter((e) => e && typeof e.userId === "string" && e.userId)
+        .map((e) => ({
+          userId: e.userId,
+          name: typeof e.name === "string" ? e.name.trim() : "",
+          email: typeof e.email === "string" && e.email ? e.email : undefined,
+          phone: typeof e.phone === "string" && e.phone ? e.phone : undefined,
+        }))
+        .filter((e) => e.name.length >= 2);
+    } catch {
+      return [];
+    }
+  });
+
 export const studentFormSchema = z.object({
   name: z.string().min(2, "Informe o nome completo"),
   username: usernameField,
@@ -127,6 +155,7 @@ export const studentFormSchema = z.object({
   // so it (and each participant) can be found later by it.
   groupName: z.string().optional(),
   groupMembers: groupMembersField,
+  groupMemberUpdates: groupMemberUpdatesField,
   // Contact email — optional, not used for login, can repeat across profiles.
   email: z.string().email("Email inválido").optional().or(z.literal("")),
   cpf: z.string().optional(),
