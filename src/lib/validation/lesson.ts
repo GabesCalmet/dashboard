@@ -42,6 +42,7 @@ export const quickLessonStatusSchema = z.enum([
   "CANCELED_BY_TEACHER",
   "CANCELED_VACATION",
   "CANCELED_HOLIDAY",
+  "MAKEUP",
   "NO_SHOW",
   "PAUSED",
 ]);

@@ -85,13 +85,18 @@ export const lessonStatusCode: Record<LessonStatus, string> = {
 
 // The set of statuses teachers pick from day-to-day when logging today's
 // lessons — a subset of the full LessonStatus enum (which also covers
-// reposição/technical issues, set elsewhere in the detailed report form).
+// technical issues, set elsewhere in the detailed report form). MAKEUP is
+// included so a reposição lesson's own row (created via the reagendamento
+// flow) can show/keep its real status here too, instead of an unmatched
+// blank dropdown — selecting it directly is also how a reposição not
+// booked through that flow gets flagged as one.
 export const quickLessonStatuses: LessonStatus[] = [
   "COMPLETED",
   "CANCELED_BY_STUDENT",
   "CANCELED_BY_TEACHER",
   "CANCELED_VACATION",
   "CANCELED_HOLIDAY",
+  "MAKEUP",
   "NO_SHOW",
   "PAUSED",
 ];
