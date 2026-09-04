@@ -362,6 +362,8 @@ export function StudentDetailView({
                 userId: m.userId,
                 name: m.user.name,
                 username: m.user.username,
+                monthlyValue: Number(m.monthlyValue),
+                monthlyValueHistory: parseValueHistory(m.monthlyValueHistory),
               }))}
               canManage={permissions.canEdit}
             />

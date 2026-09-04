@@ -57,17 +57,25 @@ export async function getAdminDashboardData(referenceMonth?: { year: number; mon
   ]);
 
   // Ticket médio = each course's real total (own portion + whatever a
-  // third party covers on top), averaged — using _sum/count rather than
-  // _avg since _avg would skip students with no third party instead of
-  // treating their thirdPartyAmount as 0.
+  // third party covers on top, plus every group participant's own share),
+  // averaged — using a manual sum/count rather than a DB _avg since _avg
+  // would skip students with no third party instead of treating their
+  // thirdPartyAmount as 0, and can't reach into the groupMembers relation.
   let avgTicket = 0;
   if (activeStudents > 0) {
-    const agg = await prisma.studentProfile.aggregate({
+    const students = await prisma.studentProfile.findMany({
       where: { status: "ACTIVE" },
-      _sum: { monthlyValue: true, thirdPartyAmount: true },
+      select: { monthlyValue: true, thirdPartyAmount: true, groupMembers: { select: { monthlyValue: true } } },
     });
-    avgTicket =
-      (Number(agg._sum.monthlyValue ?? 0) + Number(agg._sum.thirdPartyAmount ?? 0)) / activeStudents;
+    const total = students.reduce(
+      (sum, s) =>
+        sum +
+        Number(s.monthlyValue) +
+        Number(s.thirdPartyAmount ?? 0) +
+        s.groupMembers.reduce((memberSum, m) => memberSum + Number(m.monthlyValue), 0),
+      0
+    );
+    avgTicket = total / activeStudents;
   }
 
   const avgLessonsPerStudent =

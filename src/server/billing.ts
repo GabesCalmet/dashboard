@@ -1,12 +1,12 @@
 import type { BankAccount } from "@prisma/client";
 
-// A student is billed as one or two "slots" per month: their own portion
-// (payerName: null, amount = monthlyValue) and, if a third party also
-// covers part of the course, a second slot billed to that third party for
-// thirdPartyAmount — additional to monthlyValue, not carved out of it, so
-// the course's real total is monthlyValue + thirdPartyAmount. Shared
-// between billing generation and the Cobranças table so both stay in sync
-// about who owes what and when.
+// A student is billed as one or more "slots" per month: their own portion
+// (payerName: null, amount = monthlyValue), a slot for a third party if one
+// covers part of the course (additional to monthlyValue, not carved out of
+// it), and one more slot per "grupo" participant beyond the primary, each
+// billed separately for their own amount. Shared between billing
+// generation and the Cobranças table so both stay in sync about who owes
+// what and when.
 export type BillingSlot = {
   payerName: string | null;
   amount: number;
@@ -15,6 +15,25 @@ export type BillingSlot = {
 };
 
 export type ValueHistoryEntry = { amount: number; from?: string; until?: string };
+
+// Adapts a fetched StudentProfile (with its groupMembers relation included,
+// via `groupMembers: { include: { user: true } }`) into the shape
+// getBillingSlots expects — every call site needs this same reshape, so
+// it's centralized here instead of repeated inline.
+export function withBillingGroupMembers<
+  T extends {
+    groupMembers: { monthlyValue: unknown; monthlyValueHistory: unknown; user: { name: string } }[];
+  },
+>(student: T) {
+  return {
+    ...student,
+    groupMembers: student.groupMembers.map((m) => ({
+      name: m.user.name,
+      monthlyValue: m.monthlyValue,
+      monthlyValueHistory: m.monthlyValueHistory,
+    })),
+  };
+}
 
 function parseValueHistory(value: unknown): ValueHistoryEntry[] {
   if (!Array.isArray(value)) return [];
@@ -62,6 +81,10 @@ export function getBillingSlots(
     thirdPartyPayerName: string | null;
     thirdPartyDueDay: number | null;
     thirdPartyBankAccount: BankAccount | null;
+    // "Grupo" participants beyond the primary — each bills separately for
+    // their own resolved amount, at the group's shared due day/account
+    // (only the amount differs per participant, not when/where it's paid).
+    groupMembers?: { name: string; monthlyValue: unknown; monthlyValueHistory?: unknown }[];
   },
   referenceMonth: Date
 ): BillingSlot[] {
@@ -81,6 +104,22 @@ export function getBillingSlots(
 
   if (own > 0) {
     slots.push({ payerName: null, amount: own, dueDay, bankAccount: student.bankAccount });
+  }
+
+  for (const member of student.groupMembers ?? []) {
+    const memberAmount = resolveHistoricalAmount(
+      member.monthlyValue,
+      member.monthlyValueHistory,
+      referenceMonth
+    );
+    if (memberAmount > 0) {
+      slots.push({
+        payerName: member.name,
+        amount: memberAmount,
+        dueDay,
+        bankAccount: student.bankAccount,
+      });
+    }
   }
 
   return slots;

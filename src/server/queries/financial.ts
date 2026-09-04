@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { bankAccountLabel } from "@/lib/labels";
-import { getBillingSlots } from "@/server/billing";
+import { getBillingSlots, withBillingGroupMembers } from "@/server/billing";
 import type { BankAccount, Expense, PaymentStatus } from "@prisma/client";
 
 export async function getFinancialOverview(year?: number, month?: number) {
@@ -18,7 +18,11 @@ export async function getFinancialOverview(year?: number, month?: number) {
     }),
     prisma.studentProfile.findMany({
       where: { status: "ACTIVE" },
-      include: { user: true, teacher: { include: { user: true } } },
+      include: {
+        user: true,
+        teacher: { include: { user: true } },
+        groupMembers: { include: { user: true } },
+      },
     }),
     prisma.payment.findMany({
       where: { referenceMonth: monthStart },
@@ -42,7 +46,7 @@ export async function getFinancialOverview(year?: number, month?: number) {
   const rows = activeStudents
     .filter((s) => (s.billingStartDate ?? s.startDate) <= monthEnd || studentIdsWithPayment.has(s.id))
     .flatMap((s) =>
-      getBillingSlots(s, monthStart).map((slot) => {
+      getBillingSlots(withBillingGroupMembers(s), monthStart).map((slot) => {
         const payment = paymentBySlot.get(`${s.id}::${slot.payerName ?? ""}`);
         if (payment) {
           return {
@@ -218,15 +222,15 @@ export async function getFinancialSummary() {
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);
 
-  const [receivedAgg, activeStudentsAgg, totalContributors, expenses, activeTeachers, teacherMinutes] =
+  const [receivedAgg, activeStudentsForRevenue, totalContributors, expenses, activeTeachers, teacherMinutes] =
     await Promise.all([
       prisma.payment.aggregate({
         where: { referenceMonth: monthStart, status: "PAID" },
         _sum: { amount: true },
       }),
-      prisma.studentProfile.aggregate({
+      prisma.studentProfile.findMany({
         where: { status: "ACTIVE" },
-        _sum: { monthlyValue: true, thirdPartyAmount: true },
+        select: { monthlyValue: true, thirdPartyAmount: true, groupMembers: { select: { monthlyValue: true } } },
       }),
       prisma.studentProfile.count({ where: { status: "ACTIVE" } }),
       prisma.expense.findMany(),
@@ -246,10 +250,16 @@ export async function getFinancialSummary() {
 
   const revenueRealized = Number(receivedAgg._sum.amount ?? 0);
   // The course's real monthly total is the student's own portion plus
-  // whatever a third party covers on top of it (see getBillingSlots).
-  const revenuePrevisto =
-    Number(activeStudentsAgg._sum.monthlyValue ?? 0) +
-    Number(activeStudentsAgg._sum.thirdPartyAmount ?? 0);
+  // whatever a third party covers on top of it, plus every group
+  // participant's own separate share (see getBillingSlots).
+  const revenuePrevisto = activeStudentsForRevenue.reduce(
+    (sum, s) =>
+      sum +
+      Number(s.monthlyValue) +
+      Number(s.thirdPartyAmount ?? 0) +
+      s.groupMembers.reduce((memberSum, m) => memberSum + Number(m.monthlyValue), 0),
+    0
+  );
   const expenseRealized = expenseTotalForMonth(expenses, monthStart, monthEnd, now);
   const expensePrevisto = expenseTotalForMonth(expenses, monthStart, monthEnd);
 
@@ -317,7 +327,11 @@ export async function getFinancialSummary() {
 // student isn't ACTIVE (nothing new is expected), but real past rows for a
 // since-paused/canceled student are always included regardless.
 export async function getStudentPaymentHistory(studentId: string) {
-  const student = await prisma.studentProfile.findUniqueOrThrow({ where: { id: studentId } });
+  const student = await prisma.studentProfile.findUniqueOrThrow({
+    where: { id: studentId },
+    include: { groupMembers: { include: { user: true } } },
+  });
+  const billingStudent = withBillingGroupMembers(student);
   const realPayments = await prisma.payment.findMany({ where: { studentId } });
   const paymentBySlot = new Map(
     realPayments.map((p) => [`${p.referenceMonth.toISOString().slice(0, 7)}::${p.payerName ?? ""}`, p])
@@ -343,7 +357,7 @@ export async function getStudentPaymentHistory(studentId: string) {
     const monthKey = cursor.toISOString().slice(0, 7);
     const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
 
-    for (const slot of getBillingSlots(student, cursor)) {
+    for (const slot of getBillingSlots(billingStudent, cursor)) {
       const real = paymentBySlot.get(`${monthKey}::${slot.payerName ?? ""}`);
       if (real) {
         rows.push({

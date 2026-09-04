@@ -36,7 +36,7 @@ const selectHistoryField = z
 
 // Submitted by MonthlyValueHistoryEditor as a JSON string, e.g.
 // '[{"amount":141.02,"from":"2026-01-01","until":"2026-06-30"}]'.
-const numericHistoryField = z
+export const numericHistoryField = z
   .string()
   .optional()
   .transform((val) => {
@@ -88,6 +88,7 @@ const groupMembersField = z
           password: e.password,
           email: typeof e.email === "string" && e.email ? e.email : undefined,
           phone: typeof e.phone === "string" && e.phone ? e.phone : undefined,
+          monthlyValue: typeof e.monthlyValue === "number" ? e.monthlyValue : 0,
         }));
     } catch {
       return [];

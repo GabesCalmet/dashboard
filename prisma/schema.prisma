@@ -310,6 +310,13 @@ model StudentGroupMember {
   studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
   userId           String         @unique
   user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // This participant's own share of the group's monthly value — billed as
+  // their own separate cobrança each month (see getBillingSlots), same
+  // Vigência history convention as StudentProfile.monthlyValue. The
+  // primary member's share is still StudentProfile.monthlyValue itself;
+  // this only covers everyone else.
+  monthlyValue        Decimal      @default(0) @db.Decimal(10, 2)
+  monthlyValueHistory Json         @default("[]")
   createdAt        DateTime       @default(now())
 
   @@map("student_group_members")

@@ -6,7 +6,12 @@ import { requireRole, requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { provisionUsernameAccount, hardDeleteUserAccount } from "@/server/accounts";
 import { recordAudit } from "@/server/audit";
-import { studentFormSchema, usernameField, passwordField } from "@/lib/validation/student";
+import {
+  studentFormSchema,
+  usernameField,
+  passwordField,
+  numericHistoryField,
+} from "@/lib/validation/student";
 import { levelOrder } from "@/lib/labels";
 import { syncRecurringLessons } from "@/server/lessons/recurring";
 
@@ -94,7 +99,7 @@ export async function createStudent(
         phone: member.phone,
       });
       await prisma.studentGroupMember.create({
-        data: { studentProfileId: student.id, userId: memberUser.id },
+        data: { studentProfileId: student.id, userId: memberUser.id, monthlyValue: member.monthlyValue },
       });
     }
 
@@ -249,6 +254,7 @@ export async function addStudentGroupMember(
       password: passwordField,
       email: z.string().email("Email inválido").optional().or(z.literal("")),
       phone: z.string().optional(),
+      monthlyValue: z.coerce.number().min(0, "Valor inválido").default(0),
     })
     .safeParse(raw);
 
@@ -267,7 +273,7 @@ export async function addStudentGroupMember(
       phone: data.phone,
     });
     await prisma.studentGroupMember.create({
-      data: { studentProfileId: studentId, userId: user.id },
+      data: { studentProfileId: studentId, userId: user.id, monthlyValue: data.monthlyValue },
     });
 
     await recordAudit({
@@ -303,6 +309,46 @@ export async function removeStudentGroupMember(memberId: string) {
   await hardDeleteUserAccount(member.userId);
   revalidatePath(`/admin/students/${member.studentProfileId}`);
   revalidatePath(`/coordinator/students/${member.studentProfileId}`);
+}
+
+// Updates one group member's own monthly value/history — their separate
+// billing slot (see getBillingSlots), same Vigência convention as the
+// primary member's own monthlyValue on StudentProfile.
+export async function updateGroupMemberValue(
+  memberId: string,
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = z
+    .object({
+      monthlyValue: z.coerce.number().min(0, "Valor inválido"),
+      monthlyValueHistory: numericHistoryField,
+    })
+    .safeParse(raw);
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  const data = parsed.data;
+
+  const member = await prisma.studentGroupMember.update({
+    where: { id: memberId },
+    data: { monthlyValue: data.monthlyValue, monthlyValueHistory: data.monthlyValueHistory },
+  });
+
+  await recordAudit({
+    entityType: "StudentProfile",
+    entityId: member.studentProfileId,
+    action: "UPDATE",
+    actor,
+    changes: { groupMemberValueUpdated: memberId },
+  });
+
+  revalidatePath(`/admin/students/${member.studentProfileId}`);
+  revalidatePath(`/coordinator/students/${member.studentProfileId}`);
+  return { success: "Valor atualizado." };
 }
 
 export async function promoteStudentLevel(studentId: string) {

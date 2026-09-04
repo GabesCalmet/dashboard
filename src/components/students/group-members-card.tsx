@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, Users } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,10 +29,26 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
 import { SetPasswordButton } from "@/components/shared/set-password-button";
-import { addStudentGroupMember, removeStudentGroupMember } from "@/server/actions/students";
+import {
+  MonthlyValueHistoryEditor,
+  type ValueHistoryEntry,
+} from "@/components/students/monthly-value-history-editor";
+import {
+  addStudentGroupMember,
+  removeStudentGroupMember,
+  updateGroupMemberValue,
+} from "@/server/actions/students";
 import { useActionToast } from "@/hooks/use-action-toast";
+import { formatCurrency } from "@/lib/labels";
 
-type Member = { id: string; userId: string; name: string; username: string | null };
+type Member = {
+  id: string;
+  userId: string;
+  name: string;
+  username: string | null;
+  monthlyValue: number;
+  monthlyValueHistory: ValueHistoryEntry[];
+};
 
 export function GroupMembersCard({
   studentId,
@@ -60,9 +76,13 @@ export function GroupMembersCard({
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{m.name}</p>
               <p className="truncate text-xs text-muted-foreground">{m.username}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                Valor mensal: {formatCurrency(m.monthlyValue)}
+              </p>
             </div>
             {canManage && (
               <div className="flex flex-wrap gap-1.5">
+                <EditMemberValueDialog member={m} />
                 <ViewCredentialsButton userId={m.userId} size="sm" />
                 <SetPasswordButton userId={m.userId} size="sm" />
                 <RemoveMemberButton memberId={m.id} name={m.name} />
@@ -97,7 +117,8 @@ function AddGroupMemberDialog({ studentId }: { studentId: string }) {
         <DialogHeader>
           <DialogTitle>Adicionar participante do grupo</DialogTitle>
           <DialogDescription>
-            Cria um login próprio que acessa o mesmo cadastro (aulas, progresso e financeiro).
+            Cria um login próprio que acessa o mesmo cadastro (aulas, progresso e financeiro), com
+            sua própria cobrança mensal.
           </DialogDescription>
         </DialogHeader>
 
@@ -121,6 +142,10 @@ function AddGroupMemberDialog({ studentId }: { studentId: string }) {
             />
           </div>
           <div className="space-y-1.5">
+            <Label htmlFor="member-monthlyValue">Valor mensal (R$)</Label>
+            <Input id="member-monthlyValue" name="monthlyValue" type="number" step="0.01" defaultValue={0} />
+          </div>
+          <div className="space-y-1.5">
             <Label htmlFor="member-email">Email (opcional)</Label>
             <Input id="member-email" name="email" type="email" />
           </div>
@@ -133,6 +158,47 @@ function AddGroupMemberDialog({ studentId }: { studentId: string }) {
             <Button type="submit" disabled={isPending}>
               {isPending && <Loader2 className="animate-spin" />}
               Adicionar
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditMemberValueDialog({ member }: { member: Member }) {
+  const action = updateGroupMemberValue.bind(null, member.id);
+  const [state, formAction, isPending] = useActionState(action, undefined);
+  const [open, setOpen] = useState(false);
+  useActionToast(state, () => setOpen(false));
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <Pencil /> Valor
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Valor mensal — {member.name}</DialogTitle>
+          <DialogDescription>
+            A cobrança mensal deste participante, separada do resto do grupo.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form action={formAction} className="space-y-4">
+          <MonthlyValueHistoryEditor
+            amountFieldName="monthlyValue"
+            historyFieldName="monthlyValueHistory"
+            defaultAmount={member.monthlyValue}
+            defaultHistory={member.monthlyValueHistory}
+          />
+
+          <DialogFooter>
+            <Button type="submit" disabled={isPending}>
+              {isPending && <Loader2 className="animate-spin" />}
+              Salvar
             </Button>
           </DialogFooter>
         </form>

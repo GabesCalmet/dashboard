@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
-import { getBillingSlots } from "@/server/billing";
+import { getBillingSlots, withBillingGroupMembers } from "@/server/billing";
 import type { PaymentStatus } from "@prisma/client";
 
 function dueDateFor(monthStart: Date, day: number) {
@@ -43,8 +43,13 @@ export async function setCobrancaStatus(
       data: { status, paidAt },
     });
   } else {
-    const student = await prisma.studentProfile.findUniqueOrThrow({ where: { id: studentId } });
-    const slot = getBillingSlots(student, monthStart).find((s) => s.payerName === payerName);
+    const student = await prisma.studentProfile.findUniqueOrThrow({
+      where: { id: studentId },
+      include: { groupMembers: { include: { user: true } } },
+    });
+    const slot = getBillingSlots(withBillingGroupMembers(student), monthStart).find(
+      (s) => s.payerName === payerName
+    );
     if (!slot) throw new Error("Cobrança não encontrada para este pagador.");
     payment = await prisma.payment.create({
       data: {
@@ -74,6 +79,7 @@ export async function generateMonthlyPayments(referenceMonth: Date) {
   const actor = await requireRole("ADMIN");
   const students = await prisma.studentProfile.findMany({
     where: { status: "ACTIVE" },
+    include: { groupMembers: { include: { user: true } } },
   });
 
   const now = new Date();
@@ -85,7 +91,7 @@ export async function generateMonthlyPayments(referenceMonth: Date) {
     // billingStartDate when set, independent of when their classes
     // actually started (startDate).
     if ((student.billingStartDate ?? student.startDate) > monthEnd) continue;
-    for (const slot of getBillingSlots(student, monthStart)) {
+    for (const slot of getBillingSlots(withBillingGroupMembers(student), monthStart)) {
       const existing = await prisma.payment.findFirst({
         where: { studentId: student.id, referenceMonth: monthStart, payerName: slot.payerName },
       });

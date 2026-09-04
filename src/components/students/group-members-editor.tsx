@@ -12,22 +12,24 @@ export type GroupMemberEntry = {
   password: string;
   email: string;
   phone: string;
+  monthlyValue: number;
 };
 
 let nextId = 0;
-type EditorEntry = GroupMemberEntry & { _id: number };
+type EditorEntry = Omit<GroupMemberEntry, "monthlyValue"> & { monthlyValue: string; _id: number };
 
 // Additional logins for a "grupo" student, submitted alongside the main
 // cadastro form as one JSON field — see groupMembersField in
 // lib/validation/student.ts and createStudent, which provisions one
-// separate account per entry after the primary student is created.
+// separate account (and their own billing slot, via monthlyValue) per
+// entry after the primary student is created.
 export function GroupMembersEditor({ fieldName = "groupMembers" }: { fieldName?: string }) {
   const [entries, setEntries] = useState<EditorEntry[]>([]);
 
   function addEntry() {
     setEntries((prev) => [
       ...prev,
-      { name: "", username: "", password: "", email: "", phone: "", _id: nextId++ },
+      { name: "", username: "", password: "", email: "", phone: "", monthlyValue: "", _id: nextId++ },
     ]);
   }
 
@@ -35,16 +37,17 @@ export function GroupMembersEditor({ fieldName = "groupMembers" }: { fieldName?:
     setEntries((prev) => prev.filter((e) => e._id !== id));
   }
 
-  function updateEntry(id: number, field: keyof GroupMemberEntry, value: string) {
+  function updateEntry(id: number, field: keyof EditorEntry, value: string) {
     setEntries((prev) => prev.map((e) => (e._id === id ? { ...e, [field]: value } : e)));
   }
 
-  const value: GroupMemberEntry[] = entries.map(({ name, username, password, email, phone }) => ({
+  const value: GroupMemberEntry[] = entries.map(({ name, username, password, email, phone, monthlyValue }) => ({
     name,
     username,
     password,
     email,
     phone,
+    monthlyValue: Number(monthlyValue) || 0,
   }));
 
   return (
@@ -74,6 +77,15 @@ export function GroupMembersEditor({ fieldName = "groupMembers" }: { fieldName?:
               type="text"
               value={entry.password}
               onChange={(e) => updateEntry(entry._id, "password", e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-normal text-muted-foreground">Valor mensal (R$)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              value={entry.monthlyValue}
+              onChange={(e) => updateEntry(entry._id, "monthlyValue", e.target.value)}
             />
           </div>
           <div className="flex items-end gap-1.5">
