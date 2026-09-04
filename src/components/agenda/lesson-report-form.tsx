@@ -18,6 +18,9 @@ import { lessonStatusLabel } from "@/lib/labels";
 import type { CalendarLessonEvent } from "@/components/agenda/calendar-view";
 import { curriculumUnits } from "@/lib/curriculum";
 import { CurriculumPicker } from "@/components/lessons/curriculum-picker";
+import { reschedulableStatuses } from "@/lib/validation/lesson";
+import { LessonRescheduleEditor } from "@/components/lessons/lesson-reschedule-editor";
+import { MakeupGivenToggle } from "@/components/lessons/makeup-given-toggle";
 
 export function LessonReportForm({
   lesson,
@@ -36,6 +39,7 @@ export function LessonReportForm({
   const [text, setText] = useState(initialMode === "text" ? (lesson.contentTaught ?? "") : "");
   const [unit, setUnit] = useState(initialMode === "unit" ? (lesson.contentTaught ?? "") : "");
   const [focus, setFocus] = useState(lesson.classFocus ?? "");
+  const [status, setStatus] = useState(lesson.status);
 
   useEffect(() => {
     if (state?.success) {
@@ -80,7 +84,7 @@ export function LessonReportForm({
       </div>
       <div className="space-y-1.5">
         <Label>Status da aula</Label>
-        <Select name="status" defaultValue={lesson.status}>
+        <Select name="status" value={status} onValueChange={setStatus}>
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -96,6 +100,31 @@ export function LessonReportForm({
 
       <input type="hidden" name="contentTaught" value={mode === "unit" ? unit : text} />
       <input type="hidden" name="classFocus" value={focus} />
+
+      {(reschedulableStatuses as readonly string[]).includes(status) && (
+        <div className="flex items-center gap-3 rounded-md border p-3 sm:col-span-2">
+          <div className="flex-1">
+            <p className="mb-1 text-xs font-medium text-muted-foreground">Reagendamento</p>
+            <LessonRescheduleEditor
+              lessonId={lesson.id}
+              rescheduledTo={
+                lesson.rescheduledTo
+                  ? {
+                      scheduledAt: new Date(lesson.rescheduledTo.scheduledAt),
+                      durationMin: lesson.rescheduledTo.durationMin,
+                    }
+                  : null
+              }
+            />
+          </div>
+          {lesson.rescheduledTo && (
+            <MakeupGivenToggle
+              makeupLessonId={lesson.rescheduledTo.id}
+              given={lesson.rescheduledTo.status === "COMPLETED"}
+            />
+          )}
+        </div>
+      )}
 
       <div className="sm:col-span-2">
         <Label className="mb-1.5 block">Conteúdo ensinado</Label>

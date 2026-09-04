@@ -24,7 +24,11 @@ export async function GET(request: NextRequest) {
 
   const lessons = await prisma.lesson.findMany({
     where,
-    include: { student: { include: { user: true } }, teacher: { include: { user: true } } },
+    include: {
+      student: { include: { user: true } },
+      teacher: { include: { user: true } },
+      rescheduledTo: { select: { id: true, scheduledAt: true, durationMin: true, status: true } },
+    },
     orderBy: { scheduledAt: "asc" },
     take: 500,
   });
@@ -47,6 +51,14 @@ export async function GET(request: NextRequest) {
       classFocus: l.classFocus,
       homework: l.homework,
       meetLink: l.student.meetLink,
+      rescheduledTo: l.rescheduledTo
+        ? {
+            id: l.rescheduledTo.id,
+            scheduledAt: l.rescheduledTo.scheduledAt.toISOString(),
+            durationMin: l.rescheduledTo.durationMin,
+            status: l.rescheduledTo.status,
+          }
+        : null,
     },
   }));
 

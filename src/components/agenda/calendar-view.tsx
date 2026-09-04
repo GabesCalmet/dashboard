@@ -25,6 +25,7 @@ export type CalendarLessonEvent = {
   homework: string | null;
   meetLink: string | null;
   start: string;
+  rescheduledTo: { id: string; scheduledAt: string; durationMin: number; status: string } | null;
 };
 
 export function CalendarView({
@@ -53,6 +54,7 @@ export function CalendarView({
       homework: props.homework,
       meetLink: props.meetLink,
       start: arg.event.startStr,
+      rescheduledTo: props.rescheduledTo ?? null,
     });
   }
 
