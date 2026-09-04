@@ -126,6 +126,17 @@ export function LessonReportForm({
         </div>
       )}
 
+      {lesson.status === "MAKEUP" && (
+        <div className="flex items-center justify-between rounded-md border p-3 sm:col-span-2">
+          <p className="text-xs font-medium text-muted-foreground">Esta é uma aula de reposição</p>
+          <MakeupGivenToggle
+            makeupLessonId={lesson.id}
+            given={status === "COMPLETED"}
+            onChange={(given) => setStatus(given ? "COMPLETED" : "MAKEUP")}
+          />
+        </div>
+      )}
+
       <div className="sm:col-span-2">
         <Label className="mb-1.5 block">Conteúdo ensinado</Label>
         <CurriculumPicker

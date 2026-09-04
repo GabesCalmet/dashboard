@@ -9,9 +9,11 @@ import { setMakeupGiven } from "@/server/actions/lessons";
 export function MakeupGivenToggle({
   makeupLessonId,
   given,
+  onChange,
 }: {
   makeupLessonId: string;
   given: boolean;
+  onChange?: (given: boolean) => void;
 }) {
   const [isPending, startTransition] = useTransition();
 
@@ -25,6 +27,7 @@ export function MakeupGivenToggle({
             try {
               await setMakeupGiven(makeupLessonId, checked === true);
               toast.success(checked ? "Reposição marcada como dada." : "Reposição marcada como pendente.");
+              onChange?.(checked === true);
             } catch (err) {
               toast.error(err instanceof Error ? err.message : "Erro ao atualizar reposição.");
             }
