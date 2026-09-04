@@ -148,6 +148,21 @@ export function StudentFormDialog({
             </div>
           )}
 
+          {((!isEdit && studentType === "grupo") || (isEdit && student?.isGroup)) && (
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="groupName">Nome do grupo</Label>
+              <Input
+                id="groupName"
+                name="groupName"
+                placeholder="ex: Família Silva, Empresa XYZ"
+                defaultValue={student?.groupName ?? ""}
+              />
+              <p className="text-xs text-muted-foreground">
+                Usado para encontrar o grupo e seus participantes na busca.
+              </p>
+            </div>
+          )}
+
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="name">Nome completo</Label>
             <Input id="name" name="name" defaultValue={student?.name} required />
@@ -189,21 +204,6 @@ export function StudentFormDialog({
             <Label htmlFor="birthDate">Data de nascimento</Label>
             <Input id="birthDate" name="birthDate" type="date" defaultValue={student?.birthDate} />
           </div>
-
-          {((!isEdit && studentType === "grupo") || (isEdit && student?.isGroup)) && (
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="groupName">Nome do grupo</Label>
-              <Input
-                id="groupName"
-                name="groupName"
-                placeholder="ex: Família Silva, Empresa XYZ"
-                defaultValue={student?.groupName ?? ""}
-              />
-              <p className="text-xs text-muted-foreground">
-                Usado para encontrar o grupo e seus participantes na busca.
-              </p>
-            </div>
-          )}
 
           {!isEdit && studentType === "grupo" && <GroupMembersEditor />}
 
