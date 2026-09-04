@@ -134,7 +134,7 @@ export function StudentDetailView({
           </Avatar>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold">{student.user.name}</h1>
+              <h1 className="text-xl font-semibold">{student.groupName ?? student.user.name}</h1>
               <Badge variant={studentStatusVariant[student.status]}>
                 {studentStatusLabel[student.status]}
               </Badge>
