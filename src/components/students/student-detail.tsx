@@ -160,6 +160,8 @@ export function StudentDetailView({
                   id: student.id,
                   name: student.user.name,
                   username: student.user.username,
+                  groupName: student.groupName,
+                  isGroup: student.groupMembers.length > 0,
                   email: student.user.email,
                   cpf: student.cpf,
                   phone: student.user.phone,
@@ -259,6 +261,9 @@ export function StudentDetailView({
                   <CardTitle>Dados cadastrais</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                  {student.groupMembers.length > 0 && (
+                    <InfoRow label="Nome do grupo" value={student.groupName ?? "—"} />
+                  )}
                   <InfoRow label="CPF" value={student.cpf ?? "—"} />
                   <InfoRow label="Telefone" value={student.user.phone ?? "—"} />
                   <InfoRow

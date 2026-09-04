@@ -98,6 +98,9 @@ export const studentFormSchema = z.object({
   name: z.string().min(2, "Informe o nome completo"),
   username: usernameField,
   password: passwordField,
+  // Only meaningful for a "grupo" cadastro — a name for the group itself,
+  // so it (and each participant) can be found later by it.
+  groupName: z.string().optional(),
   groupMembers: groupMembersField,
   // Contact email — optional, not used for login, can repeat across profiles.
   email: z.string().email("Email inválido").optional().or(z.literal("")),

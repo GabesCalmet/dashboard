@@ -44,6 +44,10 @@ type StudentDefaults = {
   id: string;
   name: string;
   username?: string | null;
+  // Set only for an existing "grupo" cadastro — lets the edit dialog show
+  // (and let the admin rename) the group's own name.
+  groupName?: string | null;
+  isGroup?: boolean;
   email?: string | null;
   cpf?: string | null;
   phone?: string | null;
@@ -185,6 +189,21 @@ export function StudentFormDialog({
             <Label htmlFor="birthDate">Data de nascimento</Label>
             <Input id="birthDate" name="birthDate" type="date" defaultValue={student?.birthDate} />
           </div>
+
+          {((!isEdit && studentType === "grupo") || (isEdit && student?.isGroup)) && (
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="groupName">Nome do grupo</Label>
+              <Input
+                id="groupName"
+                name="groupName"
+                placeholder="ex: Família Silva, Empresa XYZ"
+                defaultValue={student?.groupName ?? ""}
+              />
+              <p className="text-xs text-muted-foreground">
+                Usado para encontrar o grupo e seus participantes na busca.
+              </p>
+            </div>
+          )}
 
           {!isEdit && studentType === "grupo" && <GroupMembersEditor />}
 

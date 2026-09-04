@@ -38,6 +38,7 @@ export async function createStudent(
     const student = await prisma.studentProfile.create({
       data: {
         userId: user.id,
+        groupName: data.groupMembers.length > 0 ? data.groupName || undefined : undefined,
         cpf: data.cpf || undefined,
         birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
         address: data.address,
@@ -136,6 +137,7 @@ export async function updateStudent(
     prisma.studentProfile.update({
       where: { id: studentId },
       data: {
+        groupName: data.groupName || null,
         cpf: data.cpf || undefined,
         birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
         address: data.address,

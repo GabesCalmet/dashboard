@@ -197,6 +197,10 @@ model StudentProfile {
   id                String          @id @default(uuid())
   userId            String          @unique
   user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Set only for a "grupo" cadastro — a name for the group itself (e.g. a
+  // family or company name) so it can be found later by that, not just by
+  // the primary member's name. Null for an ordinary individual student.
+  groupName         String?
   cpf               String?         @unique
   birthDate         DateTime?
   address           String?
