@@ -32,6 +32,11 @@ type Row = {
   status: StudentStatus;
   teacherName?: string | null;
   courseName?: string | null;
+  // Group name + every participant's name, for a "grupo" cadastro — each
+  // one needs to be findable by their own name even though they all share
+  // this one row/profile. Just [name] for an ordinary individual student.
+  searchNames: string[];
+  groupMemberNames?: string[];
 };
 
 export function StudentsTable({
@@ -47,8 +52,9 @@ export function StudentsTable({
   const [status, setStatus] = useState<string>(initialStatus);
 
   const filtered = useMemo(() => {
+    const q = query.toLowerCase();
     return rows.filter((r) => {
-      const matchesQuery = r.name.toLowerCase().includes(query.toLowerCase());
+      const matchesQuery = r.searchNames.some((n) => n.toLowerCase().includes(q));
       const matchesStatus = status === "all" || r.status === status;
       return matchesQuery && matchesStatus;
     });
@@ -102,6 +108,11 @@ export function StudentsTable({
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{r.name}</p>
                       <p className="truncate text-xs text-muted-foreground">{r.login}</p>
+                      {r.groupMemberNames && r.groupMemberNames.length > 0 && (
+                        <p className="truncate text-xs text-muted-foreground">
+                          Grupo: {r.groupMemberNames.join(", ")}
+                        </p>
+                      )}
                     </div>
                   </Link>
                 </TableCell>

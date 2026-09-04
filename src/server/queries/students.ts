@@ -3,7 +3,13 @@ import { prisma } from "@/lib/prisma";
 export async function listStudents() {
   return prisma.studentProfile.findMany({
     where: { user: { active: true } },
-    include: { user: true, teacher: { include: { user: true } }, course: true, plan: true },
+    include: {
+      user: true,
+      teacher: { include: { user: true } },
+      course: true,
+      plan: true,
+      groupMembers: { include: { user: true } },
+    },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -11,7 +17,13 @@ export async function listStudents() {
 export async function listStudentsForTeacher(teacherId: string) {
   return prisma.studentProfile.findMany({
     where: { teacherId, user: { active: true } },
-    include: { user: true, teacher: { include: { user: true } }, course: true, plan: true },
+    include: {
+      user: true,
+      teacher: { include: { user: true } },
+      course: true,
+      plan: true,
+      groupMembers: { include: { user: true } },
+    },
     orderBy: { user: { name: "asc" } },
   });
 }
