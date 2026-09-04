@@ -115,6 +115,35 @@ export function StudentFormDialog({
         </DialogHeader>
 
         <form action={formAction} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {!isEdit && (
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Tipo de cadastro</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={studentType === "individual" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStudentType("individual")}
+                >
+                  Individual
+                </Button>
+                <Button
+                  type="button"
+                  variant={studentType === "grupo" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStudentType("grupo")}
+                >
+                  Grupo
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Nome/usuário/senha abaixo são da primeira pessoa. Em um grupo, as aulas e o
+                financeiro ficam ligados a um só cadastro, mas cada participante tem seu próprio
+                login.
+              </p>
+            </div>
+          )}
+
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="name">Nome completo</Label>
             <Input id="name" name="name" defaultValue={student?.name} required />
@@ -134,33 +163,6 @@ export function StudentFormDialog({
               <div className="space-y-1.5">
                 <Label htmlFor="password">Senha</Label>
                 <Input id="password" name="password" type="text" placeholder="Mínimo 6 caracteres" required />
-              </div>
-
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label>Tipo de cadastro</Label>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant={studentType === "individual" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setStudentType("individual")}
-                  >
-                    Individual
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={studentType === "grupo" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setStudentType("grupo")}
-                  >
-                    Grupo
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Nome/usuário/senha acima são da primeira pessoa. Em um grupo, as aulas e o
-                  financeiro ficam ligados a um só cadastro, mas cada participante tem seu próprio
-                  login.
-                </p>
               </div>
 
               {studentType === "grupo" && <GroupMembersEditor />}
