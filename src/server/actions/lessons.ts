@@ -115,7 +115,14 @@ export async function updateLessonStatus(lessonId: string, status: string) {
 
   await prisma.lesson.update({
     where: { id: lessonId },
-    data: { status: parsed.data, reportedAt: new Date() },
+    data: {
+      status: parsed.data,
+      reportedAt: new Date(),
+      // Sticky once set — see the isMakeup field comment on why this can't
+      // just be inferred from rescheduledFromId once status moves on to
+      // COMPLETED.
+      ...(parsed.data === "MAKEUP" ? { isMakeup: true } : {}),
+    },
   });
 
   // A reagendamento only makes sense while the lesson is CA/CP/CF — if the
@@ -250,6 +257,7 @@ export async function scheduleLessonReschedule(
         scheduledAt,
         durationMin,
         status: "MAKEUP",
+        isMakeup: true,
         rescheduledFromId: lesson.id,
       },
     });

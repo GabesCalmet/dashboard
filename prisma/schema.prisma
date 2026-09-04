@@ -369,6 +369,13 @@ model Lesson {
   // regenerating that schedule never touches manually-booked lessons
   // (makeups, one-off extra classes, etc).
   isRecurring Boolean      @default(false)
+  // Sticky flag marking this lesson slot as a reposição — set once (via the
+  // "Reagendamento" picker, or by picking "R — Reposição" directly in the
+  // status dropdown) and never cleared afterwards, so the "R — Reposições"
+  // stat can still recognize it once status later moves on to COMPLETED
+  // (at which point rescheduledFromId isn't a reliable signal for a
+  // manually-flagged one that was never actually linked to an original).
+  isMakeup    Boolean      @default(false)
 
   // Set on the NEW (makeup) lesson created via the "Reagendamento" picker
   // when a lesson is canceled (CA/CP/CF) — points back to the lesson it

@@ -88,25 +88,26 @@ export function StudentDetailView({
   // months don't all contain the same number of each weekday — so this
   // counts the student's real recurring lessons for the current month
   // instead of showing the flat lessonsPerMonth contract value. Reposições
-  // (rescheduledFromId set) are extra makeup slots, not part of the regular
-  // weekly schedule, so they're excluded here.
+  // (isMakeup) are extra makeup slots, not part of the regular weekly
+  // schedule, so they're excluded here.
   const refMonthDate = monthNav ? new Date(monthNav.year, monthNav.month, 1) : new Date();
   const monthStart = startOfMonth(refMonthDate);
   const monthEnd = endOfMonth(refMonthDate);
   const contractedLessonsThisMonth = student.lessons.filter(
-    (l) => l.scheduledAt >= monthStart && l.scheduledAt <= monthEnd && !l.rescheduledFromId
+    (l) => l.scheduledAt >= monthStart && l.scheduledAt <= monthEnd && !l.isMakeup
   ).length;
   const completedLessons = student.lessons.filter((l) => l.status === "COMPLETED").length;
   const canceledByStudent = student.lessons.filter((l) => l.status === "CANCELED_BY_STUDENT").length;
   const canceledByTeacher = student.lessons.filter((l) => l.status === "CANCELED_BY_TEACHER").length;
-  // Only counts a reposição once the teacher has actually marked it "dada"
-  // via MakeupGivenToggle (status flips MAKEUP -> COMPLETED then) — a
-  // booked-but-not-yet-given reposição stays MAKEUP and isn't counted here
-  // yet, since it hasn't happened. Already folded into completedLessons
-  // above once it does count.
-  const makeupCount = student.lessons.filter(
-    (l) => l.rescheduledFromId && l.status === "COMPLETED"
-  ).length;
+  // Only counts a reposição once it's actually marked "dada" (status flips
+  // to COMPLETED) — a booked-but-not-yet-given reposição stays MAKEUP and
+  // isn't counted here yet, since it hasn't happened. isMakeup (not
+  // rescheduledFromId) is what identifies it as a reposição at all, since
+  // one flagged directly via the status dropdown — not booked through the
+  // Reagendamento picker — has no rescheduledFromId to key off once its
+  // status has already moved on to COMPLETED. Already folded into
+  // completedLessons above once it does count.
+  const makeupCount = student.lessons.filter((l) => l.isMakeup && l.status === "COMPLETED").length;
   const noShowCount = student.lessons.filter((l) => l.status === "NO_SHOW").length;
   // "Realizada" = the lesson slot actually happened (teacher held it), even
   // if the student didn't show up (NC) — as opposed to "Dada" (OK), which
