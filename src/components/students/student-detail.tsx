@@ -139,9 +139,19 @@ export function StudentDetailView({
                 {studentStatusLabel[student.status]}
               </Badge>
             </div>
-            <p className="text-sm text-muted-foreground">@{student.user.username}</p>
-            {student.user.email && (
-              <p className="text-xs text-muted-foreground">{student.user.email}</p>
+            {student.groupName ? (
+              <p className="text-sm text-muted-foreground">
+                {[student.user, ...student.groupMembers.map((m) => m.user)]
+                  .map((u) => `@${u.username}`)
+                  .join(", ")}
+              </p>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">@{student.user.username}</p>
+                {student.user.email && (
+                  <p className="text-xs text-muted-foreground">{student.user.email}</p>
+                )}
+              </>
             )}
             <p className="text-sm text-muted-foreground">
               {student.course?.name ?? "Curso não definido"} · Prof.{" "}
