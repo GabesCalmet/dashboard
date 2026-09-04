@@ -164,8 +164,6 @@ export function StudentFormDialog({
                 <Label htmlFor="password">Senha</Label>
                 <Input id="password" name="password" type="text" placeholder="Mínimo 6 caracteres" required />
               </div>
-
-              {studentType === "grupo" && <GroupMembersEditor />}
             </>
           )}
 
@@ -187,6 +185,9 @@ export function StudentFormDialog({
             <Label htmlFor="birthDate">Data de nascimento</Label>
             <Input id="birthDate" name="birthDate" type="date" defaultValue={student?.birthDate} />
           </div>
+
+          {!isEdit && studentType === "grupo" && <GroupMembersEditor />}
+
           <div className="space-y-1.5">
             <Label htmlFor="startDate">Data de início das aulas</Label>
             <Input id="startDate" name="startDate" type="date" defaultValue={student?.startDate} />
