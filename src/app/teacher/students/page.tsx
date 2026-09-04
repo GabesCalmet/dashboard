@@ -11,7 +11,7 @@ export default async function TeacherStudentsPage() {
     const memberNames = s.groupMembers.map((m) => m.user.name);
     return {
       id: s.id,
-      name: s.user.name,
+      name: s.groupName ?? s.user.name,
       login: s.user.username ?? s.user.email,
       avatarUrl: s.user.avatarUrl,
       level: s.level,
@@ -19,7 +19,7 @@ export default async function TeacherStudentsPage() {
       teacherName: s.teacher?.user.name,
       courseName: s.course?.name,
       searchNames: [s.user.name, s.groupName, ...memberNames].filter((n): n is string => Boolean(n)),
-      groupMemberNames: memberNames,
+      groupMemberNames: s.groupName ? [s.user.name, ...memberNames] : memberNames,
     };
   });
 
