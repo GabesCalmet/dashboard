@@ -34,6 +34,10 @@ import {
   SelectHistoryEditor,
   type SelectHistoryEntry,
 } from "@/components/students/select-history-editor";
+import {
+  TeacherAssignmentEditor,
+  type TeacherHistoryEntry,
+} from "@/components/students/teacher-assignment-editor";
 import { GroupMembersEditor } from "@/components/students/group-members-editor";
 import { levelLabel, bankAccountLabel } from "@/lib/labels";
 import type { CourseLevel, StudentStatus, BankAccount } from "@prisma/client";
@@ -55,7 +59,8 @@ type StudentDefaults = {
   address?: string | null;
   meetLink?: string | null;
   teacherId?: string | null;
-  teacherHistory?: SelectHistoryEntry[];
+  teacherHistory?: TeacherHistoryEntry[];
+  teacherPayRate?: number;
   courseId?: string | null;
   courseHistory?: SelectHistoryEntry[];
   planId?: string | null;
@@ -245,13 +250,14 @@ export function StudentFormDialog({
             />
           </div>
 
-          <SelectHistoryEditor
-            label="Professor"
+          <TeacherAssignmentEditor
             valueFieldName="teacherId"
             historyFieldName="teacherHistory"
+            rateFieldName="teacherPayRate"
             options={teachers}
             defaultValue={student?.teacherId}
             defaultHistory={student?.teacherHistory ?? []}
+            defaultRate={student?.teacherPayRate ?? 0}
           />
 
           <SelectHistoryEditor

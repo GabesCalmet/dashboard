@@ -34,6 +34,30 @@ const selectHistoryField = z
     }
   });
 
+// Submitted by TeacherAssignmentEditor — like selectHistoryField, but each
+// entry also carries the rate that teacher is paid per hour for this
+// student/group during that period.
+const teacherHistoryField = z
+  .string()
+  .optional()
+  .transform((val) => {
+    if (!val) return [];
+    try {
+      const parsed = JSON.parse(val);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter((e) => e && typeof e.id === "string" && e.id)
+        .map((e) => ({
+          id: e.id,
+          from: typeof e.from === "string" && e.from ? e.from : undefined,
+          until: typeof e.until === "string" && e.until ? e.until : undefined,
+          rate: typeof e.rate === "number" ? e.rate : undefined,
+        }));
+    } catch {
+      return [];
+    }
+  });
+
 // Submitted by MonthlyValueHistoryEditor as a JSON string, e.g.
 // '[{"amount":141.02,"from":"2026-01-01","until":"2026-06-30"}]'.
 export const numericHistoryField = z
@@ -111,7 +135,12 @@ export const studentFormSchema = z.object({
   address: z.string().optional(),
   meetLink: z.string().url("Link inválido").optional().or(z.literal("")),
   teacherId: z.string().optional(),
-  teacherHistory: selectHistoryField,
+  teacherHistory: teacherHistoryField,
+  // The amount the assigned teacher is paid per hour for this specific
+  // student/group — mirrors whichever teacherHistory entry is current, same
+  // convention as monthlyValue/monthlyValueHistory. Payroll falls back to
+  // the teacher's own hourlyRate when this is unset (0).
+  teacherPayRate: z.coerce.number().min(0, "Valor inválido").default(0),
   courseId: z.string().optional(),
   courseHistory: selectHistoryField,
   planId: z.string().optional(),

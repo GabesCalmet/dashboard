@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { bankAccountLabel } from "@/lib/labels";
 import { getBillingSlots, withBillingGroupMembers } from "@/server/billing";
+import { getTeacherPayrollForMonth } from "@/server/queries/teachers";
 import type { BankAccount, Expense, PaymentStatus } from "@prisma/client";
 
 export async function getFinancialOverview(year?: number, month?: number) {
@@ -222,7 +223,7 @@ export async function getFinancialSummary() {
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);
 
-  const [receivedAgg, activeStudentsForRevenue, totalContributors, expenses, activeTeachers, teacherMinutes] =
+  const [receivedAgg, activeStudentsForRevenue, totalContributors, expenses, teacherPayroll] =
     await Promise.all([
       prisma.payment.aggregate({
         where: { referenceMonth: monthStart, status: "PAID" },
@@ -234,18 +235,10 @@ export async function getFinancialSummary() {
       }),
       prisma.studentProfile.count({ where: { status: "ACTIVE" } }),
       prisma.expense.findMany(),
-      prisma.teacherProfile.findMany({ where: { user: { active: true } } }),
-      // Minutes actually taught this month (OK/NC/R), per teacher — the
-      // basis for férias below, since a teacher's hours vary month to
-      // month with what actually happened, not a fixed contracted number.
-      prisma.lesson.groupBy({
-        by: ["teacherId"],
-        where: {
-          scheduledAt: { gte: monthStart, lte: monthEnd },
-          status: { in: ["COMPLETED", "NO_SHOW", "MAKEUP"] },
-        },
-        _sum: { durationMin: true },
-      }),
+      // What teachers actually earned this month (OK/NC/R hours × whatever
+      // each is paid per student/group) — the basis for férias below, same
+      // "Realizado" figure shown on the Professores box.
+      getTeacherPayrollForMonth(now.getFullYear(), now.getMonth()),
     ]);
 
   const revenueRealized = Number(receivedAgg._sum.amount ?? 0);
@@ -264,16 +257,10 @@ export async function getFinancialSummary() {
   const expensePrevisto = expenseTotalForMonth(expenses, monthStart, monthEnd);
 
   // Provisão mensal de férias dos professores: 8,3% do valor que cada
-  // professor recebeu no mês (valor/hora × horas de aulas OK/NC/R dadas),
-  // acumulada mês a mês desde janeiro com o quadro atual de professores.
-  const minutesByTeacher = new Map(
-    teacherMinutes.map((g) => [g.teacherId, g._sum.durationMin ?? 0])
-  );
-  const feriasMonthly = activeTeachers.reduce((sum, t) => {
-    const hoursTaught = (minutesByTeacher.get(t.id) ?? 0) / 60;
-    const monthlyPay = Number(t.hourlyRate) * hoursTaught;
-    return sum + monthlyPay * 0.083;
-  }, 0);
+  // professor recebeu no mês (realizado — hours × whatever each is paid
+  // per student/group that month), acumulada mês a mês desde janeiro com o
+  // quadro atual de professores.
+  const feriasMonthly = teacherPayroll.totals.realizado * 0.083;
   const monthsElapsed = now.getMonth() + 1;
   const feriasAnnual = feriasMonthly * monthsElapsed;
 

@@ -3,6 +3,55 @@ import { startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
 import { resolveHistoricalAmount } from "@/server/billing";
 import type { LessonStatus } from "@prisma/client";
 
+type TeacherHistoryEntry = { id: string; from?: string; until?: string; rate?: number };
+
+function parseTeacherHistory(value: unknown): TeacherHistoryEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (e): e is TeacherHistoryEntry =>
+        typeof e === "object" && e !== null && typeof (e as Record<string, unknown>).id === "string"
+    )
+    .map((e) => ({
+      id: e.id,
+      from: typeof e.from === "string" && e.from ? e.from : undefined,
+      until: typeof e.until === "string" && e.until ? e.until : undefined,
+      rate: typeof e.rate === "number" ? e.rate : undefined,
+    }));
+}
+
+// Resolves what a teacher is paid per hour for a specific student/group in
+// a given month — the student's teacherHistory entry for that teacher
+// covering the month, if one was configured with a rate; else the
+// student's current flat teacherPayRate, for a still-current assignment
+// that's never had a change recorded; else the teacher's own flat
+// hourlyRate as a last resort, so payroll for a student nobody has
+// configured a rate for yet keeps working exactly as it did before this
+// feature existed.
+function resolveTeacherPayRate(
+  student: { teacherId: string | null; teacherHistory: unknown; teacherPayRate: unknown },
+  teacherId: string,
+  referenceMonth: Date,
+  fallbackHourlyRate: number
+): number {
+  const entries = parseTeacherHistory(student.teacherHistory);
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+  const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
+  const match = entries.find((e) => {
+    if (e.id !== teacherId) return false;
+    const from = e.from ? new Date(e.from) : null;
+    const until = e.until ? new Date(e.until) : null;
+    if (from && from > monthEnd) return false;
+    if (until && until < monthStart) return false;
+    return true;
+  });
+  if (match && typeof match.rate === "number" && match.rate > 0) return match.rate;
+  if (student.teacherId === teacherId && Number(student.teacherPayRate) > 0) {
+    return Number(student.teacherPayRate);
+  }
+  return fallbackHourlyRate;
+}
+
 // A class "happened" in some recorded sense if it's OK (dada), NC (não
 // compareceu) or R (reposição) — as opposed to still SCHEDULED or one of
 // the cancellation codes, which never occurred.
@@ -22,8 +71,10 @@ const PREVISTO_EXCLUDED_STATUSES: LessonStatus[] = [
 // Per-teacher payroll for a given month — "previsto" is every class on
 // their calendar that month that isn't already a known cancellation (so it
 // includes both future SCHEDULED classes and ones already given), priced
-// at their hourly rate for that month (resolved from hourlyRateHistory).
-// "realizado" is the same but only for classes actually given so far
+// at whatever that teacher is paid for each specific student/group that
+// month (resolveTeacherPayRate — usually configured per student/group
+// cadastro instead of the teacher's own flat hourlyRate). "realizado" is
+// the same but only for classes actually given so far
 // (COMPLETED/NO_SHOW/MAKEUP) — grows live as teachers report their
 // lessons, same rule as "Horas trabalhadas (mês)" on the teacher detail
 // page. Used for the "Professores" box on the Gastos page instead of a
@@ -32,34 +83,41 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
   const monthStart = new Date(year, month, 1);
   const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
-  const [teachers, lessonsByTeacher] = await Promise.all([
+  const [teachers, lessonsByTeacherStudent] = await Promise.all([
     prisma.teacherProfile.findMany({
       where: { user: { active: true } },
       include: { user: true },
     }),
     prisma.lesson.groupBy({
-      by: ["teacherId", "status"],
+      by: ["teacherId", "studentId", "status"],
       where: { scheduledAt: { gte: monthStart, lte: monthEnd } },
       _sum: { durationMin: true },
     }),
   ]);
 
+  const studentIds = [...new Set(lessonsByTeacherStudent.map((g) => g.studentId))];
+  const students = studentIds.length
+    ? await prisma.studentProfile.findMany({
+        where: { id: { in: studentIds } },
+        select: { id: true, teacherId: true, teacherHistory: true, teacherPayRate: true },
+      })
+    : [];
+  const studentById = new Map(students.map((s) => [s.id, s]));
+
   const rows = teachers.map((t) => {
-    const hourlyRate = resolveHistoricalAmount(t.hourlyRate, t.hourlyRateHistory, monthStart);
-    let previstoMinutes = 0;
-    let realizadoMinutes = 0;
-    for (const g of lessonsByTeacher) {
+    const fallbackHourlyRate = resolveHistoricalAmount(t.hourlyRate, t.hourlyRateHistory, monthStart);
+    let previsto = 0;
+    let realizado = 0;
+    for (const g of lessonsByTeacherStudent) {
       if (g.teacherId !== t.id) continue;
-      const minutes = g._sum.durationMin ?? 0;
-      if (!PREVISTO_EXCLUDED_STATUSES.includes(g.status)) previstoMinutes += minutes;
-      if ((REALIZED_STATUSES as readonly string[]).includes(g.status)) realizadoMinutes += minutes;
+      const student = studentById.get(g.studentId);
+      if (!student) continue;
+      const rate = resolveTeacherPayRate(student, t.id, monthStart, fallbackHourlyRate);
+      const pay = ((g._sum.durationMin ?? 0) / 60) * rate;
+      if (!PREVISTO_EXCLUDED_STATUSES.includes(g.status)) previsto += pay;
+      if ((REALIZED_STATUSES as readonly string[]).includes(g.status)) realizado += pay;
     }
-    return {
-      teacherId: t.id,
-      teacherName: t.user.name,
-      previsto: (previstoMinutes / 60) * hourlyRate,
-      realizado: (realizadoMinutes / 60) * hourlyRate,
-    };
+    return { teacherId: t.id, teacherName: t.user.name, previsto, realizado };
   });
 
   rows.sort((a, b) => b.previsto - a.previsto);
@@ -71,10 +129,12 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
   return { rows, totals };
 }
 
-// Breaks one teacher's month down by lesson status — hours and pay
-// (hours × their hourly rate for that month) per status group, so the
-// previsto/realizado totals on the payroll list are traceable to exactly
-// which classes make them up.
+// Breaks one teacher's month down by lesson status — hours and pay per
+// status group, so the previsto/realizado totals on the payroll list are
+// traceable to exactly which classes make them up. Pay is resolved per
+// student/group (resolveTeacherPayRate), not a single flat rate, so the
+// "groups" totals are built up from the per-student breakdown rather than
+// the other way around.
 export async function getTeacherPayrollDetail(teacherId: string, year: number, month: number) {
   const monthStart = new Date(year, month, 1);
   const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
@@ -100,7 +160,46 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
     }),
   ]);
 
-  const hourlyRate = resolveHistoricalAmount(teacher.hourlyRate, teacher.hourlyRateHistory, monthStart);
+  const fallbackHourlyRate = resolveHistoricalAmount(
+    teacher.hourlyRate,
+    teacher.hourlyRateHistory,
+    monthStart
+  );
+
+  // Every student who has any lesson with this teacher this month — active,
+  // paused, or canceled — so nobody who was actually taught (or is still on
+  // the schedule) drops off just because their status changed since.
+  const studentIds = [...new Set(studentBreakdown.map((g) => g.studentId))];
+  const students = studentIds.length
+    ? await prisma.studentProfile.findMany({
+        where: { id: { in: studentIds } },
+        include: { user: true },
+      })
+    : [];
+  const studentById = new Map(students.map((s) => [s.id, s]));
+
+  const payByStatus = new Map<string, number>();
+  const byStudent = new Map<
+    string,
+    { hours: number; previsto: number; realizado: number; count: number; rate: number }
+  >();
+  for (const g of studentBreakdown) {
+    const student = studentById.get(g.studentId);
+    const rate = student
+      ? resolveTeacherPayRate(student, teacherId, monthStart, fallbackHourlyRate)
+      : fallbackHourlyRate;
+    const hours = (g._sum.durationMin ?? 0) / 60;
+    const pay = hours * rate;
+
+    payByStatus.set(g.status, (payByStatus.get(g.status) ?? 0) + pay);
+
+    const entry = byStudent.get(g.studentId) ?? { hours: 0, previsto: 0, realizado: 0, count: 0, rate };
+    entry.hours += hours;
+    entry.count += g._count._all;
+    if (!PREVISTO_EXCLUDED_STATUSES.includes(g.status)) entry.previsto += pay;
+    if ((REALIZED_STATUSES as readonly string[]).includes(g.status)) entry.realizado += pay;
+    byStudent.set(g.studentId, entry);
+  }
 
   const groups = statusBreakdown
     .filter((g) => g._count._all > 0)
@@ -110,7 +209,7 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
         status: g.status,
         count: g._count._all,
         hours,
-        pay: hours * hourlyRate,
+        pay: payByStatus.get(g.status) ?? 0,
         countsAsPrevisto: !PREVISTO_EXCLUDED_STATUSES.includes(g.status),
         countsAsRealizado: (REALIZED_STATUSES as readonly string[]).includes(g.status),
       };
@@ -125,32 +224,7 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
     { previsto: 0, realizado: 0 }
   );
 
-  // Every student who has any lesson with this teacher this month — active,
-  // paused, or canceled — so nobody who was actually taught (or is still on
-  // the schedule) drops off just because their status changed since.
-  const studentIds = [...new Set(studentBreakdown.map((g) => g.studentId))];
-  const students = studentIds.length
-    ? await prisma.studentProfile.findMany({
-        where: { id: { in: studentIds } },
-        include: { user: true },
-      })
-    : [];
   const studentNameById = new Map(students.map((s) => [s.id, s.user.name]));
-
-  const byStudent = new Map<
-    string,
-    { hours: number; previsto: number; realizado: number; count: number }
-  >();
-  for (const g of studentBreakdown) {
-    const hours = (g._sum.durationMin ?? 0) / 60;
-    const pay = hours * hourlyRate;
-    const entry = byStudent.get(g.studentId) ?? { hours: 0, previsto: 0, realizado: 0, count: 0 };
-    entry.hours += hours;
-    entry.count += g._count._all;
-    if (!PREVISTO_EXCLUDED_STATUSES.includes(g.status)) entry.previsto += pay;
-    if ((REALIZED_STATUSES as readonly string[]).includes(g.status)) entry.realizado += pay;
-    byStudent.set(g.studentId, entry);
-  }
   const studentTotals = [...byStudent.entries()]
     .map(([studentId, t]) => ({
       studentId,
@@ -162,7 +236,7 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
   return {
     teacherId: teacher.id,
     teacherName: teacher.user.name,
-    hourlyRate,
+    fallbackHourlyRate,
     groups,
     totals,
     students: studentTotals,

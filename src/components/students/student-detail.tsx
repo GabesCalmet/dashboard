@@ -23,6 +23,7 @@ import { StudentFormDialog } from "@/components/students/student-form-dialog";
 import type { ScheduleEntry } from "@/components/students/lesson-schedule-editor";
 import type { ValueHistoryEntry } from "@/components/students/monthly-value-history-editor";
 import type { SelectHistoryEntry } from "@/components/students/select-history-editor";
+import type { TeacherHistoryEntry } from "@/components/students/teacher-assignment-editor";
 import { DeleteStudentButton } from "@/components/students/delete-student-button";
 import { GroupMembersCard } from "@/components/students/group-members-card";
 import { ResyncLessonsButton } from "@/components/students/resync-lessons-button";
@@ -183,7 +184,8 @@ export function StudentDetailView({
                   address: student.address,
                   meetLink: student.meetLink,
                   teacherId: student.teacherId,
-                  teacherHistory: parseSelectHistory(student.teacherHistory),
+                  teacherHistory: parseTeacherHistory(student.teacherHistory),
+                  teacherPayRate: Number(student.teacherPayRate),
                   courseId: student.courseId,
                   courseHistory: parseSelectHistory(student.courseHistory),
                   planId: student.planId,
@@ -435,6 +437,21 @@ function parseSelectHistory(value: unknown): SelectHistoryEntry[] {
       id: e.id,
       from: typeof e.from === "string" && e.from ? e.from : undefined,
       until: typeof e.until === "string" && e.until ? e.until : undefined,
+    }));
+}
+
+function parseTeacherHistory(value: unknown): TeacherHistoryEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (e): e is { id: string; from?: string; until?: string; rate?: number } =>
+        typeof e === "object" && e !== null && typeof (e as Record<string, unknown>).id === "string"
+    )
+    .map((e) => ({
+      id: e.id,
+      from: typeof e.from === "string" && e.from ? e.from : undefined,
+      until: typeof e.until === "string" && e.until ? e.until : undefined,
+      rate: typeof e.rate === "number" ? e.rate : undefined,
     }));
 }
 

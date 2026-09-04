@@ -210,11 +210,21 @@ model StudentProfile {
   meetLink          String?
   teacherId         String?
   teacher           TeacherProfile? @relation("StudentProfile_teacher", fields: [teacherId], references: [id])
-  // History of teacher changes — [{ "id": "<teacherId>", "from": "...", "until": "..." }, ...].
+  // History of teacher changes —
+  // [{ "id": "<teacherId>", "from": "...", "until": "...", "rate": 25.0 }, ...].
   // teacherId always mirrors whichever entry is in effect today (or the
   // most recent one), and syncRecurringLessons resolves the
   // historically-correct teacher per generated lesson from this instead.
+  // Each entry's "rate" is what THAT teacher is paid per hour for THIS
+  // student/group — teacherPayRate mirrors it the same way, and payroll
+  // (getTeacherPayrollForMonth/Detail) resolves it per lesson instead of
+  // the teacher's own flat hourlyRate, falling back to that when unset.
   teacherHistory    Json            @default("[]")
+  // Mirrors whichever teacherHistory entry is in effect today — the
+  // per-student/group amount the assigned teacher is paid per hour,
+  // typically higher for a "grupo" cadastro (e.g. +R$5/hour per extra
+  // participant, entered manually here rather than computed).
+  teacherPayRate    Decimal         @default(0) @db.Decimal(10, 2)
   courseId          String?
   course            Course?         @relation(fields: [courseId], references: [id])
   // Record of past courses, same shape as teacherHistory — informational

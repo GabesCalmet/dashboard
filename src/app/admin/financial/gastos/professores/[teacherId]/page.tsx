@@ -42,7 +42,7 @@ export default async function AdminTeacherPayrollDetailPage({
 
       <PageHeader
         title={detail.teacherName}
-        description={`Horas e pagamento por tipo de aula — valor/hora ${formatCurrency(detail.hourlyRate)}.`}
+        description={`Horas e pagamento por tipo de aula — valor/hora varia por aluno/grupo (padrão ${formatCurrency(detail.fallbackHourlyRate)} quando não configurado).`}
       />
 
       <div className="mb-4">
@@ -109,6 +109,7 @@ export default async function AdminTeacherPayrollDetailPage({
           <TableHeader>
             <TableRow>
               <TableHead>Aluno</TableHead>
+              <TableHead>Valor/hora</TableHead>
               <TableHead>Aulas</TableHead>
               <TableHead>Horas</TableHead>
               <TableHead>Previsto</TableHead>
@@ -126,6 +127,7 @@ export default async function AdminTeacherPayrollDetailPage({
                     {s.studentName}
                   </Link>
                 </TableCell>
+                <TableCell>{formatCurrency(s.rate)}</TableCell>
                 <TableCell>{s.count}</TableCell>
                 <TableCell>{s.hours.toFixed(1)}h</TableCell>
                 <TableCell>{formatCurrency(s.previsto)}</TableCell>
@@ -134,7 +136,7 @@ export default async function AdminTeacherPayrollDetailPage({
             ))}
             {detail.students.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                   Nenhum aluno neste mês.
                 </TableCell>
               </TableRow>
