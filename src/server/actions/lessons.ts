@@ -286,6 +286,36 @@ export async function clearLessonReschedule(lessonId: string) {
   revalidateReportPaths(lesson.studentId);
 }
 
+// Moves a reposição's own date/time in place — unlike
+// scheduleLessonReschedule (which books a separate lesson linked via
+// rescheduledFromId to whatever it's replacing), a reposição that itself
+// needs to move doesn't need another lesson chained off it, just its own
+// scheduledAt/durationMin updated.
+export async function rescheduleMakeupLesson(
+  lessonId: string,
+  values: { date: string; time: string; endTime: string }
+) {
+  const parsed = lessonRescheduleSchema.safeParse(values);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Dados inválidos.");
+  }
+  const { actor, lesson } = await requireLessonEditAccess(lessonId);
+  const scheduledAt = brazilDateTime(parsed.data.date, parsed.data.time);
+  const durationMin = durationFromTimes(parsed.data.time, parsed.data.endTime) ?? lesson.durationMin;
+
+  await prisma.lesson.update({ where: { id: lessonId }, data: { scheduledAt, durationMin } });
+
+  await recordAudit({
+    entityType: "Lesson",
+    entityId: lessonId,
+    action: "UPDATE",
+    actor,
+    changes: { reagendamento: scheduledAt.toISOString() },
+  });
+
+  revalidateReportPaths(lesson.studentId);
+}
+
 // Marks whether the booked makeup lesson was actually given — toggles the
 // makeup lesson's own status between MAKEUP (pending) and COMPLETED (dada).
 export async function setMakeupGiven(makeupLessonId: string, given: boolean) {

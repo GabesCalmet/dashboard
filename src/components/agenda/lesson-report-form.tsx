@@ -21,6 +21,7 @@ import { CurriculumPicker } from "@/components/lessons/curriculum-picker";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
 import { LessonRescheduleEditor } from "@/components/lessons/lesson-reschedule-editor";
 import { MakeupGivenToggle } from "@/components/lessons/makeup-given-toggle";
+import { MakeupRescheduleButton } from "@/components/lessons/makeup-reschedule-button";
 
 export function LessonReportForm({
   lesson,
@@ -127,8 +128,16 @@ export function LessonReportForm({
       )}
 
       {lesson.status === "MAKEUP" && (
-        <div className="flex items-center justify-between rounded-md border p-3 sm:col-span-2">
-          <p className="text-xs font-medium text-muted-foreground">Esta é uma aula de reposição</p>
+        <div className="flex items-center justify-between gap-3 rounded-md border p-3 sm:col-span-2">
+          <div>
+            <p className="mb-1 text-xs font-medium text-muted-foreground">Esta é uma aula de reposição</p>
+            <MakeupRescheduleButton
+              lessonId={lesson.id}
+              scheduledAt={start}
+              durationMin={lesson.durationMin}
+              onRescheduled={onSaved}
+            />
+          </div>
           <MakeupGivenToggle
             makeupLessonId={lesson.id}
             given={status === "COMPLETED"}
