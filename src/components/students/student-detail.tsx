@@ -342,6 +342,7 @@ export function StudentDetailView({
               <LessonHistoryTable
                 lessons={student.lessons}
                 editable={permissions.canEditLessons}
+                canDelete={permissions.canDelete}
               />
             </TabsContent>
 

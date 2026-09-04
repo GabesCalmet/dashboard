@@ -20,6 +20,7 @@ import { LessonStatusSelect } from "@/components/lessons/lesson-status-select";
 import { LessonRescheduleEditor } from "@/components/lessons/lesson-reschedule-editor";
 import { MakeupGivenToggle } from "@/components/lessons/makeup-given-toggle";
 import { LessonSummaryEditor } from "@/components/lessons/lesson-summary-editor";
+import { DeleteLessonButton } from "@/components/lessons/delete-lesson-button";
 import type { Lesson } from "@prisma/client";
 
 type HistoryLesson = Lesson & {
@@ -35,6 +36,7 @@ export function LessonHistoryTable({
   showTeacher = false,
   teacherNames = {},
   editable = false,
+  canDelete = false,
 }: {
   lessons: HistoryLesson[];
   showTeacher?: boolean;
@@ -42,6 +44,9 @@ export function LessonHistoryTable({
   // Lets an admin change status/reagendamento/resumo directly from the
   // student's page, not just from the teacher's own Relatórios/Agenda.
   editable?: boolean;
+  // Admin-only: lets a mistaken or test lesson row (e.g. an orphaned
+  // reposição left behind by a reset reagendamento) be removed outright.
+  canDelete?: boolean;
 }) {
   const [monthValue, setMonthValue] = useState(() => monthValueOf(new Date()));
   const [year, month] = monthValue.split("-").map(Number);
@@ -97,13 +102,16 @@ export function LessonHistoryTable({
                 {showTeacher && <TableCell>{teacherNames[l.teacherId] ?? "—"}</TableCell>}
                 <TableCell>{l.durationMin} min</TableCell>
                 <TableCell>
-                  {editable ? (
-                    <LessonStatusSelect lessonId={l.id} status={l.status} />
-                  ) : (
-                    <Badge variant={lessonStatusBadgeVariant[l.status]}>
-                      {lessonStatusLabel[l.status]}
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-1">
+                    {editable ? (
+                      <LessonStatusSelect lessonId={l.id} status={l.status} />
+                    ) : (
+                      <Badge variant={lessonStatusBadgeVariant[l.status]}>
+                        {lessonStatusLabel[l.status]}
+                      </Badge>
+                    )}
+                    {canDelete && <DeleteLessonButton lessonId={l.id} />}
+                  </div>
                 </TableCell>
                 <TableCell>
                   {(reschedulableStatuses as readonly string[]).includes(l.status) ? (

@@ -156,6 +156,34 @@ export async function updateLessonStatus(lessonId: string, status: string) {
   revalidatePath("/student/history");
 }
 
+// Permanently removes a single lesson row — for cleaning up a mistaken or
+// test entry (e.g. an orphaned reposição left behind after a chain of
+// reagendamentos got reset). Deleting the original side of a reagendamento
+// just detaches its makeup (rescheduledFromId onDelete: SetNull) rather
+// than deleting that too. Admin-only: unlike the edit actions above, this
+// erases history instead of correcting it.
+export async function deleteLesson(lessonId: string) {
+  const actor = await requireRole("ADMIN");
+  const lesson = await prisma.lesson.findUniqueOrThrow({ where: { id: lessonId } });
+
+  await recordAudit({
+    entityType: "Lesson",
+    entityId: lessonId,
+    action: "DELETE",
+    actor,
+  });
+
+  await prisma.lesson.delete({ where: { id: lessonId } });
+
+  revalidatePath("/admin/agenda");
+  revalidatePath("/coordinator/agenda");
+  revalidatePath("/teacher/agenda");
+  revalidatePath(`/admin/students/${lesson.studentId}`);
+  revalidatePath(`/coordinator/students/${lesson.studentId}`);
+  revalidatePath(`/teacher/students/${lesson.studentId}`);
+  revalidatePath("/student/history");
+}
+
 // Sets the "Resumo" fields from the Relatórios table — either a free-text
 // note or a picked curriculum unit label, plus the class focus tag. Same
 // permission rule as updateLessonStatus: the lesson's own teacher or admin.
