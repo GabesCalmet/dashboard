@@ -120,11 +120,12 @@ const groupMembersField = z
   });
 
 // Submitted by GroupMemberFieldsEditor (edit form only) as a JSON string,
-// e.g. '[{"userId":"...","name":"...","email":"...","phone":"..."}]' — lets
-// every participant's own basic info be edited from the same "Editar
-// aluno" dialog instead of needing a separate place per member. Username
-// and password aren't included here — those stay under Ver senha/Alterar
-// senha on the Membros do grupo card, same as before.
+// e.g. '[{"userId":"...","name":"...","email":"...","phone":"...",
+// "monthlyValue":150,"monthlyValueHistory":[...]}]' — lets every
+// participant's own basic info and valor mensal be edited from the same
+// "Editar aluno" dialog instead of needing a separate place per member.
+// Username and password aren't included here — those stay under Ver
+// senha/Alterar senha on the Membros do grupo card, same as before.
 const groupMemberUpdatesField = z
   .string()
   .optional()
@@ -140,6 +141,16 @@ const groupMemberUpdatesField = z
           name: typeof e.name === "string" ? e.name.trim() : "",
           email: typeof e.email === "string" && e.email ? e.email : undefined,
           phone: typeof e.phone === "string" && e.phone ? e.phone : undefined,
+          monthlyValue: typeof e.monthlyValue === "number" ? e.monthlyValue : 0,
+          monthlyValueHistory: Array.isArray(e.monthlyValueHistory)
+            ? e.monthlyValueHistory
+                .filter((h: unknown) => h && typeof (h as { amount?: unknown }).amount === "number")
+                .map((h: { amount: number; from?: string; until?: string }) => ({
+                  amount: h.amount,
+                  from: typeof h.from === "string" && h.from ? h.from : undefined,
+                  until: typeof h.until === "string" && h.until ? h.until : undefined,
+                }))
+            : [],
         }))
         .filter((e) => e.name.length >= 2);
     } catch {

@@ -183,6 +183,8 @@ export function StudentDetailView({
                     username: m.user.username,
                     email: m.user.email,
                     phone: m.user.phone,
+                    monthlyValue: Number(m.monthlyValue),
+                    monthlyValueHistory: parseValueHistory(m.monthlyValueHistory),
                   })),
                   email: student.user.email,
                   cpf: student.cpf,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,19 +32,25 @@ export function MonthlyValueHistoryEditor({
   step = "0.01",
   min,
   max,
+  onChange,
 }: {
   label?: string;
   // Label shown on the numeric field itself — the outer `label` is just
   // the group heading, which reads oddly reused per-row for non-currency
   // fields like "Dia de vencimento" or "Aulas por mês".
   amountLabel?: string;
-  amountFieldName: string;
-  historyFieldName: string;
+  // Omit both field names to use this in "controlled" mode instead — no
+  // hidden inputs of its own, just reports every change via onChange so a
+  // parent editing several of these at once (one per group participant,
+  // say) can fold them all into its own single aggregated field.
+  amountFieldName?: string;
+  historyFieldName?: string;
   defaultAmount: number;
   defaultHistory?: ValueHistoryEntry[];
   step?: string;
   min?: number;
   max?: number;
+  onChange?: (amount: number, history: ValueHistoryEntry[]) => void;
 }) {
   const [entries, setEntries] = useState<EditorEntry[]>(() =>
     defaultHistory.length > 0
@@ -77,11 +83,16 @@ export function MonthlyValueHistoryEditor({
   }));
   const currentAmount = resolveCurrentAmount(history);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => onChange?.(currentAmount, history), [JSON.stringify(history)]);
+
   return (
     <div className="space-y-2 sm:col-span-2">
       <Label>{label}</Label>
-      <input type="hidden" name={amountFieldName} value={currentAmount} />
-      <input type="hidden" name={historyFieldName} value={JSON.stringify(history)} />
+      {amountFieldName && <input type="hidden" name={amountFieldName} value={currentAmount} />}
+      {historyFieldName && (
+        <input type="hidden" name={historyFieldName} value={JSON.stringify(history)} />
+      )}
 
       {entries.map((entry) => (
         <div key={entry._id} className="flex flex-wrap items-end gap-2 rounded-lg border p-3">
