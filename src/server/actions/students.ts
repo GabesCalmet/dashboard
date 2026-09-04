@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole, requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -349,6 +350,100 @@ export async function updateGroupMemberValue(
   revalidatePath(`/admin/students/${member.studentProfileId}`);
   revalidatePath(`/coordinator/students/${member.studentProfileId}`);
   return { success: "Valor atualizado." };
+}
+
+// Updates the group's own-login participant's monthly value/history —
+// there's no conceptual "primary" (see removeGroupOwner below), this is
+// just the one participant whose login the StudentProfile row happens to
+// be keyed on right now, edited the same way as any other member's.
+export async function updateGroupOwnerValue(
+  studentId: string,
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = z
+    .object({
+      monthlyValue: z.coerce.number().min(0, "Valor inválido"),
+      monthlyValueHistory: numericHistoryField,
+    })
+    .safeParse(raw);
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  const data = parsed.data;
+
+  await prisma.studentProfile.update({
+    where: { id: studentId },
+    data: { monthlyValue: data.monthlyValue, monthlyValueHistory: data.monthlyValueHistory },
+  });
+
+  await recordAudit({
+    entityType: "StudentProfile",
+    entityId: studentId,
+    action: "UPDATE",
+    actor,
+    changes: { groupOwnerValueUpdated: true },
+  });
+
+  revalidatePath(`/admin/students/${studentId}`);
+  revalidatePath(`/coordinator/students/${studentId}`);
+  return { success: "Valor atualizado." };
+}
+
+// Removes the group's current own-login participant (the one
+// StudentProfile.userId happens to point to) by first promoting the
+// longest-standing other member to take that slot — every participant is
+// meant to be equally removable, but the shared profile row (lessons,
+// progress, financeiro) needs exactly one User FK to exist at all times, so
+// whichever member is about to be removed while holding that FK hands it
+// off first. The group's shared data never moves; only which login anchors
+// it does. Requires at least one other member — the last remaining login
+// must go through deleteStudent instead, which removes the whole record.
+export async function removeGroupOwner(studentId: string) {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+  const student = await prisma.studentProfile.findUniqueOrThrow({
+    where: { id: studentId },
+    include: { groupMembers: { orderBy: { createdAt: "asc" } } },
+  });
+
+  const promoted = student.groupMembers[0];
+  if (!promoted) {
+    throw new Error(
+      'Não é possível remover o único login do grupo. Use "Excluir" para apagar o cadastro inteiro.'
+    );
+  }
+
+  const removedUserId = student.userId;
+
+  await prisma.$transaction([
+    prisma.studentGroupMember.delete({ where: { id: promoted.id } }),
+    prisma.studentProfile.update({
+      where: { id: studentId },
+      data: {
+        userId: promoted.userId,
+        monthlyValue: promoted.monthlyValue,
+        monthlyValueHistory: promoted.monthlyValueHistory as Prisma.InputJsonValue,
+      },
+    }),
+  ]);
+
+  await recordAudit({
+    entityType: "StudentProfile",
+    entityId: studentId,
+    action: "UPDATE",
+    actor,
+    changes: { groupOwnerRemoved: removedUserId, groupOwnerPromoted: promoted.userId },
+  });
+
+  await hardDeleteUserAccount(removedUserId);
+
+  revalidatePath("/admin/students");
+  revalidatePath("/coordinator/students");
+  revalidatePath(`/admin/students/${studentId}`);
+  revalidatePath(`/coordinator/students/${studentId}`);
 }
 
 export async function promoteStudentLevel(studentId: string) {

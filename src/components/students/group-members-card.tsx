@@ -36,13 +36,15 @@ import {
 import {
   addStudentGroupMember,
   removeStudentGroupMember,
+  removeGroupOwner,
   updateGroupMemberValue,
+  updateGroupOwnerValue,
+  type ActionState,
 } from "@/server/actions/students";
 import { useActionToast } from "@/hooks/use-action-toast";
 import { formatCurrency } from "@/lib/labels";
 
-type Member = {
-  id: string;
+type Participant = {
   userId: string;
   name: string;
   username: string | null;
@@ -50,15 +52,22 @@ type Member = {
   monthlyValueHistory: ValueHistoryEntry[];
 };
 
+// No participant is "the" student here — the shared profile (lessons,
+// progress, financeiro) belongs to the group as a whole, each participant
+// just has their own separate login and their own billing amount, and every
+// row below behaves identically (edit value, view/change credentials,
+// remove). Whichever login the underlying StudentProfile row happens to be
+// keyed on ("owner") is an implementation detail, not a role — see
+// removeGroupOwner for how removing that one hands the row off first.
 export function GroupMembersCard({
   studentId,
-  primary,
+  owner,
   members,
   canManage,
 }: {
   studentId: string;
-  primary: { userId: string; name: string; username: string | null; monthlyValue: number };
-  members: Member[];
+  owner: Participant;
+  members: (Participant & { id: string })[];
   canManage: boolean;
 }) {
   return (
@@ -70,52 +79,55 @@ export function GroupMembersCard({
         {canManage && <AddGroupMemberDialog studentId={studentId} />}
       </CardHeader>
       <CardContent className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2.5">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">
-              {primary.name} <span className="text-xs font-normal text-muted-foreground">(principal)</span>
-            </p>
-            <p className="truncate text-xs text-muted-foreground">{primary.username}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              Valor mensal: {formatCurrency(primary.monthlyValue)}
-            </p>
-          </div>
-          {canManage && (
-            <div className="flex flex-wrap gap-1.5">
-              <ViewCredentialsButton userId={primary.userId} size="sm" />
-              <SetPasswordButton userId={primary.userId} size="sm" />
-            </div>
-          )}
-        </div>
+        <ParticipantRow
+          participant={owner}
+          canManage={canManage}
+          editAction={updateGroupOwnerValue.bind(null, studentId)}
+          onRemove={() => removeGroupOwner(studentId)}
+        />
         {members.map((m) => (
-          <div
+          <ParticipantRow
             key={m.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2.5"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{m.name}</p>
-              <p className="truncate text-xs text-muted-foreground">{m.username}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                Valor mensal: {formatCurrency(m.monthlyValue)}
-              </p>
-            </div>
-            {canManage && (
-              <div className="flex flex-wrap gap-1.5">
-                <EditMemberValueDialog member={m} />
-                <ViewCredentialsButton userId={m.userId} size="sm" />
-                <SetPasswordButton userId={m.userId} size="sm" />
-                <RemoveMemberButton memberId={m.id} name={m.name} />
-              </div>
-            )}
-          </div>
+            participant={m}
+            canManage={canManage}
+            editAction={updateGroupMemberValue.bind(null, m.id)}
+            onRemove={() => removeStudentGroupMember(m.id)}
+          />
         ))}
-        {members.length === 0 && (
-          <p className="py-4 text-center text-sm text-muted-foreground">
-            Nenhum outro participante além do cadastro principal.
-          </p>
-        )}
       </CardContent>
     </Card>
+  );
+}
+
+function ParticipantRow({
+  participant,
+  canManage,
+  editAction,
+  onRemove,
+}: {
+  participant: Participant;
+  canManage: boolean;
+  editAction: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+  onRemove: () => Promise<void>;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2.5">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">{participant.name}</p>
+        <p className="truncate text-xs text-muted-foreground">{participant.username}</p>
+        <p className="truncate text-xs text-muted-foreground">
+          Valor mensal: {formatCurrency(participant.monthlyValue)}
+        </p>
+      </div>
+      {canManage && (
+        <div className="flex flex-wrap gap-1.5">
+          <EditValueDialog participant={participant} action={editAction} />
+          <ViewCredentialsButton userId={participant.userId} size="sm" />
+          <SetPasswordButton userId={participant.userId} size="sm" />
+          <RemoveParticipantButton name={participant.name} onRemove={onRemove} />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -185,8 +197,13 @@ function AddGroupMemberDialog({ studentId }: { studentId: string }) {
   );
 }
 
-function EditMemberValueDialog({ member }: { member: Member }) {
-  const action = updateGroupMemberValue.bind(null, member.id);
+function EditValueDialog({
+  participant,
+  action,
+}: {
+  participant: Participant;
+  action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+}) {
   const [state, formAction, isPending] = useActionState(action, undefined);
   const [open, setOpen] = useState(false);
   useActionToast(state, () => setOpen(false));
@@ -200,7 +217,7 @@ function EditMemberValueDialog({ member }: { member: Member }) {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Valor mensal — {member.name}</DialogTitle>
+          <DialogTitle>Valor mensal — {participant.name}</DialogTitle>
           <DialogDescription>
             A cobrança mensal deste participante, separada do resto do grupo.
           </DialogDescription>
@@ -210,8 +227,8 @@ function EditMemberValueDialog({ member }: { member: Member }) {
           <MonthlyValueHistoryEditor
             amountFieldName="monthlyValue"
             historyFieldName="monthlyValueHistory"
-            defaultAmount={member.monthlyValue}
-            defaultHistory={member.monthlyValueHistory}
+            defaultAmount={participant.monthlyValue}
+            defaultHistory={participant.monthlyValueHistory}
           />
 
           <DialogFooter>
@@ -226,7 +243,7 @@ function EditMemberValueDialog({ member }: { member: Member }) {
   );
 }
 
-function RemoveMemberButton({ memberId, name }: { memberId: string; name: string }) {
+function RemoveParticipantButton({ name, onRemove }: { name: string; onRemove: () => Promise<void> }) {
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -252,7 +269,7 @@ function RemoveMemberButton({ memberId, name }: { memberId: string; name: string
               e.preventDefault();
               startTransition(async () => {
                 try {
-                  await removeStudentGroupMember(memberId);
+                  await onRemove();
                   toast.success("Participante removido.");
                 } catch (err) {
                   toast.error(err instanceof Error ? err.message : "Erro ao remover.");
