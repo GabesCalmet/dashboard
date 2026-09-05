@@ -157,7 +157,13 @@ export async function updateStudent(
     ...memberUpdates.map((m) =>
       prisma.studentGroupMember.update({
         where: { userId: m.userId },
-        data: { monthlyValue: m.monthlyValue, monthlyValueHistory: m.monthlyValueHistory },
+        data: {
+          monthlyValue: m.monthlyValue,
+          monthlyValueHistory: m.monthlyValueHistory,
+          dueDay: m.dueDay,
+          dueDayHistory: m.dueDayHistory,
+          bankAccount: m.bankAccount,
+        },
       })
     ),
     prisma.studentProfile.update({

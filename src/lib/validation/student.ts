@@ -119,13 +119,29 @@ const groupMembersField = z
     }
   });
 
+function parseAmountHistory(value: unknown): { amount: number; from?: string; until?: string }[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((h): h is { amount: number; from?: string; until?: string } => {
+      const r = h as Record<string, unknown> | null;
+      return Boolean(r) && typeof r?.amount === "number";
+    })
+    .map((h) => ({
+      amount: h.amount,
+      from: typeof h.from === "string" && h.from ? h.from : undefined,
+      until: typeof h.until === "string" && h.until ? h.until : undefined,
+    }));
+}
+
 // Submitted by GroupMemberFieldsEditor (edit form only) as a JSON string,
 // e.g. '[{"userId":"...","name":"...","email":"...","phone":"...",
-// "monthlyValue":150,"monthlyValueHistory":[...]}]' — lets every
-// participant's own basic info and valor mensal be edited from the same
-// "Editar aluno" dialog instead of needing a separate place per member.
-// Username and password aren't included here — those stay under Ver
-// senha/Alterar senha on the Membros do grupo card, same as before.
+// "monthlyValue":150,"monthlyValueHistory":[...],"dueDay":10,
+// "dueDayHistory":[...],"bankAccount":"JOE"}]' — lets every participant's
+// own basic info and billing (valor, conta bancária, dia de vencimento) be
+// edited from the same "Editar aluno" dialog instead of needing a separate
+// place per member. Username and password aren't included here — those
+// stay under Ver senha/Alterar senha on the Membros do grupo card, same as
+// before.
 const groupMemberUpdatesField = z
   .string()
   .optional()
@@ -142,15 +158,12 @@ const groupMemberUpdatesField = z
           email: typeof e.email === "string" && e.email ? e.email : undefined,
           phone: typeof e.phone === "string" && e.phone ? e.phone : undefined,
           monthlyValue: typeof e.monthlyValue === "number" ? e.monthlyValue : 0,
-          monthlyValueHistory: Array.isArray(e.monthlyValueHistory)
-            ? e.monthlyValueHistory
-                .filter((h: unknown) => h && typeof (h as { amount?: unknown }).amount === "number")
-                .map((h: { amount: number; from?: string; until?: string }) => ({
-                  amount: h.amount,
-                  from: typeof h.from === "string" && h.from ? h.from : undefined,
-                  until: typeof h.until === "string" && h.until ? h.until : undefined,
-                }))
-            : [],
+          monthlyValueHistory: parseAmountHistory(e.monthlyValueHistory),
+          dueDay: typeof e.dueDay === "number" ? e.dueDay : 10,
+          dueDayHistory: parseAmountHistory(e.dueDayHistory),
+          bankAccount: (["GABES", "JOE", "ASAAS"] as const).includes(e.bankAccount)
+            ? e.bankAccount
+            : "JOE",
         }))
         .filter((e) => e.name.length >= 2);
     } catch {

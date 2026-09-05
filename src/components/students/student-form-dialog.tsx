@@ -286,12 +286,42 @@ export function StudentFormDialog({
             defaultHistory={student?.planHistory ?? []}
           />
 
-          <MonthlyValueHistoryEditor
-            amountFieldName="monthlyValue"
-            historyFieldName="monthlyValueHistory"
-            defaultAmount={student?.monthlyValue ?? 0}
-            defaultHistory={student?.monthlyValueHistory ?? []}
-          />
+          <div className="grid grid-cols-1 gap-4 rounded-lg border p-3 sm:col-span-2 sm:grid-cols-2">
+            <MonthlyValueHistoryEditor
+              amountFieldName="monthlyValue"
+              historyFieldName="monthlyValueHistory"
+              defaultAmount={student?.monthlyValue ?? 0}
+              defaultHistory={student?.monthlyValueHistory ?? []}
+            />
+
+            <div className="space-y-1.5">
+              <Label>Conta bancária</Label>
+              <Select name="bankAccount" defaultValue={student?.bankAccount ?? "JOE"} required>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(bankAccountLabel).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <MonthlyValueHistoryEditor
+              label="Dia de vencimento do boleto"
+              amountLabel="Dia"
+              amountFieldName="dueDay"
+              historyFieldName="dueDayHistory"
+              defaultAmount={student?.dueDay ?? 10}
+              defaultHistory={student?.dueDayHistory ?? []}
+              step="1"
+              min={1}
+              max={31}
+            />
+          </div>
 
           <div className="flex items-end pb-1.5">
             <label className="flex items-center gap-2 text-sm">
@@ -358,34 +388,6 @@ export function StudentFormDialog({
               </div>
             </>
           )}
-
-          <div className="space-y-1.5">
-            <Label>Conta bancária</Label>
-            <Select name="bankAccount" defaultValue={student?.bankAccount ?? "JOE"} required>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(bankAccountLabel).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <MonthlyValueHistoryEditor
-            label="Dia de vencimento do boleto"
-            amountLabel="Dia"
-            amountFieldName="dueDay"
-            historyFieldName="dueDayHistory"
-            defaultAmount={student?.dueDay ?? 10}
-            defaultHistory={student?.dueDayHistory ?? []}
-            step="1"
-            min={1}
-            max={31}
-          />
 
           <MonthlyValueHistoryEditor
             label="Aulas por mês"

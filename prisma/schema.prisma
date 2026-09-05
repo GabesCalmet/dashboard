@@ -327,6 +327,12 @@ model StudentGroupMember {
   // this only covers everyone else.
   monthlyValue        Decimal      @default(0) @db.Decimal(10, 2)
   monthlyValueHistory Json         @default("[]")
+  // This participant's own due day and bank account — each participant's
+  // cobrança can go to a different account and fall due on a different
+  // day, same Vigência convention as StudentProfile.dueDay/dueDayHistory.
+  dueDay              Int          @default(10)
+  dueDayHistory       Json         @default("[]")
+  bankAccount         BankAccount  @default(JOE)
   createdAt        DateTime       @default(now())
 
   @@map("student_group_members")
