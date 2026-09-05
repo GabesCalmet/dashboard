@@ -26,7 +26,11 @@ export type GroupMemberFields = {
 // (its own "Valor" quick-edit there still works too; this is just another
 // way to reach the same field). See groupMemberUpdatesField in
 // lib/validation/student.ts and updateStudent, which applies these to
-// each member's User and StudentGroupMember rows.
+// each member's User and StudentGroupMember rows. Each participant's block
+// mirrors the exact field layout/style used for the primary above it —
+// one full-width field per row, not a cramped multi-column grid — so
+// every participant looks the same regardless of which one happens to be
+// the form's "primary".
 export function GroupMemberFieldsEditor({
   members,
   fieldName = "groupMemberUpdates",
@@ -62,40 +66,44 @@ export function GroupMemberFieldsEditor({
   }));
 
   return (
-    <div className="space-y-2 sm:col-span-2">
+    <div className="space-y-4 sm:col-span-2">
       <Label>Outros participantes do grupo</Label>
       <input type="hidden" name={fieldName} value={JSON.stringify(value)} />
 
       {entries.map((entry) => (
-        <div key={entry.userId} className="space-y-3 rounded-lg border p-3">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-normal text-muted-foreground">Nome completo</Label>
-              <Input value={entry.name} onChange={(e) => update(entry.userId, "name", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-normal text-muted-foreground">Email</Label>
-              <Input
-                type="email"
-                value={entry.email}
-                onChange={(e) => update(entry.userId, "email", e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-normal text-muted-foreground">Telefone</Label>
-              <Input value={entry.phone} onChange={(e) => update(entry.userId, "phone", e.target.value)} />
-            </div>
+        <div key={entry.userId} className="grid grid-cols-1 gap-4 rounded-lg border p-3 sm:grid-cols-2">
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Nome completo</Label>
+            <Input value={entry.name} onChange={(e) => update(entry.userId, "name", e.target.value)} />
+          </div>
+
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Nome de usuário (login)</Label>
+            <Input value={entry.username ?? ""} disabled readOnly />
+          </div>
+
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Email de contato (opcional)</Label>
+            <Input
+              type="email"
+              value={entry.email}
+              onChange={(e) => update(entry.userId, "email", e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Telefone</Label>
+            <Input value={entry.phone} onChange={(e) => update(entry.userId, "phone", e.target.value)} />
           </div>
 
           <MonthlyValueHistoryEditor
-            label={`Valor mensal (R$) — ${entry.name || "participante"}`}
             defaultAmount={entry.monthlyValue}
             defaultHistory={entry.monthlyValueHistory}
             onChange={(amount, history) => updateValue(entry.userId, amount, history)}
           />
 
-          <p className="text-xs text-muted-foreground">
-            @{entry.username} — usuário e senha são gerenciados em &quot;Membros do grupo&quot;.
+          <p className="text-xs text-muted-foreground sm:col-span-2">
+            Usuário e senha são gerenciados em &quot;Membros do grupo&quot;.
           </p>
         </div>
       ))}
