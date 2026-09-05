@@ -173,46 +173,89 @@ export function StudentFormDialog({
             </div>
           )}
 
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="name">Nome completo</Label>
-            <Input id="name" name="name" defaultValue={student?.name} required />
-          </div>
-
-          {isEdit ? (
-            <div className="space-y-1.5">
-              <Label>Nome de usuário (login)</Label>
-              <Input value={student?.username ?? ""} disabled readOnly />
+          <div className="grid grid-cols-1 gap-4 rounded-lg border p-3 sm:col-span-2 sm:grid-cols-2">
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="name">Nome completo</Label>
+              <Input id="name" name="name" defaultValue={student?.name} required />
             </div>
-          ) : (
-            <>
-              <div className="space-y-1.5">
-                <Label htmlFor="username">Nome de usuário (login)</Label>
-                <Input id="username" name="username" placeholder="ex: joao.silva" required />
+
+            {isEdit ? (
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>Nome de usuário (login)</Label>
+                <Input value={student?.username ?? ""} disabled readOnly />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Senha</Label>
-                <Input id="password" name="password" type="text" placeholder="Mínimo 6 caracteres" required />
-              </div>
-            </>
-          )}
+            ) : (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="username">Nome de usuário (login)</Label>
+                  <Input id="username" name="username" placeholder="ex: joao.silva" required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="password">Senha</Label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="text"
+                    placeholder="Mínimo 6 caracteres"
+                    required
+                  />
+                </div>
+              </>
+            )}
 
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="email">Email de contato (opcional)</Label>
-            <Input id="email" name="email" type="email" defaultValue={student?.email ?? ""} />
-          </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="email">Email de contato (opcional)</Label>
+              <Input id="email" name="email" type="email" defaultValue={student?.email ?? ""} />
+            </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="cpf">CPF</Label>
-            <Input id="cpf" name="cpf" defaultValue={student?.cpf ?? ""} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="phone">Telefone</Label>
-            <Input id="phone" name="phone" defaultValue={student?.phone ?? ""} />
-          </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cpf">CPF</Label>
+              <Input id="cpf" name="cpf" defaultValue={student?.cpf ?? ""} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="phone">Telefone</Label>
+              <Input id="phone" name="phone" defaultValue={student?.phone ?? ""} />
+            </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="birthDate">Data de nascimento</Label>
-            <Input id="birthDate" name="birthDate" type="date" defaultValue={student?.birthDate} />
+            <div className="space-y-1.5">
+              <Label htmlFor="birthDate">Data de nascimento</Label>
+              <Input id="birthDate" name="birthDate" type="date" defaultValue={student?.birthDate} />
+            </div>
+
+            <MonthlyValueHistoryEditor
+              amountFieldName="monthlyValue"
+              historyFieldName="monthlyValueHistory"
+              defaultAmount={student?.monthlyValue ?? 0}
+              defaultHistory={student?.monthlyValueHistory ?? []}
+            />
+
+            <div className="space-y-1.5">
+              <Label>Conta bancária</Label>
+              <Select name="bankAccount" defaultValue={student?.bankAccount ?? "JOE"} required>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(bankAccountLabel).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <MonthlyValueHistoryEditor
+              label="Dia de vencimento do boleto"
+              amountLabel="Dia"
+              amountFieldName="dueDay"
+              historyFieldName="dueDayHistory"
+              defaultAmount={student?.dueDay ?? 10}
+              defaultHistory={student?.dueDayHistory ?? []}
+              step="1"
+              min={1}
+              max={31}
+            />
           </div>
 
           {!isEdit && studentType === "grupo" && <GroupMembersEditor />}
@@ -285,43 +328,6 @@ export function StudentFormDialog({
             defaultValue={student?.planId}
             defaultHistory={student?.planHistory ?? []}
           />
-
-          <div className="grid grid-cols-1 gap-4 rounded-lg border p-3 sm:col-span-2 sm:grid-cols-2">
-            <MonthlyValueHistoryEditor
-              amountFieldName="monthlyValue"
-              historyFieldName="monthlyValueHistory"
-              defaultAmount={student?.monthlyValue ?? 0}
-              defaultHistory={student?.monthlyValueHistory ?? []}
-            />
-
-            <div className="space-y-1.5">
-              <Label>Conta bancária</Label>
-              <Select name="bankAccount" defaultValue={student?.bankAccount ?? "JOE"} required>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(bankAccountLabel).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <MonthlyValueHistoryEditor
-              label="Dia de vencimento do boleto"
-              amountLabel="Dia"
-              amountFieldName="dueDay"
-              historyFieldName="dueDayHistory"
-              defaultAmount={student?.dueDay ?? 10}
-              defaultHistory={student?.dueDayHistory ?? []}
-              step="1"
-              min={1}
-              max={31}
-            />
-          </div>
 
           <div className="flex items-end pb-1.5">
             <label className="flex items-center gap-2 text-sm">
