@@ -194,9 +194,15 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
     payByStatus.set(g.status, (payByStatus.get(g.status) ?? 0) + pay);
 
     const entry = byStudent.get(g.studentId) ?? { hours: 0, previsto: 0, realizado: 0, count: 0, rate };
-    entry.hours += hours;
     entry.count += g._count._all;
-    if (!PREVISTO_EXCLUDED_STATUSES.includes(g.status)) entry.previsto += pay;
+    // Only previsto-eligible hours are counted here — a class that's
+    // already known to be a no-op (CA/CP/CF/PAUSED) doesn't get taught or
+    // paid for, so folding its minutes into "Horas" would make Horas ×
+    // Valor/hora stop matching Previsto right next to it.
+    if (!PREVISTO_EXCLUDED_STATUSES.includes(g.status)) {
+      entry.hours += hours;
+      entry.previsto += pay;
+    }
     if ((REALIZED_STATUSES as readonly string[]).includes(g.status)) entry.realizado += pay;
     byStudent.set(g.studentId, entry);
   }
