@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
 import { resolveHistoricalAmount } from "@/server/billing";
-import type { LessonStatus } from "@prisma/client";
 
 type TeacherHistoryEntry = { id: string; from?: string; until?: string; rate?: number };
 
@@ -57,28 +56,19 @@ function resolveTeacherPayRate(
 // the cancellation codes, which never occurred.
 const REALIZED_STATUSES = ["COMPLETED", "NO_SHOW", "MAKEUP"] as const;
 
-// Statuses that mean a scheduled class definitely won't be taught/paid —
-// excluded even from the "previsto" (forecast) total, since it's already
-// known those hours won't happen.
-const PREVISTO_EXCLUDED_STATUSES: LessonStatus[] = [
-  "CANCELED_BY_STUDENT",
-  "CANCELED_BY_TEACHER",
-  "CANCELED_VACATION",
-  "CANCELED_HOLIDAY",
-  "PAUSED",
-];
-
-// Per-teacher payroll for a given month — "previsto" is every class on
-// their calendar that month that isn't already a known cancellation (so it
-// includes both future SCHEDULED classes and ones already given), priced
-// at whatever that teacher is paid for each specific student/group that
-// month (resolveTeacherPayRate — usually configured per student/group
-// cadastro instead of the teacher's own flat hourlyRate). "realizado" is
-// the same but only for classes actually given so far
-// (COMPLETED/NO_SHOW/MAKEUP) — grows live as teachers report their
-// lessons, same rule as "Horas trabalhadas (mês)" on the teacher detail
-// page. Used for the "Professores" box on the Gastos page instead of a
-// manually-entered expense, since teacher pay is derived, not typed in.
+// Per-teacher payroll for a given month — "previsto" is the full amount
+// supposing every class on the calendar that month is given, however it
+// actually turns out later (a cancellation doesn't reduce it — it's a
+// forecast of the whole month, not a running total), priced at whatever
+// that teacher is paid for each specific student/group that month
+// (resolveTeacherPayRate — usually configured per student/group cadastro
+// instead of the teacher's own flat hourlyRate). "realizado" is the
+// opposite: only classes actually given so far (COMPLETED/NO_SHOW/MAKEUP)
+// — it's what changes with cancellations and reposições, and grows live as
+// teachers report their lessons, same rule as "Horas trabalhadas (mês)" on
+// the teacher detail page. Used for the "Professores" box on the Gastos
+// page instead of a manually-entered expense, since teacher pay is
+// derived, not typed in.
 export async function getTeacherPayrollForMonth(year: number, month: number) {
   const monthStart = new Date(year, month, 1);
   const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
@@ -114,7 +104,7 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
       if (!student) continue;
       const rate = resolveTeacherPayRate(student, t.id, monthStart, fallbackHourlyRate);
       const pay = ((g._sum.durationMin ?? 0) / 60) * rate;
-      if (!PREVISTO_EXCLUDED_STATUSES.includes(g.status)) previsto += pay;
+      previsto += pay;
       if ((REALIZED_STATUSES as readonly string[]).includes(g.status)) realizado += pay;
     }
     return { teacherId: t.id, teacherName: t.user.name, previsto, realizado };
@@ -195,14 +185,12 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
 
     const entry = byStudent.get(g.studentId) ?? { hours: 0, previsto: 0, realizado: 0, count: 0, rate };
     entry.count += g._count._all;
-    // Only previsto-eligible hours are counted here — a class that's
-    // already known to be a no-op (CA/CP/CF/PAUSED) doesn't get taught or
-    // paid for, so folding its minutes into "Horas" would make Horas ×
-    // Valor/hora stop matching Previsto right next to it.
-    if (!PREVISTO_EXCLUDED_STATUSES.includes(g.status)) {
-      entry.hours += hours;
-      entry.previsto += pay;
-    }
+    // Previsto counts every class regardless of status — it's a forecast
+    // of the full month assuming everything is given, not a running total,
+    // so a cancellation doesn't shrink it. Horas follows the same rule, so
+    // Horas × Valor/hora always equals Previsto on this row.
+    entry.hours += hours;
+    entry.previsto += pay;
     if ((REALIZED_STATUSES as readonly string[]).includes(g.status)) entry.realizado += pay;
     byStudent.set(g.studentId, entry);
   }
@@ -216,7 +204,7 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
         count: g._count._all,
         hours,
         pay: payByStatus.get(g.status) ?? 0,
-        countsAsPrevisto: !PREVISTO_EXCLUDED_STATUSES.includes(g.status),
+        countsAsPrevisto: true,
         countsAsRealizado: (REALIZED_STATUSES as readonly string[]).includes(g.status),
       };
     })
@@ -224,7 +212,7 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
 
   const totals = groups.reduce(
     (acc, g) => ({
-      previsto: acc.previsto + (g.countsAsPrevisto ? g.pay : 0),
+      previsto: acc.previsto + g.pay,
       realizado: acc.realizado + (g.countsAsRealizado ? g.pay : 0),
     }),
     { previsto: 0, realizado: 0 }
