@@ -212,6 +212,38 @@ export async function updateStudent(
     }),
   ]);
 
+  // Lets an individual student be turned into a "grupo" cadastro right
+  // from this same edit — e.g. when they invite a friend to have class
+  // together. Provisioned one at a time after the main update so a
+  // failure here (e.g. a taken username) still leaves the rest of the
+  // edit intact.
+  let memberError: string | undefined;
+  for (const member of data.groupMembers) {
+    try {
+      const { user: memberUser } = await provisionUsernameAccount({
+        name: member.name,
+        username: member.username,
+        password: member.password,
+        role: "STUDENT",
+        email: member.email,
+        phone: member.phone,
+      });
+      await prisma.studentGroupMember.create({
+        data: {
+          studentProfileId: studentId,
+          userId: memberUser.id,
+          monthlyValue: member.monthlyValue,
+          monthlyValueHistory: member.monthlyValueHistory,
+          dueDay: member.dueDay,
+          dueDayHistory: member.dueDayHistory,
+          bankAccount: member.bankAccount,
+        },
+      });
+    } catch (err) {
+      memberError = err instanceof Error ? err.message : "Erro ao adicionar participante.";
+    }
+  }
+
   await recordAudit({
     entityType: "StudentProfile",
     entityId: studentId,
@@ -229,6 +261,10 @@ export async function updateStudent(
   revalidatePath("/admin/agenda");
   revalidatePath("/coordinator/agenda");
   revalidatePath("/teacher/agenda");
+
+  if (memberError) {
+    return { error: `Aluno atualizado, mas houve um erro ao adicionar participante: ${memberError}` };
+  }
   return { success: "Aluno atualizado." };
 }
 

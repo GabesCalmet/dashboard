@@ -107,7 +107,9 @@ export function StudentFormDialog({
   const [state, formAction, isPending] = useActionState(action, undefined);
   const [open, setOpen] = useState(false);
   const [hasThirdParty, setHasThirdParty] = useState(Boolean(student?.thirdPartyAmount));
-  const [studentType, setStudentType] = useState<"individual" | "grupo">("individual");
+  const [studentType, setStudentType] = useState<"individual" | "grupo">(
+    student?.isGroup ? "grupo" : "individual"
+  );
   useActionToast(state, () => setOpen(false));
 
   return (
@@ -129,7 +131,7 @@ export function StudentFormDialog({
         </DialogHeader>
 
         <form action={formAction} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {!isEdit && (
+          {!(isEdit && student?.isGroup) && (
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Tipo de cadastro</Label>
               <div className="flex gap-2">
@@ -151,14 +153,14 @@ export function StudentFormDialog({
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Nome/usuário/senha abaixo são da primeira pessoa. Em um grupo, as aulas e o
-                financeiro ficam ligados a um só cadastro, mas cada participante tem seu próprio
-                login.
+                {isEdit
+                  ? 'Mude para "Grupo" para transformar este aluno num grupo — ex: quando ele convida um amigo para ter aula junto. As aulas e o financeiro continuam ligados a este mesmo cadastro, mas cada participante tem seu próprio login.'
+                  : "Nome/usuário/senha abaixo são da primeira pessoa. Em um grupo, as aulas e o financeiro ficam ligados a um só cadastro, mas cada participante tem seu próprio login."}
               </p>
             </div>
           )}
 
-          {((!isEdit && studentType === "grupo") || (isEdit && student?.isGroup)) && (
+          {studentType === "grupo" && (
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="groupName">Nome do grupo</Label>
               <Input
@@ -258,7 +260,7 @@ export function StudentFormDialog({
             />
           </div>
 
-          {!isEdit && studentType === "grupo" && <GroupMembersEditor />}
+          {studentType === "grupo" && !student?.isGroup && <GroupMembersEditor />}
           {isEdit && student?.isGroup && (
             <GroupMemberFieldsEditor members={student.groupMembers ?? []} />
           )}
