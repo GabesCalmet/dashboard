@@ -62,6 +62,21 @@ export function TeacherAssignmentEditor({
     setEntries((prev) => [...prev, { id: "", rate: 0, _id: nextId++ }]);
   }
 
+  // Adds a new Valor/Vigência entry for the CURRENT teacher, without
+  // reselecting them — for when a participant leaves or joins the group
+  // and the rate needs to change but the teacher doesn't (unlike
+  // "Adicionar professor", which starts blank for an actual teacher
+  // change).
+  function addPaymentEntry() {
+    setEntries((prev) => {
+      const history = prev
+        .filter((e) => e.id)
+        .map(({ id, from, until, rate }) => ({ id, from, until, rate }));
+      const currentTeacherId = resolveCurrent(history).id;
+      return [...prev, { id: currentTeacherId, rate: 0, _id: nextId++ }];
+    });
+  }
+
   function removeEntry(id: number) {
     setEntries((prev) => prev.filter((e) => e._id !== id));
   }
@@ -149,6 +164,12 @@ export function TeacherAssignmentEditor({
 
       {entries.length === 0 && (
         <p className="text-sm text-muted-foreground">Nenhum(a) professor(a) selecionado(a).</p>
+      )}
+
+      {entries.length > 0 && (
+        <Button type="button" variant="outline" size="sm" onClick={addPaymentEntry}>
+          <Plus className="size-4" /> Adicionar pagamento
+        </Button>
       )}
 
       <Button type="button" variant="outline" size="sm" onClick={addEntry}>
