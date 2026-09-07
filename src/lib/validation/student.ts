@@ -80,13 +80,29 @@ export const numericHistoryField = z
     }
   });
 
+function parseAmountHistory(value: unknown): { amount: number; from?: string; until?: string }[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((h): h is { amount: number; from?: string; until?: string } => {
+      const r = h as Record<string, unknown> | null;
+      return Boolean(r) && typeof r?.amount === "number";
+    })
+    .map((h) => ({
+      amount: h.amount,
+      from: typeof h.from === "string" && h.from ? h.from : undefined,
+      until: typeof h.until === "string" && h.until ? h.until : undefined,
+    }));
+}
+
 // Submitted by GroupMembersEditor (create form only) as a JSON string, e.g.
-// '[{"name":"...","username":"...","password":"...","email":"...","phone":"..."}]'
-// — one additional login for a "grupo" student, beyond the primary
-// name/username/password above. Loose validation here (real uniqueness/
-// length checks happen per-member in provisionUsernameAccount, same as the
-// primary) since a malformed entry should just be dropped, not fail the
-// whole cadastro.
+// '[{"name":"...","username":"...","password":"...","email":"...","phone":"...",
+// "monthlyValue":150,"monthlyValueHistory":[...],"dueDay":10,
+// "dueDayHistory":[...],"bankAccount":"JOE"}]' — one additional login for a
+// "grupo" student, beyond the primary name/username/password above, with
+// the exact same billing fields as the primary's own card. Loose
+// validation here (real uniqueness/length checks happen per-member in
+// provisionUsernameAccount, same as the primary) since a malformed entry
+// should just be dropped, not fail the whole cadastro.
 const groupMembersField = z
   .string()
   .optional()
@@ -113,25 +129,17 @@ const groupMembersField = z
           email: typeof e.email === "string" && e.email ? e.email : undefined,
           phone: typeof e.phone === "string" && e.phone ? e.phone : undefined,
           monthlyValue: typeof e.monthlyValue === "number" ? e.monthlyValue : 0,
+          monthlyValueHistory: parseAmountHistory(e.monthlyValueHistory),
+          dueDay: typeof e.dueDay === "number" ? e.dueDay : 10,
+          dueDayHistory: parseAmountHistory(e.dueDayHistory),
+          bankAccount: (["GABES", "JOE", "ASAAS"] as const).includes(e.bankAccount)
+            ? e.bankAccount
+            : "JOE",
         }));
     } catch {
       return [];
     }
   });
-
-function parseAmountHistory(value: unknown): { amount: number; from?: string; until?: string }[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((h): h is { amount: number; from?: string; until?: string } => {
-      const r = h as Record<string, unknown> | null;
-      return Boolean(r) && typeof r?.amount === "number";
-    })
-    .map((h) => ({
-      amount: h.amount,
-      from: typeof h.from === "string" && h.from ? h.from : undefined,
-      until: typeof h.until === "string" && h.until ? h.until : undefined,
-    }));
-}
 
 // Submitted by GroupMemberFieldsEditor (edit form only) as a JSON string,
 // e.g. '[{"userId":"...","name":"...","email":"...","phone":"...",

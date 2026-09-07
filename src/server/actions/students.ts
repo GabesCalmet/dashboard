@@ -101,7 +101,15 @@ export async function createStudent(
         phone: member.phone,
       });
       await prisma.studentGroupMember.create({
-        data: { studentProfileId: student.id, userId: memberUser.id, monthlyValue: member.monthlyValue },
+        data: {
+          studentProfileId: student.id,
+          userId: memberUser.id,
+          monthlyValue: member.monthlyValue,
+          monthlyValueHistory: member.monthlyValueHistory,
+          dueDay: member.dueDay,
+          dueDayHistory: member.dueDayHistory,
+          bankAccount: member.bankAccount,
+        },
       });
     }
 
