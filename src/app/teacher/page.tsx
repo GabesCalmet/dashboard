@@ -24,22 +24,19 @@ export default async function TeacherDashboardPage({
 
   return (
     <div>
-      <PageHeader
-        title={`Olá, ${user.name.split(" ")[0]}`}
-        description="Seu painel de aulas."
-        actions={
-          <Button asChild variant="outline">
-            <a
-              href="https://upfrontidiomas.com.br/newportal/upfront-A1.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="justify-center"
-            >
-              <BookOpen className="size-5" /> Material didático
-            </a>
-          </Button>
-        }
-      />
+      <PageHeader title={`Olá, ${user.name.split(" ")[0]}`} description="Seu painel de aulas." />
+
+      <div className="my-4 flex justify-center">
+        <Button asChild size="lg" className="bg-blue-600 px-8 text-base text-white hover:bg-blue-700">
+          <a
+            href="https://upfrontidiomas.com.br/newportal/upfront-A1.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <BookOpen className="size-6" /> Material didático
+          </a>
+        </Button>
+      </div>
 
       <div className="mb-2 flex justify-start">
         <MonthNav basePath="/teacher" year={year} month={month} />
