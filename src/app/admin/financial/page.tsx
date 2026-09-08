@@ -25,7 +25,30 @@ export default async function AdminFinancialPage() {
     <div>
       <PageHeader title="Financeiro" description="Visão geral de receita, gastos e caixa da escola." />
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Receita bruta (mensal)" value={formatCurrency(data.revenueRealized)} icon={Wallet} />
+        <StatCard label="Gastos (mensal)" value={formatCurrency(data.expenseRealized)} icon={TrendingDown} />
+        <StatCard label="Lucro (mensal)" value={formatCurrency(data.caixaRealized)} icon={Landmark} accent />
+        <StatCard
+          label="Para a escola"
+          value={formatCurrency(data.partnerSplit.realizado.school)}
+          icon={School}
+          accent
+        />
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard label="Receita bruta (ano)" value={formatCurrency(data.ytdGrossRevenue)} icon={Wallet} />
+        <StatCard label="Gastos (ano)" value={formatCurrency(data.ytdExpenses)} icon={TrendingDown} />
+        <StatCard
+          label="Lucro (ano)"
+          value={formatCurrency(data.ytdProfit)}
+          icon={Landmark}
+          accent
+        />
+      </div>
+
+      <div className="mt-6 mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -129,29 +152,6 @@ export default async function AdminFinancialPage() {
           </div>
         </CardContent>
       </Card>
-
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Receita bruta (mensal)" value={formatCurrency(data.revenueRealized)} icon={Wallet} />
-        <StatCard label="Gastos (mensal)" value={formatCurrency(data.expenseRealized)} icon={TrendingDown} />
-        <StatCard label="Lucro (mensal)" value={formatCurrency(data.caixaRealized)} icon={Landmark} accent />
-        <StatCard
-          label="Para a escola"
-          value={formatCurrency(data.partnerSplit.realizado.school)}
-          icon={School}
-          accent
-        />
-      </div>
-
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Receita bruta (ano)" value={formatCurrency(data.ytdGrossRevenue)} icon={Wallet} />
-        <StatCard label="Gastos (ano)" value={formatCurrency(data.ytdExpenses)} icon={TrendingDown} />
-        <StatCard
-          label="Lucro (ano)"
-          value={formatCurrency(data.ytdProfit)}
-          icon={Landmark}
-          accent
-        />
-      </div>
 
       <Card className="mt-6">
         <CardHeader>
