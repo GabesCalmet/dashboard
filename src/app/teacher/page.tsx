@@ -1,5 +1,14 @@
 import Link from "next/link";
-import { Users, CalendarCheck2, CalendarClock, CheckCircle2, Clock, BookOpen } from "lucide-react";
+import {
+  Users,
+  CalendarCheck2,
+  CalendarClock,
+  CheckCircle2,
+  Clock,
+  BookOpen,
+  Wallet,
+  DollarSign,
+} from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,8 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
 import { getTeacherDashboardData } from "@/server/queries/teacher-dashboard";
-import { formatDateTime } from "@/lib/labels";
-import { LessonStatusSelect } from "@/components/lessons/lesson-status-select";
+import { formatDateTime, formatCurrency } from "@/lib/labels";
 import { MonthNav } from "@/components/financial/month-nav";
 import { parseMonthParam } from "@/lib/month-param";
 
@@ -44,7 +52,7 @@ export default async function TeacherDashboardPage({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard label="Total de alunos" value={String(data.totalStudents)} icon={Users} />
-        <StatCard label="Aulas hoje" value={String(data.todayLessons.length)} icon={CalendarCheck2} />
+        <StatCard label="Aulas hoje" value={String(data.todayLessonsCount)} icon={CalendarCheck2} />
         <div className="space-y-4">
           <StatCard
             label="Aulas previstas (mês)"
@@ -60,30 +68,19 @@ export default async function TeacherDashboardPage({
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Aulas de hoje</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            {data.todayLessons.map((l) => (
-              <div
-                key={l.id}
-                className="flex items-center justify-between gap-3 rounded-md px-2 py-2 text-sm hover:bg-secondary"
-              >
-                <Link href={`/teacher/students/${l.studentId}`} className="min-w-0 flex-1">
-                  <p className="truncate">{l.student.user.name}</p>
-                  <p className="text-xs text-muted-foreground">{formatDateTime(l.scheduledAt)}</p>
-                </Link>
-                <LessonStatusSelect lessonId={l.id} status={l.status} />
-              </div>
-            ))}
-            {data.todayLessons.length === 0 && (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                Nenhuma aula agendada para hoje.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <StatCard
+            label="Pagamento previsto (mês)"
+            value={formatCurrency(data.payrollPrevisto)}
+            icon={Wallet}
+          />
+          <StatCard
+            label="Pagamento realizado (mês)"
+            value={formatCurrency(data.payrollRealizado)}
+            icon={DollarSign}
+            accent
+          />
+        </div>
 
         <Card>
           <CardHeader>

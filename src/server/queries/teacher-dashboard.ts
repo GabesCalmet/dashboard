@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
+import { getTeacherPayrollDetail } from "@/server/queries/teachers";
 
 export async function getTeacherDashboardData(
   teacherId: string,
@@ -10,13 +11,11 @@ export async function getTeacherDashboardData(
   const monthStart = startOfMonth(monthDate);
   const monthEnd = endOfMonth(monthDate);
 
-  const [totalStudents, todayLessons, upcomingLessons, completedLessonsThisMonth, previstoAgg] =
+  const [totalStudents, todayLessonsCount, upcomingLessons, completedLessonsThisMonth, previstoAgg, payroll] =
     await Promise.all([
       prisma.studentProfile.count({ where: { teacherId } }),
-      prisma.lesson.findMany({
+      prisma.lesson.count({
         where: { teacherId, scheduledAt: { gte: startOfDay(now), lte: endOfDay(now) } },
-        include: { student: { include: { user: true } } },
-        orderBy: { scheduledAt: "asc" },
       }),
       prisma.lesson.findMany({
         where: { teacherId, scheduledAt: { gt: now }, status: "SCHEDULED" },
@@ -38,13 +37,19 @@ export async function getTeacherDashboardData(
         where: { teacherId, scheduledAt: { gte: monthStart, lte: monthEnd } },
         _sum: { durationMin: true },
       }),
+      // The teacher's own payroll totals for the month — same
+      // previsto/realizado figures the admin sees on Gastos, so a teacher
+      // can track their own earnings without asking.
+      getTeacherPayrollDetail(teacherId, referenceMonth.year, referenceMonth.month),
     ]);
 
   return {
     totalStudents,
-    todayLessons,
+    todayLessonsCount,
     upcomingLessons,
     completedLessonsThisMonth,
     previstoHoursThisMonth: (previstoAgg._sum.durationMin ?? 0) / 60,
+    payrollPrevisto: payroll?.totals.previsto ?? 0,
+    payrollRealizado: payroll?.totals.realizado ?? 0,
   };
 }
