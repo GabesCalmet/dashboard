@@ -2,12 +2,10 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { MonthNav } from "@/components/financial/month-nav";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
   TableCell,
-  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -15,7 +13,7 @@ import {
 import { requireRole } from "@/lib/auth";
 import { getTeacherPayrollDetail } from "@/server/queries/teachers";
 import { parseMonthParam } from "@/lib/month-param";
-import { formatCurrency, lessonStatusLabel } from "@/lib/labels";
+import { formatCurrency } from "@/lib/labels";
 
 export default async function TeacherPayrollPage({
   searchParams,
@@ -39,64 +37,14 @@ export default async function TeacherPayrollPage({
 
       <PageHeader
         title="Seu pagamento"
-        description={`Horas e pagamento por tipo de aula — valor/hora varia por aluno/grupo (padrão ${formatCurrency(detail?.fallbackHourlyRate ?? 0)} quando não configurado).`}
+        description={`Pagamento por aluno/grupo — valor/hora varia por aluno/grupo (padrão ${formatCurrency(detail?.fallbackHourlyRate ?? 0)} quando não configurado).`}
       />
 
       <div className="mb-4">
         <MonthNav basePath="/teacher/payroll" year={year} month={month} />
       </div>
 
-      <div className="overflow-hidden rounded-xl border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Grupo</TableHead>
-              <TableHead>Aulas</TableHead>
-              <TableHead>Horas</TableHead>
-              <TableHead>Pagamento</TableHead>
-              <TableHead>Conta em</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {detail?.groups.map((g) => (
-              <TableRow key={g.status}>
-                <TableCell>{lessonStatusLabel[g.status]}</TableCell>
-                <TableCell>{g.count}</TableCell>
-                <TableCell>{g.hours.toFixed(1)}h</TableCell>
-                <TableCell>{formatCurrency(g.pay)}</TableCell>
-                <TableCell className="space-x-1.5">
-                  {g.countsAsPrevisto && <Badge variant="outline">Previsto</Badge>}
-                  {g.countsAsRealizado && <Badge variant="success">Realizado</Badge>}
-                  {!g.countsAsPrevisto && !g.countsAsRealizado && (
-                    <span className="text-sm text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-            {!detail || detail.groups.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                  Nenhuma aula neste mês.
-                </TableCell>
-              </TableRow>
-            ) : null}
-          </TableBody>
-          {detail && detail.groups.length > 0 && (
-            <TableFooter>
-              <TableRow>
-                <TableCell colSpan={3}>Total previsto / realizado</TableCell>
-                <TableCell colSpan={2} className="space-x-3">
-                  <span>{formatCurrency(detail.totals.previsto)}</span>
-                  <span className="text-muted-foreground">/</span>
-                  <span>{formatCurrency(detail.totals.realizado)}</span>
-                </TableCell>
-              </TableRow>
-            </TableFooter>
-          )}
-        </Table>
-      </div>
-
-      <h2 className="mt-6 mb-3 text-sm font-semibold">Por aluno</h2>
+      <h2 className="mb-3 text-sm font-semibold">Por aluno</h2>
       <div className="overflow-hidden rounded-xl border">
         <Table>
           <TableHeader>
