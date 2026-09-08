@@ -18,7 +18,7 @@ import { requireRole } from "@/lib/auth";
 import { getTeacherDashboardData } from "@/server/queries/teacher-dashboard";
 import { formatDateTime, formatCurrency } from "@/lib/labels";
 import { MonthNav } from "@/components/financial/month-nav";
-import { parseMonthParam } from "@/lib/month-param";
+import { parseMonthParam, monthParam } from "@/lib/month-param";
 
 export default async function TeacherDashboardPage({
   searchParams,
@@ -73,12 +73,14 @@ export default async function TeacherDashboardPage({
             label="Pagamento previsto (mês)"
             value={formatCurrency(data.payrollPrevisto)}
             icon={Wallet}
+            href={`/teacher/payroll?month=${monthParam(year, month)}`}
           />
           <StatCard
             label="Pagamento realizado (mês)"
             value={formatCurrency(data.payrollRealizado)}
             icon={DollarSign}
             accent
+            href={`/teacher/payroll?month=${monthParam(year, month)}`}
           />
         </div>
 
