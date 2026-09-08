@@ -7,6 +7,7 @@ import { ExpenseFormDialog } from "@/components/financial/expense-form-dialog";
 import { MonthNav } from "@/components/financial/month-nav";
 import { listExpensesForMonth, getExpenseCategoryTotals } from "@/server/queries/expenses";
 import { getTeacherPayrollForMonth } from "@/server/queries/teachers";
+import { getFinancialSummary } from "@/server/queries/financial";
 import { parseMonthParam, monthParam } from "@/lib/month-param";
 import { formatCurrency } from "@/lib/labels";
 
@@ -26,10 +27,11 @@ export default async function AdminFinancialGastosPage({
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
 
-  const [expenses, categoryTotals, payroll] = await Promise.all([
+  const [expenses, categoryTotals, payroll, financialSummary] = await Promise.all([
     listExpensesForMonth(year, month),
     getExpenseCategoryTotals(year, month),
     getTeacherPayrollForMonth(year, month),
+    getFinancialSummary(),
   ]);
 
   const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
@@ -39,12 +41,25 @@ export default async function AdminFinancialGastosPage({
   // "Professores" isn't a manually-typed expense — it's derived from
   // actual lesson hours × hourly rate (see getTeacherPayrollForMonth), so
   // its box overrides the (always-zero) expense-category total and links
-  // to the per-teacher breakdown instead.
-  const boxes = categoryTotals.map((c) =>
-    c.category === "PROFESSORES"
-      ? { ...c, previsto: payroll.totals.previsto, realizado: payroll.totals.realizado, href: payrollHref }
-      : { ...c, href: undefined }
-  );
+  // to the per-teacher breakdown instead. "Parceiros" is likewise derived
+  // — Joe and Gabriel's combined 2/3 share of this month's revenue after
+  // teacher pay (see partnerSplit in getFinancialSummary) — and, unlike
+  // every other box here, always reflects the current calendar month
+  // regardless of which month is being browsed on this page.
+  const boxes = categoryTotals.map((c) => {
+    if (c.category === "PROFESSORES") {
+      return { ...c, previsto: payroll.totals.previsto, realizado: payroll.totals.realizado, href: payrollHref };
+    }
+    if (c.category === "PARCEIROS") {
+      return {
+        ...c,
+        previsto: financialSummary.partnerSplit.previsto.partnersTotal,
+        realizado: financialSummary.partnerSplit.realizado.partnersTotal,
+        href: "/admin/financial/gastos/parceiros",
+      };
+    }
+    return { ...c, href: undefined };
+  });
 
   return (
     <div>

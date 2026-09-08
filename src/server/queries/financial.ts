@@ -287,6 +287,29 @@ export async function getFinancialSummary() {
   const ytdGrossRevenue = yearlyChart.reduce((sum, m) => sum + m.receita, 0);
   const ytdExpenses = yearlyChart.reduce((sum, m) => sum + m.gasto, 0);
 
+  // What's left of this month's revenue after paying teachers is split
+  // three ways: one third each to Joe and Gabriel (the "Parceiros" box on
+  // Gastos is their combined 2/3), and the remaining third stays with the
+  // school ("Para a escola" on the Financeiro overview). Always the
+  // current calendar month, same as teacherPayroll above — not affected
+  // by browsing a different month elsewhere (e.g. on Gastos).
+  const schoolSharePrevisto = (revenuePrevisto - teacherPayroll.totals.previsto) / 3;
+  const schoolShareRealizado = (revenueRealized - teacherPayroll.totals.realizado) / 3;
+  const partnerSplit = {
+    previsto: {
+      school: schoolSharePrevisto,
+      joe: schoolSharePrevisto,
+      gabriel: schoolSharePrevisto,
+      partnersTotal: schoolSharePrevisto * 2,
+    },
+    realizado: {
+      school: schoolShareRealizado,
+      joe: schoolShareRealizado,
+      gabriel: schoolShareRealizado,
+      partnersTotal: schoolShareRealizado * 2,
+    },
+  };
+
   return {
     revenueRealized,
     revenuePrevisto,
@@ -301,6 +324,7 @@ export async function getFinancialSummary() {
     ytdProfit: ytdGrossRevenue - ytdExpenses,
     yearlyChart,
     totalContributors,
+    partnerSplit,
   };
 }
 

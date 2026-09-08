@@ -8,6 +8,7 @@ import {
   ArrowRight,
   ReceiptText,
   Landmark,
+  School,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -128,6 +129,18 @@ export default async function AdminFinancialPage() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Receita bruta (mensal)" value={formatCurrency(data.revenueRealized)} icon={Wallet} />
+        <StatCard label="Gastos (mensal)" value={formatCurrency(data.expenseRealized)} icon={TrendingDown} />
+        <StatCard label="Lucro (mensal)" value={formatCurrency(data.caixaRealized)} icon={Landmark} accent />
+        <StatCard
+          label="Para a escola"
+          value={formatCurrency(data.partnerSplit.realizado.school)}
+          icon={School}
+          accent
+        />
+      </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Receita bruta (ano)" value={formatCurrency(data.ytdGrossRevenue)} icon={Wallet} />
