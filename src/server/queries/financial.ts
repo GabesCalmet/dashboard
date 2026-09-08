@@ -253,8 +253,41 @@ export async function getFinancialSummary() {
       s.groupMembers.reduce((memberSum, m) => memberSum + Number(m.monthlyValue), 0),
     0
   );
-  const expenseRealized = expenseTotalForMonth(expenses, monthStart, monthEnd, now);
-  const expensePrevisto = expenseTotalForMonth(expenses, monthStart, monthEnd);
+  const manualExpenseRealized = expenseTotalForMonth(expenses, monthStart, monthEnd, now);
+  const manualExpensePrevisto = expenseTotalForMonth(expenses, monthStart, monthEnd);
+
+  // What's left of this month's revenue after paying teachers is split
+  // three ways: one third each to Joe and Gabriel (the "Parceiros" box on
+  // Gastos is their combined 2/3), and the remaining third stays with the
+  // school ("Para a escola" on the Financeiro overview). Always the
+  // current calendar month — not affected by browsing a different month
+  // elsewhere (e.g. on Gastos). Computed here, ahead of expenseRealized/
+  // expensePrevisto below, since both partner payouts count as gastos too.
+  const schoolSharePrevisto = (revenuePrevisto - teacherPayroll.totals.previsto) / 3;
+  const schoolShareRealizado = (revenueRealized - teacherPayroll.totals.realizado) / 3;
+  const partnerSplit = {
+    previsto: {
+      school: schoolSharePrevisto,
+      joe: schoolSharePrevisto,
+      gabriel: schoolSharePrevisto,
+      partnersTotal: schoolSharePrevisto * 2,
+    },
+    realizado: {
+      school: schoolShareRealizado,
+      joe: schoolShareRealizado,
+      gabriel: schoolShareRealizado,
+      partnersTotal: schoolShareRealizado * 2,
+    },
+  };
+
+  // "Gasto" for the month is manually-typed expenses (Marketing/R&D/
+  // Outros/any stray Parceiros entries) plus the two derived
+  // categories that never get their own Expense rows: teacher payroll
+  // and the partners' own payout — so "Em caixa"/"Caixa previsto" below
+  // land on what's actually left after everyone (teachers, partners) has
+  // been paid, not just after manual bills.
+  const expenseRealized = manualExpenseRealized + teacherPayroll.totals.realizado + partnerSplit.realizado.partnersTotal;
+  const expensePrevisto = manualExpensePrevisto + teacherPayroll.totals.previsto + partnerSplit.previsto.partnersTotal;
 
   // Provisão mensal de férias dos professores: 8,3% do valor que cada
   // professor recebeu no mês (realizado — hours × whatever each is paid
@@ -286,29 +319,6 @@ export async function getFinancialSummary() {
 
   const ytdGrossRevenue = yearlyChart.reduce((sum, m) => sum + m.receita, 0);
   const ytdExpenses = yearlyChart.reduce((sum, m) => sum + m.gasto, 0);
-
-  // What's left of this month's revenue after paying teachers is split
-  // three ways: one third each to Joe and Gabriel (the "Parceiros" box on
-  // Gastos is their combined 2/3), and the remaining third stays with the
-  // school ("Para a escola" on the Financeiro overview). Always the
-  // current calendar month, same as teacherPayroll above — not affected
-  // by browsing a different month elsewhere (e.g. on Gastos).
-  const schoolSharePrevisto = (revenuePrevisto - teacherPayroll.totals.previsto) / 3;
-  const schoolShareRealizado = (revenueRealized - teacherPayroll.totals.realizado) / 3;
-  const partnerSplit = {
-    previsto: {
-      school: schoolSharePrevisto,
-      joe: schoolSharePrevisto,
-      gabriel: schoolSharePrevisto,
-      partnersTotal: schoolSharePrevisto * 2,
-    },
-    realizado: {
-      school: schoolShareRealizado,
-      joe: schoolShareRealizado,
-      gabriel: schoolShareRealizado,
-      partnersTotal: schoolShareRealizado * 2,
-    },
-  };
 
   return {
     revenueRealized,
