@@ -35,10 +35,7 @@ export default async function TeacherPayrollPage({
         <ArrowLeft className="size-4" /> Voltar para o painel
       </Link>
 
-      <PageHeader
-        title="Seu pagamento"
-        description={`Pagamento por aluno/grupo — valor/hora varia por aluno/grupo (padrão ${formatCurrency(detail?.fallbackHourlyRate ?? 0)} quando não configurado).`}
-      />
+      <PageHeader title="Seu pagamento" />
 
       <div className="mb-4">
         <MonthNav basePath="/teacher/payroll" year={year} month={month} />
