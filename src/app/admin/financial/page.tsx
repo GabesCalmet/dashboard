@@ -8,7 +8,6 @@ import {
   ArrowRight,
   ReceiptText,
   Landmark,
-  School,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -25,19 +24,7 @@ export default async function AdminFinancialPage() {
     <div>
       <PageHeader title="Financeiro" description="Visão geral de receita, gastos e caixa da escola." />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Receita bruta (mensal)" value={formatCurrency(data.revenueRealized)} icon={Wallet} />
-        <StatCard label="Gastos (mensal)" value={formatCurrency(data.expenseRealized)} icon={TrendingDown} />
-        <StatCard label="Lucro (mensal)" value={formatCurrency(data.caixaRealized)} icon={Landmark} accent />
-        <StatCard
-          label="Para a escola"
-          value={formatCurrency(data.partnerSplit.realizado.school)}
-          icon={School}
-          accent
-        />
-      </div>
-
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Receita bruta (ano)" value={formatCurrency(data.ytdGrossRevenue)} icon={Wallet} />
         <StatCard label="Gastos (ano)" value={formatCurrency(data.ytdExpenses)} icon={TrendingDown} />
         <StatCard
@@ -97,6 +84,7 @@ export default async function AdminFinancialPage() {
                   <SummaryRow label="Receita recebida" value={data.revenueRealized} tone="accent" />
                   <SummaryRow label="Gasto efetuado" value={data.expenseRealized} tone="destructive" />
                   <SummaryRow label="Em caixa" value={data.caixaRealized} tone="strong" />
+                  <SummaryRow label="Para a escola" value={data.partnerSplit.realizado.school} tone="strong" />
                 </div>
               </div>
               <div>
@@ -107,6 +95,7 @@ export default async function AdminFinancialPage() {
                   <SummaryRow label="Receita prevista" value={data.revenuePrevisto} tone="accent" />
                   <SummaryRow label="Gasto previsto" value={data.expensePrevisto} tone="destructive" />
                   <SummaryRow label="Caixa previsto" value={data.caixaPrevisto} tone="strong" />
+                  <SummaryRow label="Para a escola" value={data.partnerSplit.previsto.school} tone="strong" />
                 </div>
               </div>
             </div>
