@@ -58,7 +58,10 @@ export default async function AdminFinancialGastosPage({
         href: "/admin/financial/gastos/parceiros",
       };
     }
-    return { ...c, href: undefined };
+    return {
+      ...c,
+      href: `/admin/financial/gastos/categoria/${c.category.toLowerCase()}?month=${monthParam(year, month)}`,
+    };
   });
 
   return (

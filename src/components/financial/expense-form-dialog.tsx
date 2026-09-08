@@ -75,6 +75,22 @@ export function ExpenseFormDialog({
 
         <form action={formAction} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
+            <Label>Categoria</Label>
+            <Select name="category" defaultValue={expense?.category ?? "OUTROS"} required>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(expenseCategoryLabel).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="description">Descrição</Label>
             <Input id="description" name="description" defaultValue={expense?.description} required />
           </div>
@@ -99,22 +115,6 @@ export function ExpenseFormDialog({
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(bankAccountLabel).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Categoria</Label>
-            <Select name="category" defaultValue={expense?.category ?? "OUTROS"} required>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(expenseCategoryLabel).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}
                   </SelectItem>
