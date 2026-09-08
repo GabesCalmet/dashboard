@@ -69,7 +69,7 @@ export default async function AdminFinancialGastosPage({
       </div>
 
       <h2 className="mb-3 text-sm font-semibold">Previsão de gastos</h2>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {boxes.map((c) => (
           <StatCard
             key={`previsto-${c.category}`}
@@ -82,7 +82,7 @@ export default async function AdminFinancialGastosPage({
       </div>
 
       <h2 className="mb-3 text-sm font-semibold">Gastos reais</h2>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {boxes.map((c) => (
           <StatCard
             key={`realizado-${c.category}`}
