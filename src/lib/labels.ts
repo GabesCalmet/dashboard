@@ -47,8 +47,8 @@ export const expenseFrequencyLabel: Record<ExpenseFrequency, string> = {
 
 export const expenseCategoryLabel: Record<ExpenseCategory, string> = {
   PROFESSORES: "Professores",
-  MARKETING: "Marketing",
   PARCEIROS: "Parceiros",
+  MARKETING: "Marketing",
   OUTROS: "Outros",
 };
 
