@@ -49,6 +49,7 @@ export const expenseCategoryLabel: Record<ExpenseCategory, string> = {
   PROFESSORES: "Professores",
   PARCEIROS: "Parceiros",
   MARKETING: "Marketing",
+  RD: "R&D",
   OUTROS: "Outros",
 };
 

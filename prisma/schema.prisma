@@ -459,6 +459,7 @@ enum ExpenseCategory {
   PROFESSORES
   MARKETING
   PARCEIROS
+  RD
   OUTROS
 }
 

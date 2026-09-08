@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Users, Megaphone, Handshake, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, Users, Megaphone, Handshake, FlaskConical, MoreHorizontal } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { ExpensesTable } from "@/components/financial/expenses-table";
@@ -14,6 +14,7 @@ const categoryIcon = {
   PROFESSORES: Users,
   MARKETING: Megaphone,
   PARCEIROS: Handshake,
+  RD: FlaskConical,
   OUTROS: MoreHorizontal,
 } as const;
 
