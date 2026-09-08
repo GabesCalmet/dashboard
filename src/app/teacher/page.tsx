@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, GraduationCap, CalendarCheck2, CalendarClock, CheckCircle2, BookOpen } from "lucide-react";
+import { Users, CalendarCheck2, CalendarClock, CheckCircle2, Clock, BookOpen } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,21 +33,27 @@ export default async function TeacherDashboardPage({
               href="https://upfrontidiomas.com.br/newportal/upfront-A1.html"
               target="_blank"
               rel="noopener noreferrer"
+              className="justify-center"
             >
-              <BookOpen /> Material didático
+              <BookOpen className="size-5" /> Material didático
             </a>
           </Button>
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-2 flex justify-start">
+        <MonthNav basePath="/teacher" year={year} month={month} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard label="Total de alunos" value={String(data.totalStudents)} icon={Users} />
-        <StatCard label="Alunos ativos" value={String(data.activeStudents)} icon={GraduationCap} accent />
         <StatCard label="Aulas hoje" value={String(data.todayLessons.length)} icon={CalendarCheck2} />
-        <div>
-          <div className="mb-2 flex justify-start">
-            <MonthNav basePath="/teacher" year={year} month={month} />
-          </div>
+        <div className="space-y-4">
+          <StatCard
+            label="Aulas previstas (mês)"
+            value={`${data.previstoHoursThisMonth.toFixed(1)}h`}
+            icon={Clock}
+          />
           <StatCard
             label="Aulas realizadas (mês)"
             value={String(data.completedLessonsThisMonth)}
