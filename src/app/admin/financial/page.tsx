@@ -68,58 +68,67 @@ export default async function AdminFinancialPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Resumo do mês atual</CardTitle>
-            <CardDescription>Realizado até hoje e previsto para o mês inteiro.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div>
-                <p className="mb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                  Realizado
-                </p>
-                <div className="space-y-3">
-                  <SummaryRow label="Receita recebida" value={data.revenueRealized} tone="accent" />
-                  <SummaryRow label="Gasto efetuado" value={data.expenseRealized} tone="destructive" />
-                  <SummaryRow label="Em caixa" value={data.caixaRealized} tone="strong" />
-                  <SummaryRow label="Para a escola" value={data.partnerSplit.realizado.school} tone="strong" />
-                </div>
-              </div>
-              <div>
-                <p className="mb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                  Previsto (mês)
-                </p>
-                <div className="space-y-3">
-                  <SummaryRow label="Receita prevista" value={data.revenuePrevisto} tone="accent" />
-                  <SummaryRow label="Gasto previsto" value={data.expensePrevisto} tone="destructive" />
-                  <SummaryRow label="Caixa previsto" value={data.caixaPrevisto} tone="strong" />
-                  <SummaryRow label="Para a escola" value={data.partnerSplit.previsto.school} tone="strong" />
-                </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Resumo do mês atual</CardTitle>
+          <CardDescription>Realizado até hoje e previsto para o mês inteiro.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div>
+              <p className="mb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                Realizado
+              </p>
+              <div className="space-y-3">
+                <SummaryRow label="Receita recebida" value={data.revenueRealized} tone="accent" />
+                <SummaryRow label="Gasto efetuado" value={data.expenseRealized} tone="destructive" />
+                <SummaryRow label="Em caixa" value={data.caixaRealized} tone="strong" />
+                <SummaryRow label="Para a escola" value={data.partnerSplit.realizado.school} tone="strong" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <p className="mb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                Previsto (mês)
+              </p>
+              <div className="space-y-3">
+                <SummaryRow label="Receita prevista" value={data.revenuePrevisto} tone="accent" />
+                <SummaryRow label="Gasto previsto" value={data.expensePrevisto} tone="destructive" />
+                <SummaryRow label="Caixa previsto" value={data.caixaPrevisto} tone="strong" />
+                <SummaryRow label="Para a escola" value={data.partnerSplit.previsto.school} tone="strong" />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PiggyBank className="size-4.5" /> Férias (provisão)
-            </CardTitle>
-            <CardDescription>Provisão de férias dos professores ativos.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-xs text-muted-foreground">Acumulado no ano</p>
-              <p className="text-xl font-semibold">{formatCurrency(data.feriasAnnual)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Provisão mensal</p>
-              <p className="text-xl font-semibold">{formatCurrency(data.feriasMonthly)}</p>
-            </div>
-          </CardContent>
-        </Card>
+      <h2 className="mt-6 mb-3 text-sm font-semibold">Férias (provisão)</h2>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Mensal — previsto"
+          value={formatCurrency(data.feriasMonthlyPrevisto)}
+          icon={PiggyBank}
+          href="/admin/financial/ferias"
+        />
+        <StatCard
+          label="Mensal — realizado"
+          value={formatCurrency(data.feriasMonthlyRealizado)}
+          icon={PiggyBank}
+          accent
+          href="/admin/financial/ferias"
+        />
+        <StatCard
+          label="Anual — previsto"
+          value={formatCurrency(data.feriasAnnualPrevisto)}
+          icon={PiggyBank}
+          href="/admin/financial/ferias"
+        />
+        <StatCard
+          label="Anual — realizado"
+          value={formatCurrency(data.feriasAnnualRealizado)}
+          icon={PiggyBank}
+          accent
+          href="/admin/financial/ferias"
+        />
       </div>
 
       <Card className="mt-6">

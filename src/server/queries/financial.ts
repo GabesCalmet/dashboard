@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { bankAccountLabel } from "@/lib/labels";
 import { getBillingSlots, withBillingGroupMembers } from "@/server/billing";
-import { getTeacherPayrollForMonth } from "@/server/queries/teachers";
+import { getTeacherPayrollForMonth, getTeacherFeriasForYear } from "@/server/queries/teachers";
 import type { BankAccount, Expense, PaymentStatus } from "@prisma/client";
 
 export async function getFinancialOverview(year?: number, month?: number) {
@@ -289,13 +289,12 @@ export async function getFinancialSummary() {
   const expenseRealized = manualExpenseRealized + teacherPayroll.totals.realizado + partnerSplit.realizado.partnersTotal;
   const expensePrevisto = manualExpensePrevisto + teacherPayroll.totals.previsto + partnerSplit.previsto.partnersTotal;
 
-  // Provisão mensal de férias dos professores: 8,3% do valor que cada
-  // professor recebeu no mês (realizado — hours × whatever each is paid
-  // per student/group that month), acumulada mês a mês desde janeiro com o
-  // quadro atual de professores.
-  const feriasMonthly = teacherPayroll.totals.realizado * 0.083;
-  const monthsElapsed = now.getMonth() + 1;
-  const feriasAnnual = feriasMonthly * monthsElapsed;
+  // Provisão de férias dos professores: 8,3% do que cada um ganhou —
+  // previsto (mês inteiro, supondo que toda aula marcada aconteça) e
+  // realizado (só o que já foi dado) — mensal (só o mês atual) e anual
+  // (soma mês a mês desde janeiro, com o payroll real de cada mês, não
+  // uma projeção do mês atual). Ver getTeacherFeriasForYear.
+  const ferias = await getTeacherFeriasForYear(now.getFullYear(), now.getMonth());
 
   const monthsInYear = Array.from({ length: now.getMonth() + 1 }, (_, m) => {
     const mStart = new Date(now.getFullYear(), m, 1);
@@ -327,8 +326,10 @@ export async function getFinancialSummary() {
     expensePrevisto,
     caixaRealized: revenueRealized - expenseRealized,
     caixaPrevisto: revenuePrevisto - expensePrevisto,
-    feriasMonthly,
-    feriasAnnual,
+    feriasMonthlyPrevisto: ferias.totals.monthlyPrevisto,
+    feriasMonthlyRealizado: ferias.totals.monthlyRealizado,
+    feriasAnnualPrevisto: ferias.totals.annualPrevisto,
+    feriasAnnualRealizado: ferias.totals.annualRealizado,
     ytdGrossRevenue,
     ytdExpenses,
     ytdProfit: ytdGrossRevenue - ytdExpenses,

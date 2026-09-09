@@ -119,6 +119,76 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
   return { rows, totals };
 }
 
+// Férias provision — 8,3% (≈1/12) of what each teacher earned, per month,
+// in both flavors: previsto (assumes every class that month is given,
+// same "forecast, unaffected by cancellations" convention as payroll
+// previsto) and realizado (only classes actually given so far). "Mensal"
+// is just the current month's own provision; "Anual" sums a real
+// getTeacherPayrollForMonth call for every month from January through the
+// current one — not the current month's rate projected backward — so a
+// payroll that was smaller or larger in an earlier month is reflected
+// accurately instead of assumed constant. Currently-inactive teachers who
+// taught earlier in the year are missed here, same limitation as
+// getTeacherPayrollForMonth itself (both only ever look at today's active
+// roster).
+export async function getTeacherFeriasForYear(year: number, throughMonth: number) {
+  const months = Array.from({ length: throughMonth + 1 }, (_, m) => m);
+  const monthlyPayrolls = await Promise.all(months.map((m) => getTeacherPayrollForMonth(year, m)));
+
+  const byTeacher = new Map<
+    string,
+    {
+      teacherName: string;
+      monthlyPrevisto: number;
+      monthlyRealizado: number;
+      annualPrevisto: number;
+      annualRealizado: number;
+    }
+  >();
+  monthlyPayrolls.forEach((payroll, i) => {
+    const isCurrentMonth = i === throughMonth;
+    for (const row of payroll.rows) {
+      const entry = byTeacher.get(row.teacherId) ?? {
+        teacherName: row.teacherName,
+        monthlyPrevisto: 0,
+        monthlyRealizado: 0,
+        annualPrevisto: 0,
+        annualRealizado: 0,
+      };
+      entry.annualPrevisto += row.previsto;
+      entry.annualRealizado += row.realizado;
+      if (isCurrentMonth) {
+        entry.monthlyPrevisto = row.previsto;
+        entry.monthlyRealizado = row.realizado;
+      }
+      byTeacher.set(row.teacherId, entry);
+    }
+  });
+
+  const teachers = [...byTeacher.entries()]
+    .map(([teacherId, t]) => ({
+      teacherId,
+      teacherName: t.teacherName,
+      monthlyProvisionPrevisto: t.monthlyPrevisto * 0.083,
+      monthlyProvisionRealizado: t.monthlyRealizado * 0.083,
+      annualProvisionPrevisto: t.annualPrevisto * 0.083,
+      annualProvisionRealizado: t.annualRealizado * 0.083,
+    }))
+    .sort((a, b) => b.annualProvisionRealizado - a.annualProvisionRealizado);
+
+  const totals = teachers.reduce(
+    (acc, t) => ({
+      monthlyPrevisto: acc.monthlyPrevisto + t.monthlyProvisionPrevisto,
+      monthlyRealizado: acc.monthlyRealizado + t.monthlyProvisionRealizado,
+      annualPrevisto: acc.annualPrevisto + t.annualProvisionPrevisto,
+      annualRealizado: acc.annualRealizado + t.annualProvisionRealizado,
+    }),
+    { monthlyPrevisto: 0, monthlyRealizado: 0, annualPrevisto: 0, annualRealizado: 0 }
+  );
+
+  return { teachers, totals };
+}
+
 // Breaks one teacher's month down by lesson status — hours and pay per
 // status group, so the previsto/realizado totals on the payroll list are
 // traceable to exactly which classes make them up. Pay is resolved per
