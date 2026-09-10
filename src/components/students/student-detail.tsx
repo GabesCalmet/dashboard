@@ -92,28 +92,35 @@ export function StudentDetailView({
   const refMonthDate = monthNav ? new Date(monthNav.year, monthNav.month, 1) : new Date();
   const monthStart = startOfMonth(refMonthDate);
   const monthEnd = endOfMonth(refMonthDate);
-  const contractedLessonsThisMonth = student.lessons.filter(
-    (l) => l.scheduledAt >= monthStart && l.scheduledAt <= monthEnd && !l.isMakeup
+  // Every stat below (Aulas realizadas, OK/CA/CP/R/NC) is scoped to just
+  // this month, same as contractedLessonsThisMonth — matches the MonthNav
+  // sitting directly above this row, instead of silently summing the
+  // student's entire lesson history regardless of which month is browsed.
+  const lessonsThisMonth = student.lessons.filter(
+    (l) => l.scheduledAt >= monthStart && l.scheduledAt <= monthEnd
+  );
+  const contractedLessonsThisMonth = lessonsThisMonth.filter((l) => !l.isMakeup).length;
+  // "OK — Aulas dadas" is only the regular, non-makeup lessons the student
+  // actually attended — reposições (R) and no-shows (NC) are tracked in
+  // their own boxes and shouldn't inflate this one.
+  const completedLessons = lessonsThisMonth.filter(
+    (l) => l.status === "COMPLETED" && !l.isMakeup
   ).length;
-  const completedLessons = student.lessons.filter((l) => l.status === "COMPLETED").length;
-  const canceledByStudent = student.lessons.filter((l) => l.status === "CANCELED_BY_STUDENT").length;
-  const canceledByTeacher = student.lessons.filter((l) => l.status === "CANCELED_BY_TEACHER").length;
+  const canceledByStudent = lessonsThisMonth.filter((l) => l.status === "CANCELED_BY_STUDENT").length;
+  const canceledByTeacher = lessonsThisMonth.filter((l) => l.status === "CANCELED_BY_TEACHER").length;
   // Only counts a reposição once it's actually marked "dada" (status flips
   // to COMPLETED) — a booked-but-not-yet-given reposição stays MAKEUP and
   // isn't counted here yet, since it hasn't happened. isMakeup (not
   // rescheduledFromId) is what identifies it as a reposição at all, since
   // one flagged directly via the status dropdown — not booked through the
   // Reagendamento picker — has no rescheduledFromId to key off once its
-  // status has already moved on to COMPLETED. Already folded into
-  // completedLessons above once it does count.
-  const makeupCount = student.lessons.filter((l) => l.isMakeup && l.status === "COMPLETED").length;
-  const noShowCount = student.lessons.filter((l) => l.status === "NO_SHOW").length;
-  // "Realizada" = the lesson slot actually happened (teacher held it), even
-  // if the student didn't show up (NC) — as opposed to "Dada" (OK), which
-  // only counts lessons the student actually attended. A reposição only
-  // counts once it's been given, at which point it's already COMPLETED, so
-  // it doesn't need to be added separately here.
-  const realizedLessons = completedLessons + noShowCount;
+  // status has already moved on to COMPLETED.
+  const makeupCount = lessonsThisMonth.filter((l) => l.isMakeup && l.status === "COMPLETED").length;
+  const noShowCount = lessonsThisMonth.filter((l) => l.status === "NO_SHOW").length;
+  // "Aulas realizadas" is the umbrella total — every lesson slot that
+  // actually took place this month, whichever box it landed in below (OK,
+  // R, or NC).
+  const realizedLessons = completedLessons + makeupCount + noShowCount;
 
   return (
     <div>
