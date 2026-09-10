@@ -14,9 +14,13 @@ export async function listStudents() {
   });
 }
 
+// Only ACTIVE students — a teacher shouldn't see (or have counted toward
+// their roster) a student who's been paused or canceled; that's admin/
+// coordinator territory (Alunos pausados/cancelados on the management
+// dashboard) from here on.
 export async function listStudentsForTeacher(teacherId: string) {
   return prisma.studentProfile.findMany({
-    where: { teacherId, user: { active: true } },
+    where: { teacherId, status: "ACTIVE", user: { active: true } },
     include: {
       user: true,
       teacher: { include: { user: true } },

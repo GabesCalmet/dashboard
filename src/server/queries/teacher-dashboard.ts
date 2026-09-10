@@ -13,7 +13,7 @@ export async function getTeacherDashboardData(
 
   const [totalStudents, todayLessonsCount, upcomingLessons, completedLessonsThisMonth, previstoAgg, payroll] =
     await Promise.all([
-      prisma.studentProfile.count({ where: { teacherId } }),
+      prisma.studentProfile.count({ where: { teacherId, status: "ACTIVE" } }),
       prisma.lesson.count({
         where: { teacherId, scheduledAt: { gte: startOfDay(now), lte: endOfDay(now) } },
       }),
