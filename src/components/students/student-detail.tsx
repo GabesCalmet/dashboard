@@ -3,7 +3,6 @@ import { endOfMonth, startOfMonth } from "date-fns";
 import {
   ArrowLeft,
   BookOpen,
-  CalendarClock,
   CheckCircle2,
   GraduationCap,
   Repeat,
@@ -34,7 +33,6 @@ import {
   studentStatusLabel,
   studentStatusVariant,
   formatDate,
-  formatDateTime,
   bankAccountLabel,
   formatCurrency,
 } from "@/lib/labels";
@@ -116,9 +114,6 @@ export function StudentDetailView({
   // counts once it's been given, at which point it's already COMPLETED, so
   // it doesn't need to be added separately here.
   const realizedLessons = completedLessons + noShowCount;
-  const nextLesson = student.lessons
-    .filter((l) => l.scheduledAt > new Date() && l.status === "SCHEDULED")
-    .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime())[0];
 
   return (
     <div>
@@ -240,18 +235,13 @@ export function StudentDetailView({
         </div>
       )}
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard
           label="Aulas contratadas/mês"
           value={String(contractedLessonsThisMonth)}
           icon={BookOpen}
         />
         <StatCard label="Aulas realizadas" value={String(realizedLessons)} icon={GraduationCap} accent />
-        <StatCard
-          label="Próxima aula"
-          value={nextLesson ? formatDateTime(nextLesson.scheduledAt) : "—"}
-          icon={CalendarClock}
-        />
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-5">
