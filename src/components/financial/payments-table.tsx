@@ -139,7 +139,7 @@ export function PaymentsTable({
                 <TableCell>{p.studentName}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{p.teacherName ?? "—"}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {p.payerName ?? "Aluno"}
+                  {p.payerName ?? p.studentName}
                 </TableCell>
                 <TableCell>{formatCurrency(p.amount)}</TableCell>
                 <TableCell>{formatCalendarDate(p.dueDate)}</TableCell>
