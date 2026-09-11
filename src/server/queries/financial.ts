@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { bankAccountLabel } from "@/lib/labels";
-import { getBillingSlots, withBillingGroupMembers } from "@/server/billing";
+import { getBillingSlots, withBillingGroupMembers, resolveSlotStudentName } from "@/server/billing";
 import { getTeacherPayrollForMonth, getTeacherFeriasForYear } from "@/server/queries/teachers";
 import type { BankAccount, Expense, PaymentStatus } from "@prisma/client";
 
@@ -53,7 +53,7 @@ export async function getFinancialOverview(year?: number, month?: number) {
           return {
             id: payment.id,
             studentId: s.id,
-            studentName: s.user.name,
+            studentName: resolveSlotStudentName(payment.payerName, s),
             teacherName: s.teacher?.user.name ?? null,
             payerName: payment.payerName,
             amount: Number(payment.amount),
@@ -67,7 +67,7 @@ export async function getFinancialOverview(year?: number, month?: number) {
         return {
           id: null,
           studentId: s.id,
-          studentName: s.user.name,
+          studentName: resolveSlotStudentName(slot.payerName, s),
           teacherName: s.teacher?.user.name ?? null,
           payerName: slot.payerName,
           amount: slot.amount,
@@ -421,14 +421,18 @@ export async function getStudentPaymentHistory(studentId: string) {
 export async function getLatePayments() {
   const payments = await prisma.payment.findMany({
     where: { status: "LATE" },
-    include: { student: { include: { user: true, teacher: { include: { user: true } } } } },
+    include: {
+      student: {
+        include: { user: true, teacher: { include: { user: true } }, groupMembers: { include: { user: true } } },
+      },
+    },
     orderBy: { dueDate: "asc" },
   });
 
   return payments.map((p) => ({
     id: p.id,
     studentId: p.studentId,
-    studentName: p.student.user.name,
+    studentName: resolveSlotStudentName(p.payerName, p.student),
     teacherName: p.student.teacher?.user.name ?? null,
     payerName: p.payerName,
     amount: Number(p.amount),

@@ -45,6 +45,22 @@ export function withBillingGroupMembers<
   };
 }
 
+// A billing row's Pagador can be the student themselves (payerName: null),
+// a group member paying their own share (payerName: their name), or a
+// third party (payerName: the third party's name). Only the first two are
+// actual students — the "Aluno" column should show whichever of them owns
+// this slot, not always fall back to the primary/group-owner's name.
+export function resolveSlotStudentName(
+  payerName: string | null,
+  student: { user: { name: string }; groupMembers: { user: { name: string } }[] }
+): string {
+  if (payerName) {
+    const member = student.groupMembers.find((m) => m.user.name === payerName);
+    if (member) return member.user.name;
+  }
+  return student.user.name;
+}
+
 function parseValueHistory(value: unknown): ValueHistoryEntry[] {
   if (!Array.isArray(value)) return [];
   return value
