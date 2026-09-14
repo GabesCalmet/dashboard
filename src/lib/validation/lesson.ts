@@ -28,6 +28,7 @@ export const lessonReportSchema = z.object({
   ]),
   contentTaught: z.string().optional(),
   classFocus: z.string().optional(),
+  observations: z.string().optional(),
 });
 
 export type LessonReportValues = z.infer<typeof lessonReportSchema>;
@@ -50,6 +51,10 @@ export const quickLessonStatusSchema = z.enum([
 export const lessonSummarySchema = z.object({
   contentTaught: z.string().trim().max(200).optional().or(z.literal("")),
   classFocus: z.string().trim().max(50).optional().or(z.literal("")),
+});
+
+export const lessonObservationsSchema = z.object({
+  observations: z.string().trim().max(1000).optional().or(z.literal("")),
 });
 
 // Statuses that unlock the "Reagendamento" picker — CA/CP/CF.

@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -41,6 +42,7 @@ export function LessonReportForm({
   const [unit, setUnit] = useState(initialMode === "unit" ? (lesson.contentTaught ?? "") : "");
   const [focus, setFocus] = useState(lesson.classFocus ?? "");
   const [status, setStatus] = useState(lesson.status);
+  const [observations, setObservations] = useState(lesson.observations ?? "");
 
   useEffect(() => {
     if (state?.success) {
@@ -157,6 +159,18 @@ export function LessonReportForm({
           onUnitChange={setUnit}
           focus={focus}
           onFocusChange={setFocus}
+        />
+      </div>
+
+      <div className="sm:col-span-2 space-y-1.5">
+        <Label htmlFor="observations">Observações</Label>
+        <Textarea
+          id="observations"
+          name="observations"
+          value={observations}
+          onChange={(e) => setObservations(e.target.value)}
+          placeholder="Notas livres sobre como a aula foi..."
+          rows={3}
         />
       </div>
 

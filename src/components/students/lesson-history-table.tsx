@@ -20,6 +20,7 @@ import { LessonStatusSelect } from "@/components/lessons/lesson-status-select";
 import { LessonRescheduleEditor } from "@/components/lessons/lesson-reschedule-editor";
 import { MakeupGivenToggle } from "@/components/lessons/makeup-given-toggle";
 import { LessonSummaryEditor } from "@/components/lessons/lesson-summary-editor";
+import { LessonObservationsEditor } from "@/components/lessons/lesson-observations-editor";
 import { DeleteLessonButton } from "@/components/lessons/delete-lesson-button";
 import type { Lesson } from "@prisma/client";
 
@@ -93,7 +94,7 @@ export function LessonHistoryTable({
               <TableHead>Status</TableHead>
               <TableHead>Reagendamento</TableHead>
               <TableHead>Resumo</TableHead>
-              <TableHead>Homework</TableHead>
+              <TableHead>Observações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -159,8 +160,12 @@ export function LessonHistoryTable({
                     </p>
                   )}
                 </TableCell>
-                <TableCell className="max-w-48 truncate text-sm text-muted-foreground">
-                  {l.homework ?? "—"}
+                <TableCell className="max-w-48">
+                  {editable ? (
+                    <LessonObservationsEditor lessonId={l.id} observations={l.observations} />
+                  ) : (
+                    <p className="truncate text-sm text-muted-foreground">{l.observations ?? "—"}</p>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

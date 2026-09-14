@@ -9,6 +9,7 @@ import {
   lessonReportSchema,
   quickLessonStatusSchema,
   lessonSummarySchema,
+  lessonObservationsSchema,
   lessonRescheduleSchema,
   reschedulableStatuses,
 } from "@/lib/validation/lesson";
@@ -78,6 +79,7 @@ export async function submitLessonReport(
       status: data.status,
       contentTaught: data.contentTaught,
       classFocus: data.classFocus,
+      observations: data.observations,
       reportedAt: new Date(),
     },
   });
@@ -217,6 +219,45 @@ export async function updateLessonSummary(
     action: "UPDATE",
     actor,
     changes: { contentTaught: parsed.data.contentTaught, classFocus: parsed.data.classFocus },
+  });
+
+  revalidatePath("/teacher/reports");
+  revalidatePath("/admin/reports/lessons");
+  revalidatePath("/coordinator/reports/lessons");
+  revalidatePath(`/admin/students/${lesson.studentId}`);
+  revalidatePath(`/coordinator/students/${lesson.studentId}`);
+  revalidatePath(`/teacher/students/${lesson.studentId}`);
+  revalidatePath("/student/history");
+}
+
+// Sets the "Observações" field from the Histórico de aulas table — a
+// teacher's free-text notes on how the class went, separate from Resumo
+// (what was taught) and Homework. Same permission rule as
+// updateLessonSummary: the lesson's own teacher or admin.
+export async function updateLessonObservations(lessonId: string, values: { observations?: string }) {
+  const actor = await requireUser();
+  const parsed = lessonObservationsSchema.safeParse(values);
+  if (!parsed.success) {
+    throw new Error("Dados inválidos.");
+  }
+
+  const lesson = await prisma.lesson.findUniqueOrThrow({ where: { id: lessonId } });
+  const isOwnLesson = actor.role === "TEACHER" && lesson.teacherId === actor.teacherProfile?.id;
+  if (actor.role !== "ADMIN" && !isOwnLesson) {
+    throw new Error("Você não pode editar as observações desta aula.");
+  }
+
+  await prisma.lesson.update({
+    where: { id: lessonId },
+    data: { observations: parsed.data.observations || null },
+  });
+
+  await recordAudit({
+    entityType: "Lesson",
+    entityId: lessonId,
+    action: "UPDATE",
+    actor,
+    changes: { observations: parsed.data.observations },
   });
 
   revalidatePath("/teacher/reports");

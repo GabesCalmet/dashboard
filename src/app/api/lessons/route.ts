@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
       contentTaught: l.contentTaught,
       classFocus: l.classFocus,
       homework: l.homework,
+      observations: l.observations,
       meetLink: l.student.meetLink,
       rescheduledTo: l.rescheduledTo
         ? {
