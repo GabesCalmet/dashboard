@@ -213,8 +213,6 @@ export function StudentDetailView({
                   thirdPartyAmount: student.thirdPartyAmount ? Number(student.thirdPartyAmount) : null,
                   thirdPartyDueDay: student.thirdPartyDueDay,
                   thirdPartyBankAccount: student.thirdPartyBankAccount,
-                  lessonsPerMonth: student.lessonsPerMonth,
-                  lessonsPerMonthHistory: parseValueHistory(student.lessonsPerMonthHistory),
                   lessonSchedule: parseLessonSchedule(student.lessonSchedule),
                   level: student.level,
                   startDate: student.startDate.toISOString().slice(0, 10),

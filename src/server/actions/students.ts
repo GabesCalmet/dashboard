@@ -14,7 +14,7 @@ import {
   numericHistoryField,
 } from "@/lib/validation/student";
 import { levelOrder } from "@/lib/labels";
-import { syncRecurringLessons } from "@/server/lessons/recurring";
+import { syncRecurringLessons, countLessonsPerMonthFromSchedule } from "@/server/lessons/recurring";
 
 export type ActionState = { error?: string; success?: string; tempPassword?: string } | undefined;
 
@@ -65,8 +65,7 @@ export async function createStudent(
         thirdPartyAmount: data.thirdPartyAmount,
         thirdPartyDueDay: data.thirdPartyAmount ? data.thirdPartyDueDay : undefined,
         thirdPartyBankAccount: data.thirdPartyAmount ? data.thirdPartyBankAccount : undefined,
-        lessonsPerMonth: data.lessonsPerMonth,
-        lessonsPerMonthHistory: data.lessonsPerMonthHistory,
+        lessonsPerMonth: countLessonsPerMonthFromSchedule(data.lessonSchedule),
         lessonSchedule: data.lessonSchedule,
         level: data.level,
         startDate: data.startDate ? new Date(data.startDate) : new Date(),
@@ -198,8 +197,7 @@ export async function updateStudent(
         thirdPartyAmount: data.thirdPartyAmount ?? null,
         thirdPartyDueDay: data.thirdPartyAmount ? data.thirdPartyDueDay : null,
         thirdPartyBankAccount: data.thirdPartyAmount ? data.thirdPartyBankAccount : null,
-        lessonsPerMonth: data.lessonsPerMonth,
-        lessonsPerMonthHistory: data.lessonsPerMonthHistory,
+        lessonsPerMonth: countLessonsPerMonthFromSchedule(data.lessonSchedule),
         lessonSchedule: data.lessonSchedule,
         level: data.level,
         startDate: data.startDate ? new Date(data.startDate) : undefined,

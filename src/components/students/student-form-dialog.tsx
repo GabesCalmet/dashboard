@@ -79,8 +79,6 @@ type StudentDefaults = {
   thirdPartyAmount?: number | null;
   thirdPartyDueDay?: number | null;
   thirdPartyBankAccount?: BankAccount | null;
-  lessonsPerMonth: number;
-  lessonsPerMonthHistory?: ValueHistoryEntry[];
   lessonSchedule?: ScheduleEntry[];
   level: CourseLevel;
   startDate?: string;
@@ -396,17 +394,6 @@ export function StudentFormDialog({
               </div>
             </>
           )}
-
-          <MonthlyValueHistoryEditor
-            label="Aulas por mês"
-            amountLabel="Aulas"
-            amountFieldName="lessonsPerMonth"
-            historyFieldName="lessonsPerMonthHistory"
-            defaultAmount={student?.lessonsPerMonth ?? 4}
-            defaultHistory={student?.lessonsPerMonthHistory ?? []}
-            step="1"
-            min={1}
-          />
 
           <div className="space-y-1.5 sm:col-span-2">
             <Label>Dia(s) e horário(s) da(s) aula(s)</Label>

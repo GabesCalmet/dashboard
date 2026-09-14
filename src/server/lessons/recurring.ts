@@ -72,6 +72,34 @@ function resolveTeacherId(defaultTeacherId: string, history: SelectHistoryEntry[
   return match ? match.id : defaultTeacherId;
 }
 
+// The "Aulas por mês" quota (used by the teacher's "Esperadas" stat, the
+// student's "aulas restantes no mês", the admin dashboard average, and the
+// CSV report) used to be typed in by hand — redundant with the weekly
+// schedule right next to it in the form. Derives it instead by counting how
+// many times each active schedule entry's weekday falls within the given
+// month (defaulting to the current one), the same from/until window rule
+// syncRecurringLessons uses.
+export function countLessonsPerMonthFromSchedule(
+  schedule: { weekday: number; from?: string; until?: string }[],
+  referenceMonth: Date = new Date()
+): number {
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+  const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
+  let total = 0;
+  for (const entry of schedule) {
+    const from = entry.from ? new Date(entry.from) : null;
+    const until = entry.until ? new Date(entry.until) : null;
+    if (from && from > monthEnd) continue;
+    if (until && until < monthStart) continue;
+    const cursor = new Date(monthStart);
+    while (cursor <= monthEnd) {
+      if (cursor.getDay() === entry.weekday) total++;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+  return total;
+}
+
 // Regenerates a student's recurring lessons (from their enrollment start
 // date through the last class on/before the 15th of the month closing out
 // the next ~HORIZON_WEEKS, or their course end date if that comes sooner)

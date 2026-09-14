@@ -219,8 +219,6 @@ export const studentFormSchema = z.object({
   thirdPartyAmount: z.coerce.number().min(0.01, "Valor inválido").optional(),
   thirdPartyDueDay: z.coerce.number().int().min(1).max(31).optional(),
   thirdPartyBankAccount: z.enum(["GABES", "JOE", "ASAAS"]).optional(),
-  lessonsPerMonth: z.coerce.number().int().min(1).max(60),
-  lessonsPerMonthHistory: numericHistoryField,
   // Submitted by LessonScheduleEditor as a JSON string, e.g.
   // '[{"weekday":2,"start":"19:00","end":"19:50"}]'.
   lessonSchedule: z
