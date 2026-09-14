@@ -269,6 +269,41 @@ export async function updateLessonObservations(lessonId: string, values: { obser
   revalidatePath("/student/history");
 }
 
+// Past classes' Resumo/Observações for the same student+teacher, for the
+// "Histórico" button in the lesson detail dialog — lets a teacher check
+// what they wrote for previous classes without leaving the dialog. Scoped
+// to this teacher's own lessons (or any lesson for an admin), same
+// permission shape as requireLessonEditAccess.
+export async function getLessonHistoryForStudent(
+  studentId: string,
+  teacherId: string,
+  excludeLessonId: string
+) {
+  const actor = await requireUser();
+  if (actor.role === "TEACHER" && actor.teacherProfile?.id !== teacherId) {
+    throw new Error("Você não pode ver o histórico desta aula.");
+  }
+
+  return prisma.lesson.findMany({
+    where: {
+      studentId,
+      teacherId,
+      id: { not: excludeLessonId },
+      scheduledAt: { lt: new Date() },
+    },
+    orderBy: { scheduledAt: "desc" },
+    take: 10,
+    select: {
+      id: true,
+      scheduledAt: true,
+      status: true,
+      contentTaught: true,
+      classFocus: true,
+      observations: true,
+    },
+  });
+}
+
 function revalidateReportPaths(studentId: string) {
   revalidatePath("/admin/agenda");
   revalidatePath("/coordinator/agenda");

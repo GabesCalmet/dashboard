@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LessonReportForm } from "@/components/agenda/lesson-report-form";
+import { LessonHistoryButton } from "@/components/lessons/lesson-history-button";
 import { lessonStatusBadgeVariant } from "@/lib/labels";
 import type { CalendarLessonEvent } from "@/components/agenda/calendar-view";
 import { formatDateTime } from "@/lib/labels";
@@ -52,6 +53,14 @@ export function LessonDetailDialog({
               <Video /> Entrar na aula
             </a>
           </Button>
+        )}
+
+        {isTeacherView && (
+          <LessonHistoryButton
+            studentId={lesson.studentId}
+            teacherId={lesson.teacherId}
+            excludeLessonId={lesson.id}
+          />
         )}
 
         {isTeacherView ? (
