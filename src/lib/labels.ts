@@ -191,3 +191,9 @@ export function formatDateTime(date: Date | string) {
     timeStyle: "short",
   }).format(new Date(date));
 }
+
+const WEEKDAY_ABBR = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+export function formatWeekday(date: Date | string) {
+  return WEEKDAY_ABBR[new Date(date).getDay()];
+}

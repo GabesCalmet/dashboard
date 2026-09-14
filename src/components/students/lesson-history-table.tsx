@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatDateTime } from "@/lib/labels";
+import { formatDateTime, formatWeekday } from "@/lib/labels";
 import { lessonStatusLabel, lessonStatusBadgeVariant } from "@/lib/labels";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
 import { LessonStatusSelect } from "@/components/lessons/lesson-status-select";
@@ -87,6 +87,7 @@ export function LessonHistoryTable({
           <TableHeader>
             <TableRow>
               <TableHead>Data</TableHead>
+              <TableHead>Dia</TableHead>
               {showTeacher && <TableHead>Professor</TableHead>}
               <TableHead>Duração</TableHead>
               <TableHead>Status</TableHead>
@@ -99,6 +100,9 @@ export function LessonHistoryTable({
             {filteredLessons.map((l) => (
               <TableRow key={l.id}>
                 <TableCell>{formatDateTime(l.scheduledAt)}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {formatWeekday(l.scheduledAt)}
+                </TableCell>
                 {showTeacher && <TableCell>{teacherNames[l.teacherId] ?? "—"}</TableCell>}
                 <TableCell>{l.durationMin} min</TableCell>
                 <TableCell>
@@ -163,7 +167,7 @@ export function LessonHistoryTable({
             {filteredLessons.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={showTeacher ? 7 : 6}
+                  colSpan={showTeacher ? 8 : 7}
                   className="py-10 text-center text-muted-foreground"
                 >
                   Nenhuma aula registrada neste mês.
