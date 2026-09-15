@@ -14,6 +14,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getTeacherPayrollDetail } from "@/server/queries/teachers";
+import { getPayout } from "@/server/queries/payouts";
+import { PayoutPaidButton } from "@/components/financial/payout-paid-button";
 import { parseMonthParam } from "@/lib/month-param";
 import { formatCurrency, lessonStatusLabel } from "@/lib/labels";
 
@@ -28,7 +30,10 @@ export default async function AdminTeacherPayrollDetailPage({
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
 
-  const detail = await getTeacherPayrollDetail(teacherId, year, month);
+  const [detail, payout] = await Promise.all([
+    getTeacherPayrollDetail(teacherId, year, month),
+    getPayout("TEACHER", teacherId, year, month),
+  ]);
   if (!detail) notFound();
 
   return (
@@ -45,12 +50,25 @@ export default async function AdminTeacherPayrollDetailPage({
         description={`Horas e pagamento por tipo de aula — valor/hora varia por aluno/grupo (padrão ${formatCurrency(detail.fallbackHourlyRate)} quando não configurado).`}
       />
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <MonthNav
           basePath={`/admin/financial/gastos/professores/${teacherId}`}
           year={year}
           month={month}
         />
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">
+            Previsto: <span className="font-semibold text-foreground">{formatCurrency(detail.totals.previsto)}</span>
+          </span>
+          <PayoutPaidButton
+            target={{ type: "teacher", teacherId }}
+            year={year}
+            month={month}
+            paid={Boolean(payout)}
+            amount={payout ? Number(payout.amount) : null}
+            paidAt={payout?.paidAt ?? null}
+          />
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-xl border">

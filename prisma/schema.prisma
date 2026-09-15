@@ -190,6 +190,7 @@ model TeacherProfile {
 
   students StudentProfile[] @relation("StudentProfile_teacher")
   lessons  Lesson[]
+  payouts  Payout[]
 
   @@map("teacher_profiles")
 }
@@ -482,6 +483,36 @@ model Expense {
   updatedAt   DateTime         @updatedAt
 
   @@map("expenses")
+}
+
+enum PayoutKind {
+  TEACHER
+  PARTNER_JOE
+  PARTNER_GABRIEL
+}
+
+// Actual cash paid out to a teacher or a partner (Joe/Gabriel) for a given
+// month. Previsto (teacher payroll, the Parceiros split) stays a live
+// forecast computed from classes given/revenue collected — but it only
+// counts as a real "gasto" (Gasto efetuado, Em caixa, the Gastos page's
+// Professores/Parceiros Realizado boxes) once someone marks that month
+// paid here. amount is locked in at the moment it's marked, not
+// recomputed later, so a paid month stays stable even if the underlying
+// data (a rate correction, a late-reported lesson) changes afterward.
+// Doesn't affect the teacher's own payroll view or Férias provisioning —
+// both stay accrual-based (see REALIZED_STATUSES in teachers.ts).
+model Payout {
+  id        String          @id @default(uuid())
+  kind      PayoutKind
+  teacherId String? // set only when kind == TEACHER
+  teacher   TeacherProfile? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  year      Int
+  month     Int // 0-indexed, same convention as the rest of the app
+  amount    Decimal         @db.Decimal(10, 2)
+  paidAt    DateTime        @default(now())
+
+  @@index([kind, teacherId, year, month])
+  @@map("payouts")
 }
 
 // ---------------------------------------------------------------------------

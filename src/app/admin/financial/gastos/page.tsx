@@ -7,7 +7,8 @@ import { ExpenseFormDialog } from "@/components/financial/expense-form-dialog";
 import { MonthNav } from "@/components/financial/month-nav";
 import { listExpensesForMonth, getExpenseCategoryTotals } from "@/server/queries/expenses";
 import { getTeacherPayrollForMonth } from "@/server/queries/teachers";
-import { getFinancialSummary } from "@/server/queries/financial";
+import { getPartnerSplitForMonth } from "@/server/queries/financial";
+import { getPaidTeacherPayrollTotal } from "@/server/queries/payouts";
 import { parseMonthParam, monthParam } from "@/lib/month-param";
 import { formatCurrency } from "@/lib/labels";
 
@@ -27,35 +28,40 @@ export default async function AdminFinancialGastosPage({
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
 
-  const [expenses, categoryTotals, payroll, financialSummary] = await Promise.all([
+  const [expenses, categoryTotals, payroll, paidTeacherTotal, partnerSplit] = await Promise.all([
     listExpensesForMonth(year, month),
     getExpenseCategoryTotals(year, month),
     getTeacherPayrollForMonth(year, month),
-    getFinancialSummary(),
+    // Realizado for Professores is what's actually been marked paid this
+    // month (see the Payout model) — not the live accrual figure, which
+    // stays available as "Previsto" and on the per-teacher breakdown page.
+    getPaidTeacherPayrollTotal(year, month),
+    getPartnerSplitForMonth(year, month),
   ]);
 
   const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
   const defaultDate = new Date(year, month, 1).toISOString().slice(0, 10);
   const payrollHref = `/admin/financial/gastos/professores?month=${monthParam(year, month)}`;
+  const parceirosHref = `/admin/financial/gastos/parceiros?month=${monthParam(year, month)}`;
 
   // "Professores" isn't a manually-typed expense — it's derived from
   // actual lesson hours × hourly rate (see getTeacherPayrollForMonth), so
   // its box overrides the (always-zero) expense-category total and links
   // to the per-teacher breakdown instead. "Parceiros" is likewise derived
   // — Joe and Gabriel's combined 2/3 share of this month's revenue after
-  // teacher pay (see partnerSplit in getFinancialSummary) — and, unlike
-  // every other box here, always reflects the current calendar month
-  // regardless of which month is being browsed on this page.
+  // teacher pay (see getPartnerSplitForMonth). Both follow whichever month
+  // this page is browsing, and Realizado only counts what's been marked
+  // paid on the breakdown page, not a live accrual figure.
   const boxes = categoryTotals.map((c) => {
     if (c.category === "PROFESSORES") {
-      return { ...c, previsto: payroll.totals.previsto, realizado: payroll.totals.realizado, href: payrollHref };
+      return { ...c, previsto: payroll.totals.previsto, realizado: paidTeacherTotal, href: payrollHref };
     }
     if (c.category === "PARCEIROS") {
       return {
         ...c,
-        previsto: financialSummary.partnerSplit.previsto.partnersTotal,
-        realizado: financialSummary.partnerSplit.realizado.partnersTotal,
-        href: "/admin/financial/gastos/parceiros",
+        previsto: partnerSplit.previsto.partnersTotal,
+        realizado: partnerSplit.realizado.partnersTotal,
+        href: parceirosHref,
       };
     }
     return {

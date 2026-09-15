@@ -3,6 +3,7 @@ import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { bankAccountLabel } from "@/lib/labels";
 import { getBillingSlots, withBillingGroupMembers, resolveSlotStudentName } from "@/server/billing";
 import { getTeacherPayrollForMonth, getTeacherFeriasForYear } from "@/server/queries/teachers";
+import { getPaidTeacherPayrollTotal, getPartnerPayoutAmount } from "@/server/queries/payouts";
 import type { BankAccount, Expense, PaymentStatus } from "@prisma/client";
 
 export async function getFinancialOverview(year?: number, month?: number) {
@@ -214,16 +215,19 @@ export async function getBankBalances() {
   }));
 }
 
-// Overview for the main /admin/financial dashboard: realized vs. previsto
-// for the current month (receita/gasto/caixa), the teacher férias
-// provision, year-to-date totals, a monthly chart for the year, and the
-// active student count.
-export async function getFinancialSummary() {
-  const now = new Date();
-  const monthStart = startOfMonth(now);
-  const monthEnd = endOfMonth(now);
+// The Parceiros split for one specific month — previsto is always a live
+// forecast (this month's revenue minus this month's teacher payroll,
+// divided in 3), while realizado.joe/gabriel only reflect whether that
+// partner's own payout has actually been marked paid (see the Payout
+// model) — 0 until then, and locked to whatever amount was recorded once
+// it is. realizado.school stays a live "if the pie were split right now"
+// figure since the school's own third is never "paid out" via a button.
+// Shared by getFinancialSummary (always the current month) and the Gastos
+// page / Parceiros breakdown page (whichever month is being browsed).
+export async function getPartnerSplitForMonth(year: number, month: number) {
+  const monthStart = new Date(year, month, 1);
 
-  const [receivedAgg, activeStudentsForRevenue, totalContributors, expenses, teacherPayroll] =
+  const [receivedAgg, activeStudentsForRevenue, teacherPayroll, paidTeacherTotal, paidJoe, paidGabriel] =
     await Promise.all([
       prisma.payment.aggregate({
         where: { referenceMonth: monthStart, status: "PAID" },
@@ -233,13 +237,79 @@ export async function getFinancialSummary() {
         where: { status: "ACTIVE" },
         select: { monthlyValue: true, thirdPartyAmount: true, groupMembers: { select: { monthlyValue: true } } },
       }),
-      prisma.studentProfile.count({ where: { status: "ACTIVE" } }),
-      prisma.expense.findMany(),
-      // What teachers actually earned this month (OK/NC/R hours × whatever
-      // each is paid per student/group) — the basis for férias below, same
-      // "Realizado" figure shown on the Professores box.
-      getTeacherPayrollForMonth(now.getFullYear(), now.getMonth()),
+      getTeacherPayrollForMonth(year, month),
+      getPaidTeacherPayrollTotal(year, month),
+      getPartnerPayoutAmount("PARTNER_JOE", year, month),
+      getPartnerPayoutAmount("PARTNER_GABRIEL", year, month),
     ]);
+
+  const revenueRealized = Number(receivedAgg._sum.amount ?? 0);
+  const revenuePrevisto = activeStudentsForRevenue.reduce(
+    (sum, s) =>
+      sum +
+      Number(s.monthlyValue) +
+      Number(s.thirdPartyAmount ?? 0) +
+      s.groupMembers.reduce((memberSum, m) => memberSum + Number(m.monthlyValue), 0),
+    0
+  );
+
+  const schoolSharePrevisto = (revenuePrevisto - teacherPayroll.totals.previsto) / 3;
+  const schoolShareRealizado = (revenueRealized - paidTeacherTotal) / 3;
+
+  return {
+    previsto: {
+      school: schoolSharePrevisto,
+      joe: schoolSharePrevisto,
+      gabriel: schoolSharePrevisto,
+      partnersTotal: schoolSharePrevisto * 2,
+    },
+    realizado: {
+      school: schoolShareRealizado,
+      joe: paidJoe,
+      gabriel: paidGabriel,
+      partnersTotal: paidJoe + paidGabriel,
+    },
+  };
+}
+
+// Overview for the main /admin/financial dashboard: realized vs. previsto
+// for the current month (receita/gasto/caixa), the teacher férias
+// provision, year-to-date totals, a monthly chart for the year, and the
+// active student count.
+export async function getFinancialSummary() {
+  const now = new Date();
+  const monthStart = startOfMonth(now);
+  const monthEnd = endOfMonth(now);
+
+  const [
+    receivedAgg,
+    activeStudentsForRevenue,
+    totalContributors,
+    expenses,
+    teacherPayroll,
+    paidTeacherTotal,
+    partnerSplit,
+  ] = await Promise.all([
+    prisma.payment.aggregate({
+      where: { referenceMonth: monthStart, status: "PAID" },
+      _sum: { amount: true },
+    }),
+    prisma.studentProfile.findMany({
+      where: { status: "ACTIVE" },
+      select: { monthlyValue: true, thirdPartyAmount: true, groupMembers: { select: { monthlyValue: true } } },
+    }),
+    prisma.studentProfile.count({ where: { status: "ACTIVE" } }),
+    prisma.expense.findMany(),
+    // Previsto still assumes every scheduled class happens — unaffected by
+    // the payout tracking below, same as before.
+    getTeacherPayrollForMonth(now.getFullYear(), now.getMonth()),
+    // What's actually been paid out to teachers this month — see the
+    // Payout model. Only this counts as a "gasto"; classes given but not
+    // yet paid don't (that's still tracked live, just not here — see
+    // Férias and the teacher's own payroll view, both unaffected).
+    getPaidTeacherPayrollTotal(now.getFullYear(), now.getMonth()),
+    getPartnerSplitForMonth(now.getFullYear(), now.getMonth()),
+  ]);
 
   const revenueRealized = Number(receivedAgg._sum.amount ?? 0);
   // The course's real monthly total is the student's own portion plus
@@ -256,37 +326,15 @@ export async function getFinancialSummary() {
   const manualExpenseRealized = expenseTotalForMonth(expenses, monthStart, monthEnd, now);
   const manualExpensePrevisto = expenseTotalForMonth(expenses, monthStart, monthEnd);
 
-  // What's left of this month's revenue after paying teachers is split
-  // three ways: one third each to Joe and Gabriel (the "Parceiros" box on
-  // Gastos is their combined 2/3), and the remaining third stays with the
-  // school ("Para a escola" on the Financeiro overview). Always the
-  // current calendar month — not affected by browsing a different month
-  // elsewhere (e.g. on Gastos). Computed here, ahead of expenseRealized/
-  // expensePrevisto below, since both partner payouts count as gastos too.
-  const schoolSharePrevisto = (revenuePrevisto - teacherPayroll.totals.previsto) / 3;
-  const schoolShareRealizado = (revenueRealized - teacherPayroll.totals.realizado) / 3;
-  const partnerSplit = {
-    previsto: {
-      school: schoolSharePrevisto,
-      joe: schoolSharePrevisto,
-      gabriel: schoolSharePrevisto,
-      partnersTotal: schoolSharePrevisto * 2,
-    },
-    realizado: {
-      school: schoolShareRealizado,
-      joe: schoolShareRealizado,
-      gabriel: schoolShareRealizado,
-      partnersTotal: schoolShareRealizado * 2,
-    },
-  };
-
   // "Gasto" for the month is manually-typed expenses (Marketing/R&D/
   // Outros/any stray Parceiros entries) plus the two derived
   // categories that never get their own Expense rows: teacher payroll
   // and the partners' own payout — so "Em caixa"/"Caixa previsto" below
   // land on what's actually left after everyone (teachers, partners) has
-  // been paid, not just after manual bills.
-  const expenseRealized = manualExpenseRealized + teacherPayroll.totals.realizado + partnerSplit.realizado.partnersTotal;
+  // been paid, not just after manual bills. Realizado only counts what's
+  // actually been marked paid (paidTeacherTotal, partnerSplit.realizado);
+  // previsto keeps assuming the whole month happens as scheduled.
+  const expenseRealized = manualExpenseRealized + paidTeacherTotal + partnerSplit.realizado.partnersTotal;
   const expensePrevisto = manualExpensePrevisto + teacherPayroll.totals.previsto + partnerSplit.previsto.partnersTotal;
 
   // Provisão de férias dos professores: 8,3% do que cada um ganhou —
