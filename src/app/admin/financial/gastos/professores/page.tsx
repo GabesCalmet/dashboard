@@ -12,7 +12,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getTeacherPayrollForMonth } from "@/server/queries/teachers";
-import { getPaidTeacherPayrollByTeacher } from "@/server/queries/payouts";
 import { parseMonthParam, monthParam } from "@/lib/month-param";
 import { formatCurrency } from "@/lib/labels";
 
@@ -23,16 +22,8 @@ export default async function AdminTeacherPayrollPage({
 }) {
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
-  const [{ rows, totals }, paidByTeacher] = await Promise.all([
-    getTeacherPayrollForMonth(year, month),
-    // Realizado here is what's actually been marked paid (see the Payout
-    // model and the per-teacher breakdown page's "Marcar como pago"
-    // button) — not the live accrual total, which stays visible as
-    // Previsto and on that breakdown page.
-    getPaidTeacherPayrollByTeacher(year, month),
-  ]);
+  const { rows, totals } = await getTeacherPayrollForMonth(year, month);
   const monthQuery = monthParam(year, month);
-  const totalRealizado = [...paidByTeacher.values()].reduce((sum, v) => sum + v, 0);
 
   return (
     <div>
@@ -45,7 +36,7 @@ export default async function AdminTeacherPayrollPage({
 
       <PageHeader
         title="Pagamento de professores"
-        description="Previsto (todas as aulas do mês) e realizado (o que já foi marcado como pago), por professor."
+        description="Previsto — todas as aulas do mês. Abra um professor para marcar o pagamento como feito."
       />
 
       <div className="mb-4">
@@ -58,7 +49,6 @@ export default async function AdminTeacherPayrollPage({
             <TableRow>
               <TableHead>Professor</TableHead>
               <TableHead>Previsto</TableHead>
-              <TableHead>Realizado</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -73,12 +63,11 @@ export default async function AdminTeacherPayrollPage({
                   </Link>
                 </TableCell>
                 <TableCell>{formatCurrency(r.previsto)}</TableCell>
-                <TableCell>{formatCurrency(paidByTeacher.get(r.teacherId) ?? 0)}</TableCell>
               </TableRow>
             ))}
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={3} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={2} className="py-10 text-center text-muted-foreground">
                   Nenhum professor ativo.
                 </TableCell>
               </TableRow>
@@ -89,7 +78,6 @@ export default async function AdminTeacherPayrollPage({
               <TableRow>
                 <TableCell>Total</TableCell>
                 <TableCell>{formatCurrency(totals.previsto)}</TableCell>
-                <TableCell>{formatCurrency(totalRealizado)}</TableCell>
               </TableRow>
             </TableFooter>
           )}

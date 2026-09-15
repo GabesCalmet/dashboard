@@ -20,14 +20,6 @@ export async function getPaidTeacherPayrollTotal(year: number, month: number) {
   return Number(agg._sum.amount ?? 0);
 }
 
-// Per-teacher paid amount for a given month — keyed by teacherId, so the
-// "Pagamento de professores" list can show the same Realizado figure
-// (what's actually been paid) its per-teacher breakdown page does.
-export async function getPaidTeacherPayrollByTeacher(year: number, month: number) {
-  const payouts = await prisma.payout.findMany({ where: { kind: "TEACHER", year, month } });
-  return new Map(payouts.map((p) => [p.teacherId as string, Number(p.amount)]));
-}
-
 // One partner's (Joe or Gabriel) paid amount for a month — 0 until marked.
 export async function getPartnerPayoutAmount(
   kind: "PARTNER_JOE" | "PARTNER_GABRIEL",
