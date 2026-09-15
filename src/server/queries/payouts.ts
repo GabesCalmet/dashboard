@@ -45,6 +45,16 @@ export async function getTeacherPayoutEntries(teacherId: string, year: number, m
   });
 }
 
+// Every payout ever recorded for this teacher, across every month — the
+// running "total paid to this teacher" figure on their breakdown page.
+export async function getTeacherLifetimePayoutTotal(teacherId: string) {
+  const agg = await prisma.payout.aggregate({
+    where: { kind: "TEACHER", teacherId },
+    _sum: { amount: true },
+  });
+  return Number(agg._sum.amount ?? 0);
+}
+
 // One partner's (Joe or Gabriel) paid amount for a month — 0 until marked.
 export async function getPartnerPayoutAmount(
   kind: "PARTNER_JOE" | "PARTNER_GABRIEL",

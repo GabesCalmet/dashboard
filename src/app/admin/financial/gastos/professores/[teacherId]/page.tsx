@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getTeacherPayrollDetail } from "@/server/queries/teachers";
-import { getTeacherPayoutEntries } from "@/server/queries/payouts";
+import { getTeacherPayoutEntries, getTeacherLifetimePayoutTotal } from "@/server/queries/payouts";
 import { TeacherPayoutSection } from "@/components/financial/teacher-payout-section";
 import { parseMonthParam } from "@/lib/month-param";
 import { formatCurrency, lessonStatusLabel } from "@/lib/labels";
@@ -30,9 +30,10 @@ export default async function AdminTeacherPayrollDetailPage({
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
 
-  const [detail, payoutEntries] = await Promise.all([
+  const [detail, payoutEntries, lifetimeTotal] = await Promise.all([
     getTeacherPayrollDetail(teacherId, year, month),
     getTeacherPayoutEntries(teacherId, year, month),
+    getTeacherLifetimePayoutTotal(teacherId),
   ]);
   if (!detail) notFound();
 
@@ -65,6 +66,7 @@ export default async function AdminTeacherPayrollDetailPage({
           month={month}
           previsto={detail.totals.previsto}
           entries={payoutEntries.map((p) => ({ id: p.id, amount: Number(p.amount), paidAt: p.paidAt }))}
+          lifetimeTotal={lifetimeTotal}
         />
       </div>
 

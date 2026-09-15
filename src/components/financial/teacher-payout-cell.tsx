@@ -10,11 +10,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { addTeacherPayout } from "@/server/actions/payouts";
 import { formatCurrency } from "@/lib/labels";
 
+function todayInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 // The "Realizado" cell on the Pagamento de professores list — shows the
 // total already paid this month and a "+" to log another payment
-// (amount typed by hand, so a teacher paid in installments can have
-// several entries). Defaults the input to whatever's still owed against
-// Previsto, but that's just a convenience — any amount can be entered.
+// (amount and date typed by hand, so a teacher paid in installments can
+// have several accurately-dated entries). Defaults the amount to
+// whatever's still owed against Previsto and the date to today, but
+// both are just convenience defaults — either can be edited.
 export function TeacherPayoutCell({
   teacherId,
   year,
@@ -31,13 +36,15 @@ export function TeacherPayoutCell({
   const [open, setOpen] = useState(false);
   const remaining = Math.max(0, previsto - total);
   const [amount, setAmount] = useState(() => remaining.toFixed(2));
+  const [date, setDate] = useState(todayInputValue);
   const [isPending, startTransition] = useTransition();
 
   function submit() {
     const value = Number(amount);
+    const paidAt = new Date(date);
     startTransition(async () => {
       try {
-        await addTeacherPayout(teacherId, year, month, value);
+        await addTeacherPayout(teacherId, year, month, value, paidAt);
         toast.success("Pagamento registrado.");
         setOpen(false);
       } catch (err) {
@@ -53,7 +60,10 @@ export function TeacherPayoutCell({
         open={open}
         onOpenChange={(next) => {
           setOpen(next);
-          if (next) setAmount(remaining.toFixed(2));
+          if (next) {
+            setAmount(remaining.toFixed(2));
+            setDate(todayInputValue());
+          }
         }}
       >
         <PopoverTrigger asChild>
@@ -73,6 +83,15 @@ export function TeacherPayoutCell({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`payout-date-${teacherId}`}>Data do pagamento</Label>
+              <Input
+                id={`payout-date-${teacherId}`}
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
               />
             </div>
             <Button type="button" size="sm" className="w-full" disabled={isPending} onClick={submit}>

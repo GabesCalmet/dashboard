@@ -5,43 +5,54 @@ import { toast } from "sonner";
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { addTeacherPayout, deleteTeacherPayout } from "@/server/actions/payouts";
 import { formatCurrency, formatDate } from "@/lib/labels";
 
 type Entry = { id: string; amount: number; paidAt: Date };
 
+function todayInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 // One teacher's payments for one month — each entry typed in by hand (so
-// installments are just several entries), with its own delete, plus a
-// form to log another. The sum of these entries is what counts as this
-// teacher's "Realizado" everywhere else (Gasto efetuado, Em caixa, the
-// Gastos page's Professores box, and this teacher's row on the
-// Pagamento de professores list).
+// installments are just several entries, each with its own real payment
+// date), with its own delete, plus a form to log another. The sum of
+// these entries is what counts as this teacher's "Realizado" everywhere
+// else (Gasto efetuado, Em caixa, the Gastos page's Professores box, and
+// this teacher's row on the Pagamento de professores list). lifetimeTotal
+// is this teacher's running total across every month, not just this one.
 export function TeacherPayoutSection({
   teacherId,
   year,
   month,
   previsto,
   entries,
+  lifetimeTotal,
 }: {
   teacherId: string;
   year: number;
   month: number;
   previsto: number;
   entries: Entry[];
+  lifetimeTotal: number;
 }) {
   const total = entries.reduce((sum, e) => sum + e.amount, 0);
   const remaining = Math.max(0, previsto - total);
   const [amount, setAmount] = useState(() => remaining.toFixed(2));
+  const [date, setDate] = useState(todayInputValue);
   const [isPending, startTransition] = useTransition();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   function submit() {
     const value = Number(amount);
+    const paidAt = new Date(date);
     startTransition(async () => {
       try {
-        await addTeacherPayout(teacherId, year, month, value);
+        await addTeacherPayout(teacherId, year, month, value, paidAt);
         toast.success("Pagamento registrado.");
         setAmount(Math.max(0, remaining - value).toFixed(2));
+        setDate(todayInputValue());
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Erro ao registrar pagamento.");
       }
@@ -64,12 +75,18 @@ export function TeacherPayoutSection({
 
   return (
     <div className="rounded-lg border p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
         <p className="text-sm font-medium">Pagamentos deste mês</p>
-        <p className="text-sm text-muted-foreground">
-          Total pago: <span className="font-semibold text-foreground">{formatCurrency(total)}</span> de{" "}
-          {formatCurrency(previsto)} previsto
-        </p>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-muted-foreground">
+          <span>
+            Total pago: <span className="font-semibold text-foreground">{formatCurrency(total)}</span> de{" "}
+            {formatCurrency(previsto)} previsto
+          </span>
+          <span>
+            Total pago a este professor (todos os meses):{" "}
+            <span className="font-semibold text-foreground">{formatCurrency(lifetimeTotal)}</span>
+          </span>
+        </div>
       </div>
 
       {entries.length > 0 && (
@@ -99,16 +116,29 @@ export function TeacherPayoutSection({
         </div>
       )}
 
-      <div className="flex items-center gap-2">
-        <Input
-          type="number"
-          step="0.01"
-          min="0"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          className="max-w-40"
-          aria-label="Valor pago"
-        />
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="space-y-1.5">
+          <Label htmlFor={`payout-amount-${teacherId}-${year}-${month}`}>Valor pago</Label>
+          <Input
+            id={`payout-amount-${teacherId}-${year}-${month}`}
+            type="number"
+            step="0.01"
+            min="0"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="w-36"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`payout-date-${teacherId}-${year}-${month}`}>Data do pagamento</Label>
+          <Input
+            id={`payout-date-${teacherId}-${year}-${month}`}
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-40"
+          />
+        </div>
         <Button type="button" size="sm" disabled={isPending} onClick={submit}>
           {isPending && pendingDeleteId === null && <Loader2 className="animate-spin" />}
           <Plus className="size-3.5" /> Registrar pagamento

@@ -14,19 +14,28 @@ function revalidatePayoutPaths(teacherId?: string) {
   if (teacherId) revalidatePath(`/admin/financial/gastos/professores/${teacherId}`);
 }
 
-// Records one payment made to a teacher for a given month. The amount is
-// typed in by hand rather than locked to the previsto forecast, so a
-// teacher paid in installments can have several entries logged one at a
-// time — the "Realizado" figure shown everywhere (Gasto efetuado, Em
-// caixa, the Gastos page's Professores box, this teacher's own list row)
-// is just the sum of every entry for that teacher+month. Doesn't touch
-// the teacher's own payroll view or Férias, both still accrual-based.
-export async function addTeacherPayout(teacherId: string, year: number, month: number, amount: number) {
+// Records one payment made to a teacher for a given month. The amount
+// and the actual payment date are both typed in by hand rather than
+// locked to the previsto forecast/today's date, so a teacher paid in
+// installments (or paid a few days after the month closes) can have
+// several accurately-dated entries — the "Realizado" figure shown
+// everywhere (Gasto efetuado, Em caixa, the Gastos page's Professores
+// box, this teacher's own list row) is just the sum of every entry for
+// that teacher+month. Doesn't touch the teacher's own payroll view or
+// Férias, both still accrual-based.
+export async function addTeacherPayout(
+  teacherId: string,
+  year: number,
+  month: number,
+  amount: number,
+  paidAt: Date
+) {
   const actor = await requireRole("ADMIN");
   if (!Number.isFinite(amount) || amount <= 0) throw new Error("Informe um valor válido.");
+  if (Number.isNaN(paidAt.getTime())) throw new Error("Informe uma data válida.");
 
   const payout = await prisma.payout.create({
-    data: { kind: "TEACHER", teacherId, year, month, amount },
+    data: { kind: "TEACHER", teacherId, year, month, amount, paidAt },
   });
 
   await recordAudit({
@@ -34,7 +43,7 @@ export async function addTeacherPayout(teacherId: string, year: number, month: n
     entityId: payout.id,
     action: "CREATE",
     actor,
-    changes: { kind: "TEACHER", teacherId, year, month, amount },
+    changes: { kind: "TEACHER", teacherId, year, month, amount, paidAt: paidAt.toISOString() },
   });
 
   revalidatePayoutPaths(teacherId);
