@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
       const lessons = await prisma.lesson.findMany({
         where: {
           status: {
-            in: ["CANCELED_BY_STUDENT", "CANCELED_BY_TEACHER", "CANCELED_HOLIDAY", "NO_SHOW"],
+            in: ["CANCELED_BY_STUDENT", "CANCELED_BY_TEACHER", "CANCELED_LATE", "CANCELED_HOLIDAY", "NO_SHOW"],
           },
         },
         include: { student: { include: { user: true } }, teacher: { include: { user: true } } },

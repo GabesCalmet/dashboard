@@ -52,9 +52,11 @@ function resolveTeacherPayRate(
 }
 
 // A class "happened" in some recorded sense if it's OK (dada), NC (não
-// compareceu) or R (reposição) — as opposed to still SCHEDULED or one of
-// the cancellation codes, which never occurred.
-const REALIZED_STATUSES = ["COMPLETED", "NO_SHOW", "MAKEUP"] as const;
+// compareceu), CT (cancelamento tarde) or R (reposição) — as opposed to
+// still SCHEDULED or one of the other cancellation codes, which never
+// occurred. CT counts here the same as NC: too late to fill that slot, so
+// the teacher is still paid for it.
+const REALIZED_STATUSES = ["COMPLETED", "NO_SHOW", "CANCELED_LATE", "MAKEUP"] as const;
 
 // Per-teacher payroll for a given month — "previsto" is the full amount
 // supposing every class on the calendar that month is given, however it

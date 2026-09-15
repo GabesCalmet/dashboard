@@ -53,6 +53,7 @@ enum LessonStatus {
   CANCELED_BY_STUDENT // CA
   NO_SHOW // NC
   CANCELED_BY_TEACHER // CP
+  CANCELED_LATE // CT - cancelamento tarde, conta como aula dada (como NC)
   CANCELED_VACATION // CF - cancelamento por férias
   CANCELED_HOLIDAY // F - feriado
   MAKEUP // R - reposição

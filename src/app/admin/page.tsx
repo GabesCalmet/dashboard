@@ -89,7 +89,7 @@ export default async function AdminDashboardPage({
           label="Cancelamentos (mês)"
           value={String(data.cancellationsThisMonth)}
           icon={Ban}
-          href={`/admin/reports/lessons?month=${viewedMonth}&statuses=CANCELED_BY_STUDENT,CANCELED_BY_TEACHER,CANCELED_HOLIDAY,NO_SHOW`}
+          href={`/admin/reports/lessons?month=${viewedMonth}&statuses=CANCELED_BY_STUDENT,CANCELED_BY_TEACHER,CANCELED_LATE,CANCELED_HOLIDAY,NO_SHOW`}
         />
         <StatCard
           label="Reposições (mês)"

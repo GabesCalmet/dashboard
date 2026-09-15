@@ -33,7 +33,9 @@ export async function getAdminDashboardData(referenceMonth?: { year: number; mon
     prisma.lesson.count({
       where: {
         scheduledAt: { gte: monthStart, lte: monthEnd },
-        status: { in: ["CANCELED_BY_STUDENT", "CANCELED_BY_TEACHER", "CANCELED_HOLIDAY", "NO_SHOW"] },
+        status: {
+          in: ["CANCELED_BY_STUDENT", "CANCELED_BY_TEACHER", "CANCELED_LATE", "CANCELED_HOLIDAY", "NO_SHOW"],
+        },
       },
     }),
     prisma.lesson.count({

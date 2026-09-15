@@ -15,7 +15,9 @@ export async function getStudentStats(studentId: string) {
       });
       const completed = lessons.filter((l) => l.status === "COMPLETED");
       const canceled = lessons.filter((l) =>
-        ["CANCELED_BY_STUDENT", "CANCELED_BY_TEACHER", "CANCELED_HOLIDAY", "NO_SHOW"].includes(l.status)
+        ["CANCELED_BY_STUDENT", "CANCELED_BY_TEACHER", "CANCELED_LATE", "CANCELED_HOLIDAY", "NO_SHOW"].includes(
+          l.status
+        )
       );
       const makeups = lessons.filter((l) => l.status === "MAKEUP");
       return {

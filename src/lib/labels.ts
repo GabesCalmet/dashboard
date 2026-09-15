@@ -59,6 +59,7 @@ export const lessonStatusLabel: Record<LessonStatus, string> = {
   CANCELED_BY_STUDENT: "CA — Cancelamento aluno",
   NO_SHOW: "NC — Não compareceu",
   CANCELED_BY_TEACHER: "CP — Cancelamento professor",
+  CANCELED_LATE: "CT — Cancelamento tarde",
   CANCELED_VACATION: "CF — Cancelamento férias",
   CANCELED_HOLIDAY: "F — Feriado",
   MAKEUP: "R — Reposição",
@@ -75,6 +76,7 @@ export const lessonStatusCode: Record<LessonStatus, string> = {
   CANCELED_BY_STUDENT: "CA",
   NO_SHOW: "NC",
   CANCELED_BY_TEACHER: "CP",
+  CANCELED_LATE: "CT",
   CANCELED_VACATION: "CF",
   CANCELED_HOLIDAY: "F",
   MAKEUP: "R",
@@ -95,6 +97,7 @@ export const quickLessonStatuses: LessonStatus[] = [
   "COMPLETED",
   "CANCELED_BY_STUDENT",
   "CANCELED_BY_TEACHER",
+  "CANCELED_LATE",
   "CANCELED_VACATION",
   "CANCELED_HOLIDAY",
   "MAKEUP",
@@ -124,6 +127,9 @@ export const lessonStatusCalendarStyle: Record<
   CANCELED_BY_TEACHER: { background: "transparent", border: "#d64545", text: "#f2a5a5" }, // vazado vermelho — CP
   CANCELED_BY_STUDENT: { background: "transparent", border: "#e0b400", text: "#f2d878" }, // vazado amarelo — CA
   NO_SHOW: { background: "#e8720c", border: "#e8720c", text: "#ffffff" }, // laranja — NC
+  // Solid (not vazado) like NC — a late cancellation counts as a class
+  // given, so it shouldn't read as an open/unresolved cancellation.
+  CANCELED_LATE: { background: "#a855f7", border: "#a855f7", text: "#ffffff" }, // roxo — CT
   CANCELED_VACATION: { background: "transparent", border: "#7dd3fc", text: "#7dd3fc" }, // vazado azul claro — CF
   CANCELED_HOLIDAY: { background: "transparent", border: "#e5e7eb", text: "#e5e7eb" }, // vazado branco — feriado
   MAKEUP: { background: "#4ade80", border: "#4ade80", text: "#06301a" }, // verde claro — reposição
@@ -142,6 +148,7 @@ export const lessonStatusBadgeVariant: Record<
   CANCELED_BY_STUDENT: "destructive",
   NO_SHOW: "destructive",
   CANCELED_BY_TEACHER: "destructive",
+  CANCELED_LATE: "destructive",
   CANCELED_VACATION: "outline",
   CANCELED_HOLIDAY: "outline",
   MAKEUP: "warning",

@@ -2,7 +2,12 @@ import { prisma } from "@/lib/prisma";
 import type { LessonStatus } from "@prisma/client";
 
 // Statuses that flag a student for the attendance alert.
-const FLAG_STATUSES: LessonStatus[] = ["CANCELED_BY_STUDENT", "CANCELED_BY_TEACHER", "NO_SHOW"];
+const FLAG_STATUSES: LessonStatus[] = [
+  "CANCELED_BY_STUDENT",
+  "CANCELED_BY_TEACHER",
+  "NO_SHOW",
+  "CANCELED_LATE",
+];
 
 // "Real" outcomes — excludes SCHEDULED (still pending, not yet an
 // occurrence) so future bookings never factor into either check below.
@@ -11,6 +16,7 @@ const REPORTED_STATUSES: LessonStatus[] = [
   "CANCELED_BY_STUDENT",
   "NO_SHOW",
   "CANCELED_BY_TEACHER",
+  "CANCELED_LATE",
   "CANCELED_VACATION",
   "CANCELED_HOLIDAY",
   "MAKEUP",

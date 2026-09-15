@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   BookOpen,
   CheckCircle2,
+  Clock3,
   GraduationCap,
   Repeat,
   UserX,
@@ -117,10 +118,13 @@ export function StudentDetailView({
   // status has already moved on to COMPLETED.
   const makeupCount = lessonsThisMonth.filter((l) => l.isMakeup && l.status === "COMPLETED").length;
   const noShowCount = lessonsThisMonth.filter((l) => l.status === "NO_SHOW").length;
+  // CT — canceled too late to fill the slot, so like NC it still counts as
+  // a class given (teacher is paid for it — see REALIZED_STATUSES).
+  const canceledLateCount = lessonsThisMonth.filter((l) => l.status === "CANCELED_LATE").length;
   // "Aulas realizadas" is the umbrella total — every lesson slot that
   // actually took place this month, whichever box it landed in below (OK,
-  // R, or NC).
-  const realizedLessons = completedLessons + makeupCount + noShowCount;
+  // R, NC, or CT).
+  const realizedLessons = completedLessons + makeupCount + noShowCount + canceledLateCount;
 
   return (
     <div>
@@ -249,10 +253,11 @@ export function StudentDetailView({
         <StatCard label="Aulas realizadas" value={String(realizedLessons)} icon={GraduationCap} accent />
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard label="OK — Aulas dadas" value={String(completedLessons)} icon={CheckCircle2} accent />
         <StatCard label="CA — Cancelamento aluno" value={String(canceledByStudent)} icon={XCircle} />
         <StatCard label="CP — Cancelamento professor" value={String(canceledByTeacher)} icon={XCircle} />
+        <StatCard label="CT — Cancelamento tarde" value={String(canceledLateCount)} icon={Clock3} />
         <StatCard label="R — Reposições" value={String(makeupCount)} icon={Repeat} />
         <StatCard label="NC — Não compareceu" value={String(noShowCount)} icon={UserX} />
       </div>
