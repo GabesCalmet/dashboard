@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getTeacherPayrollForMonth } from "@/server/queries/teachers";
-import { getPaidTeacherPayrollByTeacher } from "@/server/queries/payouts";
+import { getTeacherPayoutEntriesByTeacher } from "@/server/queries/payouts";
 import { parseMonthParam, monthParam } from "@/lib/month-param";
 import { formatCurrency } from "@/lib/labels";
 
@@ -24,12 +24,14 @@ export default async function AdminTeacherPayrollPage({
 }) {
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
-  const [{ rows, totals }, paidByTeacher] = await Promise.all([
+  const [{ rows, totals }, entriesByTeacher] = await Promise.all([
     getTeacherPayrollForMonth(year, month),
-    getPaidTeacherPayrollByTeacher(year, month),
+    getTeacherPayoutEntriesByTeacher(year, month),
   ]);
   const monthQuery = monthParam(year, month);
-  const totalRealizado = [...paidByTeacher.values()].reduce((sum, v) => sum + v, 0);
+  const totalRealizado = [...entriesByTeacher.values()]
+    .flat()
+    .reduce((sum, p) => sum + Number(p.amount), 0);
 
   return (
     <div>
@@ -76,7 +78,11 @@ export default async function AdminTeacherPayrollPage({
                     year={year}
                     month={month}
                     previsto={r.previsto}
-                    total={paidByTeacher.get(r.teacherId) ?? 0}
+                    entries={(entriesByTeacher.get(r.teacherId) ?? []).map((p) => ({
+                      id: p.id,
+                      amount: Number(p.amount),
+                      paidAt: p.paidAt,
+                    }))}
                   />
                 </TableCell>
               </TableRow>

@@ -21,19 +21,22 @@ export async function getPaidTeacherPayrollTotal(year: number, month: number) {
   return Number(agg._sum.amount ?? 0);
 }
 
-// Per-teacher paid total for a given month, keyed by teacherId — for the
-// "Pagamento de professores" list's Realizado column.
-export async function getPaidTeacherPayrollByTeacher(year: number, month: number) {
+// Every teacher's individual payment entries for a given month, keyed by
+// teacherId — the "Pagamento de professores" list shows each one
+// separately (not just a lump sum) right in the Realizado column.
+export async function getTeacherPayoutEntriesByTeacher(year: number, month: number) {
   const payouts = await prisma.payout.findMany({
     where: { kind: "TEACHER", year, month },
-    select: { teacherId: true, amount: true },
+    orderBy: { paidAt: "asc" },
   });
-  const totals = new Map<string, number>();
+  const byTeacher = new Map<string, typeof payouts>();
   for (const p of payouts) {
     if (!p.teacherId) continue;
-    totals.set(p.teacherId, (totals.get(p.teacherId) ?? 0) + Number(p.amount));
+    const list = byTeacher.get(p.teacherId) ?? [];
+    list.push(p);
+    byTeacher.set(p.teacherId, list);
   }
-  return totals;
+  return byTeacher;
 }
 
 // Every individual payment entry recorded for one teacher's month, oldest
