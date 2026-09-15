@@ -35,7 +35,7 @@ export const studentStatusVariant: Record<
 };
 
 export const bankAccountLabel: Record<BankAccount, string> = {
-  GABES: "Gabes",
+  GABES: "Gabriel",
   JOE: "Joe",
   ASAAS: "Asaas",
 };
