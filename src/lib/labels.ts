@@ -102,6 +102,14 @@ export const quickLessonStatuses: LessonStatus[] = [
   "PAUSED",
 ];
 
+// Statuses offered by the full "Status da aula" picker (Agenda's lesson
+// report form) — SCHEDULED plus the same day-to-day set above. Faltou
+// energia / Problema técnico / Outro were dropped as pickable statuses;
+// that kind of detail belongs in Observações as free text instead of a
+// dedicated status. Still kept in LessonStatus/lessonStatusLabel so any
+// lesson already recorded with one of them keeps displaying correctly.
+export const reportableLessonStatuses: LessonStatus[] = ["SCHEDULED", ...quickLessonStatuses];
+
 // Calendar event styling per status. Solid statuses (still to happen,
 // happened, no-show, reposição) fill the whole block; cancellations and
 // feriado are "hollow" — transparent fill, colored outline only — so a
@@ -116,7 +124,7 @@ export const lessonStatusCalendarStyle: Record<
   CANCELED_BY_TEACHER: { background: "transparent", border: "#d64545", text: "#f2a5a5" }, // vazado vermelho — CP
   CANCELED_BY_STUDENT: { background: "transparent", border: "#e0b400", text: "#f2d878" }, // vazado amarelo — CA
   NO_SHOW: { background: "#e8720c", border: "#e8720c", text: "#ffffff" }, // laranja — NC
-  CANCELED_VACATION: { background: "#8a8f98", border: "#8a8f98", text: "#ffffff" },
+  CANCELED_VACATION: { background: "transparent", border: "#7dd3fc", text: "#7dd3fc" }, // vazado azul claro — CF
   CANCELED_HOLIDAY: { background: "transparent", border: "#e5e7eb", text: "#e5e7eb" }, // vazado branco — feriado
   MAKEUP: { background: "#4ade80", border: "#4ade80", text: "#06301a" }, // verde claro — reposição
   POWER_OUTAGE: { background: "#d64545", border: "#d64545", text: "#ffffff" },

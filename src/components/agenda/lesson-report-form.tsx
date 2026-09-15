@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { submitLessonReport } from "@/server/actions/lessons";
-import { lessonStatusLabel } from "@/lib/labels";
+import { lessonStatusLabel, reportableLessonStatuses } from "@/lib/labels";
 import type { CalendarLessonEvent } from "@/components/agenda/calendar-view";
 import { curriculumUnits } from "@/lib/curriculum";
 import { CurriculumPicker } from "@/components/lessons/curriculum-picker";
@@ -92,9 +92,9 @@ export function LessonReportForm({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(lessonStatusLabel).map(([value, label]) => (
+            {reportableLessonStatuses.map((value) => (
               <SelectItem key={value} value={value}>
-                {label}
+                {lessonStatusLabel[value]}
               </SelectItem>
             ))}
           </SelectContent>
