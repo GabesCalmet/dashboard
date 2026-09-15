@@ -102,21 +102,27 @@ export const quickLessonStatuses: LessonStatus[] = [
   "PAUSED",
 ];
 
-// Calendar / badge colors per the spec: green=realizada, blue=agendada,
-// red=cancelada, yellow=reposição, gray=feriado/férias.
-export const lessonStatusColor: Record<LessonStatus, string> = {
-  SCHEDULED: "#3b6dc7",
-  COMPLETED: "#1f9d55",
-  CANCELED_BY_STUDENT: "#d64545",
-  NO_SHOW: "#d64545",
-  CANCELED_BY_TEACHER: "#d64545",
-  CANCELED_VACATION: "#8a8f98",
-  CANCELED_HOLIDAY: "#8a8f98",
-  MAKEUP: "#e0a91f",
-  POWER_OUTAGE: "#d64545",
-  TECH_ISSUE: "#d64545",
-  OTHER: "#8a8f98",
-  PAUSED: "#8a8f98",
+// Calendar event styling per status. Solid statuses (still to happen,
+// happened, no-show, reposição) fill the whole block; cancellations and
+// feriado are "hollow" — transparent fill, colored outline only — so a
+// canceled slot still visibly marks its time on the calendar without
+// reading as if the class actually took place.
+export const lessonStatusCalendarStyle: Record<
+  LessonStatus,
+  { background: string; border: string; text: string }
+> = {
+  SCHEDULED: { background: "#3b6dc7", border: "#3b6dc7", text: "#ffffff" }, // azul — ainda não dada
+  COMPLETED: { background: "#1f9d55", border: "#1f9d55", text: "#ffffff" }, // verde — dada
+  CANCELED_BY_TEACHER: { background: "transparent", border: "#d64545", text: "#f2a5a5" }, // vazado vermelho — CP
+  CANCELED_BY_STUDENT: { background: "transparent", border: "#e0b400", text: "#f2d878" }, // vazado amarelo — CA
+  NO_SHOW: { background: "#e8720c", border: "#e8720c", text: "#ffffff" }, // laranja — NC
+  CANCELED_VACATION: { background: "#8a8f98", border: "#8a8f98", text: "#ffffff" },
+  CANCELED_HOLIDAY: { background: "transparent", border: "#e5e7eb", text: "#e5e7eb" }, // vazado branco — feriado
+  MAKEUP: { background: "#4ade80", border: "#4ade80", text: "#06301a" }, // verde claro — reposição
+  POWER_OUTAGE: { background: "#d64545", border: "#d64545", text: "#ffffff" },
+  TECH_ISSUE: { background: "#d64545", border: "#d64545", text: "#ffffff" },
+  OTHER: { background: "#8a8f98", border: "#8a8f98", text: "#ffffff" },
+  PAUSED: { background: "#8a8f98", border: "#8a8f98", text: "#ffffff" },
 };
 
 export const lessonStatusBadgeVariant: Record<

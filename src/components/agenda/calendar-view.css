@@ -41,7 +41,11 @@
 }
 
 .upfront-calendar .fc-event {
-  border: none;
+  /* Transparent by default so a solid-status event (its borderColor equals
+     its backgroundColor) still reads as a plain filled block, while a
+     "hollow" cancellation/feriado event (backgroundColor: transparent)
+     shows only its colored outline. */
+  border: 1.5px solid transparent;
   border-radius: 6px;
   padding: 1px 4px;
   font-size: 0.75rem;
