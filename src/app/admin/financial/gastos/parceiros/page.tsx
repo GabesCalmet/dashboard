@@ -75,7 +75,7 @@ export default async function AdminParceirosPage({
                 <TableCell>{formatCurrency(p.previsto)}</TableCell>
                 <TableCell>
                   <PayoutPaidButton
-                    target={{ type: "partner", kind: p.kind }}
+                    kind={p.kind}
                     year={year}
                     month={month}
                     paid={Boolean(p.payout)}

@@ -6,28 +6,21 @@ import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/labels";
-import {
-  markTeacherPayoutPaid,
-  unmarkTeacherPayoutPaid,
-  markPartnerPayoutPaid,
-  unmarkPartnerPayoutPaid,
-} from "@/server/actions/payouts";
+import { markPartnerPayoutPaid, unmarkPartnerPayoutPaid } from "@/server/actions/payouts";
 
-type Target = { type: "teacher"; teacherId: string } | { type: "partner"; kind: "PARTNER_JOE" | "PARTNER_GABRIEL" };
-
-// Toggles whether a teacher's or a partner's payout for one month is
+// Toggles whether a partner's (Joe/Gabriel) payout for one month is
 // actually paid. Marking it locks in the amount server-side — only a
 // paid month counts toward Gasto efetuado/Em caixa and the Gastos page's
-// Realizado boxes; the live Previsto forecast is unaffected either way.
+// Parceiros Realizado box; the live Previsto forecast is unaffected.
 export function PayoutPaidButton({
-  target,
+  kind,
   year,
   month,
   paid,
   amount,
   paidAt,
 }: {
-  target: Target;
+  kind: "PARTNER_JOE" | "PARTNER_GABRIEL";
   year: number;
   month: number;
   paid: boolean;
@@ -35,18 +28,6 @@ export function PayoutPaidButton({
   paidAt: Date | null;
 }) {
   const [isPending, startTransition] = useTransition();
-
-  function mark() {
-    return target.type === "teacher"
-      ? markTeacherPayoutPaid(target.teacherId, year, month)
-      : markPartnerPayoutPaid(target.kind, year, month);
-  }
-
-  function unmark() {
-    return target.type === "teacher"
-      ? unmarkTeacherPayoutPaid(target.teacherId, year, month)
-      : unmarkPartnerPayoutPaid(target.kind, year, month);
-  }
 
   if (paid) {
     return (
@@ -63,7 +44,7 @@ export function PayoutPaidButton({
           onClick={() =>
             startTransition(async () => {
               try {
-                await unmark();
+                await unmarkPartnerPayoutPaid(kind, year, month);
                 toast.success("Pagamento desmarcado.");
               } catch (err) {
                 toast.error(err instanceof Error ? err.message : "Erro ao desmarcar pagamento.");
@@ -86,7 +67,7 @@ export function PayoutPaidButton({
       onClick={() =>
         startTransition(async () => {
           try {
-            await mark();
+            await markPartnerPayoutPaid(kind, year, month);
             toast.success("Marcado como pago.");
           } catch (err) {
             toast.error(err instanceof Error ? err.message : "Erro ao marcar como pago.");

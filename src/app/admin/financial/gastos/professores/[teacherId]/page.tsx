@@ -14,8 +14,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getTeacherPayrollDetail } from "@/server/queries/teachers";
-import { getPayout } from "@/server/queries/payouts";
-import { PayoutPaidButton } from "@/components/financial/payout-paid-button";
+import { getTeacherPayoutEntries } from "@/server/queries/payouts";
+import { TeacherPayoutSection } from "@/components/financial/teacher-payout-section";
 import { parseMonthParam } from "@/lib/month-param";
 import { formatCurrency, lessonStatusLabel } from "@/lib/labels";
 
@@ -30,9 +30,9 @@ export default async function AdminTeacherPayrollDetailPage({
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
 
-  const [detail, payout] = await Promise.all([
+  const [detail, payoutEntries] = await Promise.all([
     getTeacherPayrollDetail(teacherId, year, month),
-    getPayout("TEACHER", teacherId, year, month),
+    getTeacherPayoutEntries(teacherId, year, month),
   ]);
   if (!detail) notFound();
 
@@ -50,25 +50,22 @@ export default async function AdminTeacherPayrollDetailPage({
         description={`Horas e pagamento por tipo de aula — valor/hora varia por aluno/grupo (padrão ${formatCurrency(detail.fallbackHourlyRate)} quando não configurado).`}
       />
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-4">
         <MonthNav
           basePath={`/admin/financial/gastos/professores/${teacherId}`}
           year={year}
           month={month}
         />
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">
-            Previsto: <span className="font-semibold text-foreground">{formatCurrency(detail.totals.previsto)}</span>
-          </span>
-          <PayoutPaidButton
-            target={{ type: "teacher", teacherId }}
-            year={year}
-            month={month}
-            paid={Boolean(payout)}
-            amount={payout ? Number(payout.amount) : null}
-            paidAt={payout?.paidAt ?? null}
-          />
-        </div>
+      </div>
+
+      <div className="mb-6">
+        <TeacherPayoutSection
+          teacherId={teacherId}
+          year={year}
+          month={month}
+          previsto={detail.totals.previsto}
+          entries={payoutEntries.map((p) => ({ id: p.id, amount: Number(p.amount), paidAt: p.paidAt }))}
+        />
       </div>
 
       <div className="overflow-hidden rounded-xl border">

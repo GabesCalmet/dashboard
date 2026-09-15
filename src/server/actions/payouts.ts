@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
-import { getTeacherPayrollDetail } from "@/server/queries/teachers";
 import { getPartnerSplitForMonth } from "@/server/queries/financial";
 
 function revalidatePayoutPaths(teacherId?: string) {
@@ -15,55 +14,48 @@ function revalidatePayoutPaths(teacherId?: string) {
   if (teacherId) revalidatePath(`/admin/financial/gastos/professores/${teacherId}`);
 }
 
-// Marks a teacher's payroll for one month as actually paid — locks in
-// that month's previsto figure as the paid amount (see
-// getTeacherPayrollDetail), so it stays stable even if the underlying
-// data changes afterward. This is what makes it count as a real "gasto"
-// (Gasto efetuado, Em caixa, the Gastos page's Professores Realizado
-// box) — classes given but not yet marked paid don't. Doesn't touch the
-// teacher's own payroll view or Férias, both still accrual-based.
-export async function markTeacherPayoutPaid(teacherId: string, year: number, month: number) {
+// Records one payment made to a teacher for a given month. The amount is
+// typed in by hand rather than locked to the previsto forecast, so a
+// teacher paid in installments can have several entries logged one at a
+// time — the "Realizado" figure shown everywhere (Gasto efetuado, Em
+// caixa, the Gastos page's Professores box, this teacher's own list row)
+// is just the sum of every entry for that teacher+month. Doesn't touch
+// the teacher's own payroll view or Férias, both still accrual-based.
+export async function addTeacherPayout(teacherId: string, year: number, month: number, amount: number) {
   const actor = await requireRole("ADMIN");
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("Informe um valor válido.");
 
-  const existing = await prisma.payout.findFirst({ where: { kind: "TEACHER", teacherId, year, month } });
-  if (existing) return;
-
-  const detail = await getTeacherPayrollDetail(teacherId, year, month);
-  if (!detail) throw new Error("Professor não encontrado.");
-
-  await prisma.payout.create({
-    data: { kind: "TEACHER", teacherId, year, month, amount: detail.totals.previsto },
+  const payout = await prisma.payout.create({
+    data: { kind: "TEACHER", teacherId, year, month, amount },
   });
 
   await recordAudit({
     entityType: "Payout",
-    entityId: teacherId,
+    entityId: payout.id,
     action: "CREATE",
     actor,
-    changes: { kind: "TEACHER", year, month, amount: detail.totals.previsto },
+    changes: { kind: "TEACHER", teacherId, year, month, amount },
   });
 
   revalidatePayoutPaths(teacherId);
 }
 
-// Undoes a mistaken "marcar como pago" — the month goes back to not
-// counting as a gasto until marked again.
-export async function unmarkTeacherPayoutPaid(teacherId: string, year: number, month: number) {
+// Removes one payment entry — e.g. a typo'd amount.
+export async function deleteTeacherPayout(payoutId: string) {
   const actor = await requireRole("ADMIN");
-  const existing = await prisma.payout.findFirst({ where: { kind: "TEACHER", teacherId, year, month } });
-  if (!existing) return;
+  const payout = await prisma.payout.findUniqueOrThrow({ where: { id: payoutId } });
 
-  await prisma.payout.delete({ where: { id: existing.id } });
+  await prisma.payout.delete({ where: { id: payoutId } });
 
   await recordAudit({
     entityType: "Payout",
-    entityId: teacherId,
+    entityId: payoutId,
     action: "DELETE",
     actor,
-    changes: { kind: "TEACHER", year, month },
+    changes: { kind: payout.kind, teacherId: payout.teacherId, year: payout.year, month: payout.month },
   });
 
-  revalidatePayoutPaths(teacherId);
+  revalidatePayoutPaths(payout.teacherId ?? undefined);
 }
 
 type PartnerKind = "PARTNER_JOE" | "PARTNER_GABRIEL";
