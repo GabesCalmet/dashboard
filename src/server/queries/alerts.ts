@@ -38,10 +38,20 @@ export async function getAttendanceAlerts(): Promise<AttendanceAlert[]> {
     include: {
       user: true,
       teacher: { include: { user: true } },
-      lessons: { orderBy: { scheduledAt: "asc" } },
+      // rescheduledTo lets a canceled lesson that already has a
+      // reagendamento booked skip the alert below — see isFlaggable.
+      lessons: { orderBy: { scheduledAt: "asc" }, include: { rescheduledTo: true } },
       alertDismissals: { orderBy: { dismissedAt: "desc" }, take: 1 },
     },
   });
+
+  // A CA/CP/NC only counts toward the alert while it's still an open
+  // cancellation — once a reagendamento (makeup) has been booked for it,
+  // the class is considered made up and stops flagging, whether or not
+  // that makeup has actually happened yet.
+  function isFlaggable(l: { status: LessonStatus; rescheduledTo: unknown }) {
+    return FLAG_STATUSES.includes(l.status) && !l.rescheduledTo;
+  }
 
   const alerts: AttendanceAlert[] = [];
 
@@ -54,14 +64,14 @@ export async function getAttendanceAlerts(): Promise<AttendanceAlert[]> {
     if (relevantLessons.length === 0) continue;
 
     const lastTwo = relevantLessons.slice(-2);
-    const isConsecutive = lastTwo.length === 2 && lastTwo.every((l) => FLAG_STATUSES.includes(l.status));
+    const isConsecutive = lastTwo.length === 2 && lastTwo.every(isFlaggable);
 
     const monthGroups = new Map<
       string,
       { label: string; lessons: typeof relevantLessons }
     >();
     for (const l of relevantLessons) {
-      if (!FLAG_STATUSES.includes(l.status)) continue;
+      if (!isFlaggable(l)) continue;
       const key = `${l.scheduledAt.getFullYear()}-${l.scheduledAt.getMonth()}`;
       const label = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(
         l.scheduledAt
