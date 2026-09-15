@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Clock3,
   GraduationCap,
+  Palmtree,
   Repeat,
   UserX,
   XCircle,
@@ -136,6 +137,7 @@ export function StudentDetailView({
   // CT — canceled too late to fill the slot, so like NC it still counts as
   // a class given (teacher is paid for it — see REALIZED_STATUSES).
   const canceledLateCount = student.lessons.filter((l) => l.status === "CANCELED_LATE").length;
+  const canceledVacationCount = student.lessons.filter((l) => l.status === "CANCELED_VACATION").length;
 
   return (
     <div>
@@ -270,11 +272,12 @@ export function StudentDetailView({
         <StatCard label="Aulas realizadas" value={String(realizedLessonsAllTime)} icon={Award} />
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-7">
         <StatCard label="OK — Aulas dadas" value={String(completedLessons)} icon={CheckCircle2} accent />
         <StatCard label="CA — Cancelamento aluno" value={String(canceledByStudent)} icon={XCircle} />
         <StatCard label="CP — Cancelamento professor" value={String(canceledByTeacher)} icon={XCircle} />
         <StatCard label="CT — Cancelamento tarde" value={String(canceledLateCount)} icon={Clock3} />
+        <StatCard label="CF — Cancelamento férias" value={String(canceledVacationCount)} icon={Palmtree} />
         <StatCard label="R — Reposições" value={String(makeupCount)} icon={Repeat} />
         <StatCard label="NC — Não compareceu" value={String(noShowCount)} icon={UserX} />
       </div>
