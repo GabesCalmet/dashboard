@@ -2,6 +2,7 @@ import Link from "next/link";
 import { endOfMonth, startOfMonth } from "date-fns";
 import {
   ArrowLeft,
+  Award,
   BookOpen,
   CheckCircle2,
   Clock3,
@@ -93,22 +94,36 @@ export function StudentDetailView({
   const refMonthDate = monthNav ? new Date(monthNav.year, monthNav.month, 1) : new Date();
   const monthStart = startOfMonth(refMonthDate);
   const monthEnd = endOfMonth(refMonthDate);
-  // Every stat below (Aulas realizadas, OK/CA/CP/R/NC) is scoped to just
-  // this month, same as contractedLessonsThisMonth — matches the MonthNav
-  // sitting directly above this row, instead of silently summing the
-  // student's entire lesson history regardless of which month is browsed.
   const lessonsThisMonth = student.lessons.filter(
     (l) => l.scheduledAt >= monthStart && l.scheduledAt <= monthEnd
   );
+  // A lesson counts as "realizada" once it's COMPLETED, NO_SHOW (NC) or
+  // CANCELED_LATE (CT) — same rule as REALIZED_STATUSES in teachers.ts
+  // (a reposição only adds to this once its own row flips to COMPLETED,
+  // which this already covers without special-casing isMakeup).
+  const REALIZED_LESSON_STATUSES: readonly string[] = ["COMPLETED", "NO_SHOW", "CANCELED_LATE"];
+
+  // Top row: "Aulas contratadas/mês" and "Aulas realizadas (do mês)" track
+  // whichever month the MonthNav above is browsing; "Aulas realizadas"
+  // (no month qualifier) is the student's all-time total instead.
   const contractedLessonsThisMonth = lessonsThisMonth.filter((l) => !l.isMakeup).length;
+  const realizedLessonsThisMonth = lessonsThisMonth.filter((l) =>
+    REALIZED_LESSON_STATUSES.includes(l.status)
+  ).length;
+  const realizedLessonsAllTime = student.lessons.filter((l) =>
+    REALIZED_LESSON_STATUSES.includes(l.status)
+  ).length;
+
+  // OK/CA/CP/CT/R/NC below are all-time totals since the student's
+  // enrollment, not scoped to the browsed month.
   // "OK — Aulas dadas" is only the regular, non-makeup lessons the student
   // actually attended — reposições (R) and no-shows (NC) are tracked in
   // their own boxes and shouldn't inflate this one.
-  const completedLessons = lessonsThisMonth.filter(
+  const completedLessons = student.lessons.filter(
     (l) => l.status === "COMPLETED" && !l.isMakeup
   ).length;
-  const canceledByStudent = lessonsThisMonth.filter((l) => l.status === "CANCELED_BY_STUDENT").length;
-  const canceledByTeacher = lessonsThisMonth.filter((l) => l.status === "CANCELED_BY_TEACHER").length;
+  const canceledByStudent = student.lessons.filter((l) => l.status === "CANCELED_BY_STUDENT").length;
+  const canceledByTeacher = student.lessons.filter((l) => l.status === "CANCELED_BY_TEACHER").length;
   // Only counts a reposição once it's actually marked "dada" (status flips
   // to COMPLETED) — a booked-but-not-yet-given reposição stays MAKEUP and
   // isn't counted here yet, since it hasn't happened. isMakeup (not
@@ -116,15 +131,11 @@ export function StudentDetailView({
   // one flagged directly via the status dropdown — not booked through the
   // Reagendamento picker — has no rescheduledFromId to key off once its
   // status has already moved on to COMPLETED.
-  const makeupCount = lessonsThisMonth.filter((l) => l.isMakeup && l.status === "COMPLETED").length;
-  const noShowCount = lessonsThisMonth.filter((l) => l.status === "NO_SHOW").length;
+  const makeupCount = student.lessons.filter((l) => l.isMakeup && l.status === "COMPLETED").length;
+  const noShowCount = student.lessons.filter((l) => l.status === "NO_SHOW").length;
   // CT — canceled too late to fill the slot, so like NC it still counts as
   // a class given (teacher is paid for it — see REALIZED_STATUSES).
-  const canceledLateCount = lessonsThisMonth.filter((l) => l.status === "CANCELED_LATE").length;
-  // "Aulas realizadas" is the umbrella total — every lesson slot that
-  // actually took place this month, whichever box it landed in below (OK,
-  // R, NC, or CT).
-  const realizedLessons = completedLessons + makeupCount + noShowCount + canceledLateCount;
+  const canceledLateCount = student.lessons.filter((l) => l.status === "CANCELED_LATE").length;
 
   return (
     <div>
@@ -244,13 +255,19 @@ export function StudentDetailView({
         </div>
       )}
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           label="Aulas contratadas/mês"
           value={String(contractedLessonsThisMonth)}
           icon={BookOpen}
         />
-        <StatCard label="Aulas realizadas" value={String(realizedLessons)} icon={GraduationCap} accent />
+        <StatCard
+          label="Aulas realizadas (do mês)"
+          value={String(realizedLessonsThisMonth)}
+          icon={GraduationCap}
+          accent
+        />
+        <StatCard label="Aulas realizadas" value={String(realizedLessonsAllTime)} icon={Award} />
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-6">
