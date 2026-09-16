@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { addTeacherPayout } from "@/server/actions/payouts";
-import { TeacherPayoutEntry, type PayoutEntry } from "@/components/financial/teacher-payout-entry";
+import { PayoutEntry, type PayoutEntryData } from "@/components/financial/payout-entry";
 import { formatCurrency, bankAccountLabel } from "@/lib/labels";
 import type { BankAccount } from "@prisma/client";
 
@@ -18,9 +18,9 @@ function todayInputValue() {
 
 // One teacher's payments for one month — each entry is editable in place
 // (click it to change the amount/date/account, or remove it — see
-// TeacherPayoutEntry), plus a form to log another. The sum of these
-// entries is what counts as this teacher's "Realizado" everywhere else
-// (Gasto efetuado, Em caixa, the Gastos page's Professores box, and this
+// PayoutEntry), plus a form to log another. The sum of these entries is
+// what counts as this teacher's "Realizado" everywhere else (Gasto
+// efetuado, Em caixa, the Gastos page's Professores box, and this
 // teacher's row on the Pagamento de professores list). lifetimeTotal is
 // this teacher's running total across every month, not just this one.
 export function TeacherPayoutSection({
@@ -35,7 +35,7 @@ export function TeacherPayoutSection({
   year: number;
   month: number;
   previsto: number;
-  entries: PayoutEntry[];
+  entries: PayoutEntryData[];
   lifetimeTotal: number;
 }) {
   const total = entries.reduce((sum, e) => sum + e.amount, 0);
@@ -79,7 +79,7 @@ export function TeacherPayoutSection({
       {entries.length > 0 && (
         <div className="mb-3 space-y-1.5">
           {entries.map((e) => (
-            <TeacherPayoutEntry key={e.id} entry={e} variant="row" />
+            <PayoutEntry key={e.id} entry={e} variant="row" />
           ))}
         </div>
       )}

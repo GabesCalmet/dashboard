@@ -8,26 +8,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { updateTeacherPayout, deleteTeacherPayout } from "@/server/actions/payouts";
+import { updatePayout, deletePayout } from "@/server/actions/payouts";
 import { formatCurrency, formatDate, bankAccountLabel } from "@/lib/labels";
 import type { BankAccount } from "@prisma/client";
 
-export type PayoutEntry = { id: string; amount: number; paidAt: Date; bankAccount: BankAccount };
+export type PayoutEntryData = { id: string; amount: number; paidAt: Date; bankAccount: BankAccount };
 
 function toInputDate(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-// One recorded teacher payment, editable in place — click it to open a
-// small form (amount, date, account) with Salvar/remove, instead of only
-// being able to delete and re-add. Shared by the Pagamento de
-// professores list (compact "chip" variant) and the per-teacher
-// breakdown page (full-width "row" variant).
-export function TeacherPayoutEntry({
+// One recorded payment — to a teacher or a partner — editable in place:
+// click it to open a small form (amount, date, account) with
+// Salvar/remove, instead of only being able to delete and re-add. Shared
+// by the Pagamento de professores list, a teacher's own breakdown page,
+// and the Parceiros page ("chip" variant is compact for a table cell,
+// "row" is full-width).
+export function PayoutEntry({
   entry,
   variant = "chip",
 }: {
-  entry: PayoutEntry;
+  entry: PayoutEntryData;
   variant?: "chip" | "row";
 }) {
   const [open, setOpen] = useState(false);
@@ -47,7 +48,7 @@ export function TeacherPayoutEntry({
     const paidAt = new Date(date);
     startTransition(async () => {
       try {
-        await updateTeacherPayout(entry.id, value, paidAt, bankAccount);
+        await updatePayout(entry.id, value, paidAt, bankAccount);
         toast.success("Pagamento atualizado.");
         setOpen(false);
       } catch (err) {
@@ -59,7 +60,7 @@ export function TeacherPayoutEntry({
   function remove() {
     startTransition(async () => {
       try {
-        await deleteTeacherPayout(entry.id);
+        await deletePayout(entry.id);
         toast.success("Pagamento removido.");
         setOpen(false);
       } catch (err) {

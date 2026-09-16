@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { MonthNav } from "@/components/financial/month-nav";
-import { PayoutPaidButton } from "@/components/financial/payout-paid-button";
+import { PartnerPayoutCell } from "@/components/financial/partner-payout-cell";
 import {
   Table,
   TableBody,
@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getPartnerSplitForMonth } from "@/server/queries/financial";
-import { getPayout } from "@/server/queries/payouts";
+import { getPartnerPayoutEntries } from "@/server/queries/payouts";
 import { parseMonthParam } from "@/lib/month-param";
 import { formatCurrency } from "@/lib/labels";
 
@@ -25,19 +25,19 @@ export default async function AdminParceirosPage({
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
 
-  const [partnerSplit, joePayout, gabrielPayout] = await Promise.all([
+  const [partnerSplit, joeEntries, gabrielEntries] = await Promise.all([
     getPartnerSplitForMonth(year, month),
-    getPayout("PARTNER_JOE", null, year, month),
-    getPayout("PARTNER_GABRIEL", null, year, month),
+    getPartnerPayoutEntries("PARTNER_JOE", year, month),
+    getPartnerPayoutEntries("PARTNER_GABRIEL", year, month),
   ]);
 
   const partners = [
-    { name: "Joe", kind: "PARTNER_JOE" as const, previsto: partnerSplit.previsto.joe, payout: joePayout },
+    { name: "Joe", kind: "PARTNER_JOE" as const, previsto: partnerSplit.previsto.joe, entries: joeEntries },
     {
       name: "Gabriel",
       kind: "PARTNER_GABRIEL" as const,
       previsto: partnerSplit.previsto.gabriel,
-      payout: gabrielPayout,
+      entries: gabrielEntries,
     },
   ];
 
@@ -52,7 +52,7 @@ export default async function AdminParceirosPage({
 
       <PageHeader
         title="Parceiros"
-        description="O que sobra da receita do mês depois de pagar os professores é dividido em 3 — 1/3 para cada sócio, 1/3 fica para a escola. Previsto é sempre uma previsão ao vivo; só conta como gasto quando marcado como pago."
+        description="O que sobra da receita do mês depois de pagar os professores é dividido em 3 — 1/3 para cada sócio, 1/3 fica para a escola. Previsto é sempre uma previsão ao vivo; só conta como gasto o que for registrado como pago (use o +, inclusive em partes)."
       />
 
       <div className="mb-4">
@@ -74,13 +74,16 @@ export default async function AdminParceirosPage({
                 <TableCell>{p.name}</TableCell>
                 <TableCell>{formatCurrency(p.previsto)}</TableCell>
                 <TableCell>
-                  <PayoutPaidButton
+                  <PartnerPayoutCell
                     kind={p.kind}
                     year={year}
                     month={month}
-                    paid={Boolean(p.payout)}
-                    amount={p.payout ? Number(p.payout.amount) : null}
-                    paidAt={p.payout?.paidAt ?? null}
+                    entries={p.entries.map((e) => ({
+                      id: e.id,
+                      amount: Number(e.amount),
+                      paidAt: e.paidAt,
+                      bankAccount: e.bankAccount,
+                    }))}
                   />
                 </TableCell>
               </TableRow>

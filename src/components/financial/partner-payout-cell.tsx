@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { addTeacherPayout } from "@/server/actions/payouts";
+import { addPartnerPayout } from "@/server/actions/payouts";
 import { PayoutEntry, type PayoutEntryData } from "@/components/financial/payout-entry";
 import { PayoutAddFields } from "@/components/financial/payout-add-fields";
 import { formatCurrency } from "@/lib/labels";
@@ -15,30 +15,25 @@ function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// The "Realizado" cell on the Pagamento de professores list — every
-// payment made to this teacher this month shows as its own editable chip
-// (click it to change the amount/date/account, or remove it — see
-// PayoutEntry), with a "+" to log another and a fixed Total that sums
-// them all. Amount/date/account for a new payment default to whatever's
-// still owed against Previsto, today, and Joe respectively — all
-// editable before or after saving.
-export function TeacherPayoutCell({
-  teacherId,
+// The "Pagamento" cell on the Parceiros page — every payment made to
+// this partner this month shows as its own editable chip (click it to
+// change the amount/date/account, or remove it — see PayoutEntry), with
+// a "+" to log another and a fixed Total that sums them all. Same
+// pattern as TeacherPayoutCell.
+export function PartnerPayoutCell({
+  kind,
   year,
   month,
-  previsto,
   entries,
 }: {
-  teacherId: string;
+  kind: "PARTNER_JOE" | "PARTNER_GABRIEL";
   year: number;
   month: number;
-  previsto: number;
   entries: PayoutEntryData[];
 }) {
   const total = entries.reduce((sum, e) => sum + e.amount, 0);
-  const remaining = Math.max(0, previsto - total);
   const [open, setOpen] = useState(false);
-  const [amount, setAmount] = useState(() => remaining.toFixed(2));
+  const [amount, setAmount] = useState("0.00");
   const [date, setDate] = useState(todayInputValue);
   const [bankAccount, setBankAccount] = useState<BankAccount>("JOE");
   const [isPending, startTransition] = useTransition();
@@ -48,7 +43,7 @@ export function TeacherPayoutCell({
     const paidAt = new Date(date);
     startTransition(async () => {
       try {
-        await addTeacherPayout(teacherId, year, month, value, paidAt, bankAccount);
+        await addPartnerPayout(kind, year, month, value, paidAt, bankAccount);
         toast.success("Pagamento registrado.");
         setOpen(false);
       } catch (err) {
@@ -73,7 +68,7 @@ export function TeacherPayoutCell({
           onOpenChange={(next) => {
             setOpen(next);
             if (next) {
-              setAmount(remaining.toFixed(2));
+              setAmount("0.00");
               setDate(todayInputValue());
               setBankAccount("JOE");
             }
@@ -87,7 +82,7 @@ export function TeacherPayoutCell({
           <PopoverContent className="w-64">
             <div className="space-y-3">
               <PayoutAddFields
-                idPrefix={`teacher-payout-${teacherId}`}
+                idPrefix={`partner-payout-${kind}`}
                 amount={amount}
                 onAmountChange={setAmount}
                 date={date}

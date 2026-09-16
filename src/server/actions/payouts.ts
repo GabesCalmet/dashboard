@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
-import { getPartnerSplitForMonth } from "@/server/queries/financial";
 import type { BankAccount } from "@prisma/client";
 
 function revalidatePayoutPaths(teacherId?: string) {
@@ -53,16 +52,45 @@ export async function addTeacherPayout(
   revalidatePayoutPaths(teacherId);
 }
 
-// Edits one already-recorded teacher payment in place — the amount,
-// date, and/or account can all be corrected without deleting and
-// re-adding the entry (which would lose its place in the list and
-// generate a duplicate audit trail).
-export async function updateTeacherPayout(
-  payoutId: string,
+type PartnerKind = "PARTNER_JOE" | "PARTNER_GABRIEL";
+
+// Same idea as addTeacherPayout, for one partner's (Joe/Gabriel) share of
+// a given month — amount, date, and account are all typed in by hand, so
+// a partner paid in installments (or from more than one account) can
+// have several entries too. Only the sum of these counts toward Gasto
+// efetuado/Em caixa and the Gastos page's Parceiros Realizado box.
+export async function addPartnerPayout(
+  kind: PartnerKind,
+  year: number,
+  month: number,
   amount: number,
   paidAt: Date,
   bankAccount: BankAccount
 ) {
+  const actor = await requireRole("ADMIN");
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("Informe um valor válido.");
+  if (Number.isNaN(paidAt.getTime())) throw new Error("Informe uma data válida.");
+
+  const payout = await prisma.payout.create({
+    data: { kind, year, month, amount, paidAt, bankAccount },
+  });
+
+  await recordAudit({
+    entityType: "Payout",
+    entityId: payout.id,
+    action: "CREATE",
+    actor,
+    changes: { kind, year, month, amount, paidAt: paidAt.toISOString(), bankAccount },
+  });
+
+  revalidatePayoutPaths();
+}
+
+// Edits one already-recorded payment (teacher or partner) in place — the
+// amount, date, and/or account can all be corrected without deleting and
+// re-adding the entry (which would lose its place in the list and
+// generate a duplicate audit trail).
+export async function updatePayout(payoutId: string, amount: number, paidAt: Date, bankAccount: BankAccount) {
   const actor = await requireRole("ADMIN");
   if (!Number.isFinite(amount) || amount <= 0) throw new Error("Informe um valor válido.");
   if (Number.isNaN(paidAt.getTime())) throw new Error("Informe uma data válida.");
@@ -89,7 +117,7 @@ export async function updateTeacherPayout(
 }
 
 // Removes one payment entry — e.g. a typo'd amount.
-export async function deleteTeacherPayout(payoutId: string) {
+export async function deletePayout(payoutId: string) {
   const actor = await requireRole("ADMIN");
   const payout = await prisma.payout.findUniqueOrThrow({ where: { id: payoutId } });
 
@@ -104,49 +132,4 @@ export async function deleteTeacherPayout(payoutId: string) {
   });
 
   revalidatePayoutPaths(payout.teacherId ?? undefined);
-}
-
-type PartnerKind = "PARTNER_JOE" | "PARTNER_GABRIEL";
-
-// Same idea as markTeacherPayoutPaid, for one partner's (Joe/Gabriel)
-// share of a given month — locks in that month's previsto split.
-export async function markPartnerPayoutPaid(kind: PartnerKind, year: number, month: number) {
-  const actor = await requireRole("ADMIN");
-
-  const existing = await prisma.payout.findFirst({ where: { kind, teacherId: null, year, month } });
-  if (existing) return;
-
-  const split = await getPartnerSplitForMonth(year, month);
-  const amount = kind === "PARTNER_JOE" ? split.previsto.joe : split.previsto.gabriel;
-  const bankAccount: BankAccount = kind === "PARTNER_JOE" ? "JOE" : "GABES";
-
-  await prisma.payout.create({ data: { kind, year, month, amount, bankAccount } });
-
-  await recordAudit({
-    entityType: "Payout",
-    entityId: kind,
-    action: "CREATE",
-    actor,
-    changes: { kind, year, month, amount },
-  });
-
-  revalidatePayoutPaths();
-}
-
-export async function unmarkPartnerPayoutPaid(kind: PartnerKind, year: number, month: number) {
-  const actor = await requireRole("ADMIN");
-  const existing = await prisma.payout.findFirst({ where: { kind, teacherId: null, year, month } });
-  if (!existing) return;
-
-  await prisma.payout.delete({ where: { id: existing.id } });
-
-  await recordAudit({
-    entityType: "Payout",
-    entityId: kind,
-    action: "DELETE",
-    actor,
-    changes: { kind, year, month },
-  });
-
-  revalidatePayoutPaths();
 }
