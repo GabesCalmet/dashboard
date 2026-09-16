@@ -2,29 +2,27 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { addTeacherPayout, deleteTeacherPayout } from "@/server/actions/payouts";
-import { formatCurrency, formatDate, bankAccountLabel } from "@/lib/labels";
+import { addTeacherPayout } from "@/server/actions/payouts";
+import { TeacherPayoutEntry, type PayoutEntry } from "@/components/financial/teacher-payout-entry";
+import { formatCurrency, bankAccountLabel } from "@/lib/labels";
 import type { BankAccount } from "@prisma/client";
-
-type Entry = { id: string; amount: number; paidAt: Date; bankAccount: BankAccount };
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// One teacher's payments for one month — each entry typed in by hand (so
-// installments are just several entries, each with its own real payment
-// date and account), with its own delete, plus a form to log another.
-// The sum of these entries is what counts as this teacher's "Realizado"
-// everywhere else (Gasto efetuado, Em caixa, the Gastos page's
-// Professores box, and this teacher's row on the Pagamento de
-// professores list). lifetimeTotal is this teacher's running total
-// across every month, not just this one.
+// One teacher's payments for one month — each entry is editable in place
+// (click it to change the amount/date/account, or remove it — see
+// TeacherPayoutEntry), plus a form to log another. The sum of these
+// entries is what counts as this teacher's "Realizado" everywhere else
+// (Gasto efetuado, Em caixa, the Gastos page's Professores box, and this
+// teacher's row on the Pagamento de professores list). lifetimeTotal is
+// this teacher's running total across every month, not just this one.
 export function TeacherPayoutSection({
   teacherId,
   year,
@@ -37,7 +35,7 @@ export function TeacherPayoutSection({
   year: number;
   month: number;
   previsto: number;
-  entries: Entry[];
+  entries: PayoutEntry[];
   lifetimeTotal: number;
 }) {
   const total = entries.reduce((sum, e) => sum + e.amount, 0);
@@ -46,7 +44,6 @@ export function TeacherPayoutSection({
   const [date, setDate] = useState(todayInputValue);
   const [bankAccount, setBankAccount] = useState<BankAccount>("JOE");
   const [isPending, startTransition] = useTransition();
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   function submit() {
     const value = Number(amount);
@@ -59,20 +56,6 @@ export function TeacherPayoutSection({
         setDate(todayInputValue());
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Erro ao registrar pagamento.");
-      }
-    });
-  }
-
-  function remove(id: string) {
-    setPendingDeleteId(id);
-    startTransition(async () => {
-      try {
-        await deleteTeacherPayout(id);
-        toast.success("Pagamento removido.");
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Erro ao remover pagamento.");
-      } finally {
-        setPendingDeleteId(null);
       }
     });
   }
@@ -96,28 +79,7 @@ export function TeacherPayoutSection({
       {entries.length > 0 && (
         <div className="mb-3 space-y-1.5">
           {entries.map((e) => (
-            <div key={e.id} className="flex items-center justify-between rounded-md border px-3 py-1.5 text-sm">
-              <span>{formatCurrency(e.amount)}</span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">
-                  {formatDate(e.paidAt)} · {bankAccountLabel[e.bankAccount]}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-6 text-muted-foreground hover:text-destructive"
-                  disabled={isPending && pendingDeleteId === e.id}
-                  onClick={() => remove(e.id)}
-                >
-                  {isPending && pendingDeleteId === e.id ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="size-3.5" />
-                  )}
-                </Button>
-              </div>
-            </div>
+            <TeacherPayoutEntry key={e.id} entry={e} variant="row" />
           ))}
         </div>
       )}
@@ -161,7 +123,7 @@ export function TeacherPayoutSection({
           </Select>
         </div>
         <Button type="button" size="sm" disabled={isPending} onClick={submit}>
-          {isPending && pendingDeleteId === null && <Loader2 className="animate-spin" />}
+          {isPending && <Loader2 className="animate-spin" />}
           <Plus className="size-3.5" /> Registrar pagamento
         </Button>
       </div>

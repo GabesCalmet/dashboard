@@ -53,6 +53,41 @@ export async function addTeacherPayout(
   revalidatePayoutPaths(teacherId);
 }
 
+// Edits one already-recorded teacher payment in place — the amount,
+// date, and/or account can all be corrected without deleting and
+// re-adding the entry (which would lose its place in the list and
+// generate a duplicate audit trail).
+export async function updateTeacherPayout(
+  payoutId: string,
+  amount: number,
+  paidAt: Date,
+  bankAccount: BankAccount
+) {
+  const actor = await requireRole("ADMIN");
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("Informe um valor válido.");
+  if (Number.isNaN(paidAt.getTime())) throw new Error("Informe uma data válida.");
+
+  const payout = await prisma.payout.findUniqueOrThrow({ where: { id: payoutId } });
+
+  await prisma.payout.update({
+    where: { id: payoutId },
+    data: { amount, paidAt, bankAccount },
+  });
+
+  await recordAudit({
+    entityType: "Payout",
+    entityId: payoutId,
+    action: "UPDATE",
+    actor,
+    changes: {
+      before: { amount: Number(payout.amount), paidAt: payout.paidAt, bankAccount: payout.bankAccount },
+      after: { amount, paidAt: paidAt.toISOString(), bankAccount },
+    },
+  });
+
+  revalidatePayoutPaths(payout.teacherId ?? undefined);
+}
+
 // Removes one payment entry — e.g. a typo'd amount.
 export async function deleteTeacherPayout(payoutId: string) {
   const actor = await requireRole("ADMIN");

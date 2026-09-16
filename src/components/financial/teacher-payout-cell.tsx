@@ -2,29 +2,28 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { addTeacherPayout, deleteTeacherPayout } from "@/server/actions/payouts";
-import { formatCurrency, formatDate, bankAccountLabel } from "@/lib/labels";
+import { addTeacherPayout } from "@/server/actions/payouts";
+import { TeacherPayoutEntry, type PayoutEntry } from "@/components/financial/teacher-payout-entry";
+import { formatCurrency, bankAccountLabel } from "@/lib/labels";
 import type { BankAccount } from "@prisma/client";
-
-type Entry = { id: string; amount: number; paidAt: Date; bankAccount: BankAccount };
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
 
 // The "Realizado" cell on the Pagamento de professores list — every
-// payment made to this teacher this month shows as its own chip (amount,
-// date, account, removable), with a "+" to log another and a fixed Total
-// that sums them all. Amount/date/account are all typed by hand — the
-// amount defaults to whatever's still owed against Previsto, the date to
-// today, and the account to Joe — but any of them can be changed (e.g. a
-// teacher paid in installments from different accounts).
+// payment made to this teacher this month shows as its own editable chip
+// (click it to change the amount/date/account, or remove it — see
+// TeacherPayoutEntry), with a "+" to log another and a fixed Total that
+// sums them all. Amount/date/account for a new payment default to
+// whatever's still owed against Previsto, today, and Joe respectively —
+// all editable before or after saving.
 export function TeacherPayoutCell({
   teacherId,
   year,
@@ -36,7 +35,7 @@ export function TeacherPayoutCell({
   year: number;
   month: number;
   previsto: number;
-  entries: Entry[];
+  entries: PayoutEntry[];
 }) {
   const total = entries.reduce((sum, e) => sum + e.amount, 0);
   const remaining = Math.max(0, previsto - total);
@@ -45,7 +44,6 @@ export function TeacherPayoutCell({
   const [date, setDate] = useState(todayInputValue);
   const [bankAccount, setBankAccount] = useState<BankAccount>("JOE");
   const [isPending, startTransition] = useTransition();
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   function submit() {
     const value = Number(amount);
@@ -61,20 +59,6 @@ export function TeacherPayoutCell({
     });
   }
 
-  function remove(id: string) {
-    setPendingDeleteId(id);
-    startTransition(async () => {
-      try {
-        await deleteTeacherPayout(id);
-        toast.success("Pagamento removido.");
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Erro ao remover pagamento.");
-      } finally {
-        setPendingDeleteId(null);
-      }
-    });
-  }
-
   return (
     <div className="min-w-56 space-y-1.5 py-1">
       <p className="text-sm">
@@ -83,25 +67,7 @@ export function TeacherPayoutCell({
 
       <div className="flex flex-wrap items-center gap-1.5">
         {entries.map((e) => (
-          <span
-            key={e.id}
-            className="inline-flex items-center gap-1.5 rounded-md border bg-muted/40 px-2 py-1 text-xs"
-          >
-            {formatCurrency(e.amount)} · {formatDate(e.paidAt)} · {bankAccountLabel[e.bankAccount]}
-            <button
-              type="button"
-              className="text-muted-foreground hover:text-destructive"
-              disabled={isPending && pendingDeleteId === e.id}
-              onClick={() => remove(e.id)}
-              aria-label="Remover pagamento"
-            >
-              {isPending && pendingDeleteId === e.id ? (
-                <Loader2 className="size-3 animate-spin" />
-              ) : (
-                <X className="size-3" />
-              )}
-            </button>
-          </span>
+          <TeacherPayoutEntry key={e.id} entry={e} variant="chip" />
         ))}
 
         <Popover
