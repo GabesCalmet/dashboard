@@ -509,6 +509,10 @@ model Payout {
   year      Int
   month     Int // 0-indexed, same convention as the rest of the app
   amount    Decimal         @db.Decimal(10, 2)
+  // Which account this payout actually came out of — same accounts as
+  // Expense.bankAccount, so getBankBalances can deduct it from the right
+  // one regardless of whether it's a teacher or a partner payout.
+  bankAccount BankAccount   @default(JOE)
   paidAt    DateTime        @default(now())
 
   @@index([kind, teacherId, year, month])

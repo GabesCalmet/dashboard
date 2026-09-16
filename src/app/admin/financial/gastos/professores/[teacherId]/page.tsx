@@ -65,7 +65,12 @@ export default async function AdminTeacherPayrollDetailPage({
           year={year}
           month={month}
           previsto={detail.totals.previsto}
-          entries={payoutEntries.map((p) => ({ id: p.id, amount: Number(p.amount), paidAt: p.paidAt }))}
+          entries={payoutEntries.map((p) => ({
+            id: p.id,
+            amount: Number(p.amount),
+            paidAt: p.paidAt,
+            bankAccount: p.bankAccount,
+          }))}
           lifetimeTotal={lifetimeTotal}
         />
       </div>

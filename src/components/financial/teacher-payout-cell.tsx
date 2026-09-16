@@ -7,22 +7,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { addTeacherPayout, deleteTeacherPayout } from "@/server/actions/payouts";
-import { formatCurrency, formatDate } from "@/lib/labels";
+import { formatCurrency, formatDate, bankAccountLabel } from "@/lib/labels";
+import type { BankAccount } from "@prisma/client";
 
-type Entry = { id: string; amount: number; paidAt: Date };
+type Entry = { id: string; amount: number; paidAt: Date; bankAccount: BankAccount };
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
 
 // The "Realizado" cell on the Pagamento de professores list — every
-// payment made to this teacher this month shows as its own chip (amount
-// + date, removable), with a "+" to log another and a fixed Total that
-// sums them all. Amount and date are both typed by hand — the amount
-// defaults to whatever's still owed against Previsto and the date to
-// today, but either can be edited (e.g. a teacher paid in installments,
-// or a payment logged a few days after it actually happened).
+// payment made to this teacher this month shows as its own chip (amount,
+// date, account, removable), with a "+" to log another and a fixed Total
+// that sums them all. Amount/date/account are all typed by hand — the
+// amount defaults to whatever's still owed against Previsto, the date to
+// today, and the account to Joe — but any of them can be changed (e.g. a
+// teacher paid in installments from different accounts).
 export function TeacherPayoutCell({
   teacherId,
   year,
@@ -41,6 +43,7 @@ export function TeacherPayoutCell({
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState(() => remaining.toFixed(2));
   const [date, setDate] = useState(todayInputValue);
+  const [bankAccount, setBankAccount] = useState<BankAccount>("JOE");
   const [isPending, startTransition] = useTransition();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
@@ -49,7 +52,7 @@ export function TeacherPayoutCell({
     const paidAt = new Date(date);
     startTransition(async () => {
       try {
-        await addTeacherPayout(teacherId, year, month, value, paidAt);
+        await addTeacherPayout(teacherId, year, month, value, paidAt, bankAccount);
         toast.success("Pagamento registrado.");
         setOpen(false);
       } catch (err) {
@@ -84,7 +87,7 @@ export function TeacherPayoutCell({
             key={e.id}
             className="inline-flex items-center gap-1.5 rounded-md border bg-muted/40 px-2 py-1 text-xs"
           >
-            {formatCurrency(e.amount)} · {formatDate(e.paidAt)}
+            {formatCurrency(e.amount)} · {formatDate(e.paidAt)} · {bankAccountLabel[e.bankAccount]}
             <button
               type="button"
               className="text-muted-foreground hover:text-destructive"
@@ -108,6 +111,7 @@ export function TeacherPayoutCell({
             if (next) {
               setAmount(remaining.toFixed(2));
               setDate(todayInputValue());
+              setBankAccount("JOE");
             }
           }}
         >
@@ -138,6 +142,21 @@ export function TeacherPayoutCell({
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Conta</Label>
+                <Select value={bankAccount} onValueChange={(v) => setBankAccount(v as BankAccount)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(bankAccountLabel).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <Button type="button" size="sm" className="w-full" disabled={isPending} onClick={submit}>
                 {isPending && <Loader2 className="animate-spin" />}

@@ -183,20 +183,17 @@ function expenseTotalToDate(e: Expense, now: Date) {
 }
 
 // Running balance per bank account: everything ever received into it
-// (paid cobranças) minus everything ever spent from it (gastos, accrued
-// to date, plus each partner's own payouts) — "how much is actually in
-// the account right now". Joe's payouts come out of the JOE account and
-// Gabriel's out of GABES (that account's real name), same as every
-// other gasto being tied to the account it's paid from.
+// (paid cobranças) minus everything ever spent from it — gastos accrued
+// to date, plus every teacher/partner payout, each deducted from
+// whichever account it names (Payout.bankAccount) — "how much is
+// actually in the account right now".
 export async function getBankBalances() {
   const now = new Date();
 
-  const [paidPayments, expenses, partnerPayouts] = await Promise.all([
+  const [paidPayments, expenses, payouts] = await Promise.all([
     prisma.payment.findMany({ where: { status: "PAID" }, include: { student: true } }),
     prisma.expense.findMany(),
-    prisma.payout.findMany({
-      where: { kind: { in: ["PARTNER_JOE", "PARTNER_GABRIEL"] }, paidAt: { lte: now } },
-    }),
+    prisma.payout.findMany({ where: { paidAt: { lte: now } } }),
   ]);
 
   const received: Record<BankAccount, number> = { GABES: 0, JOE: 0, ASAAS: 0 };
@@ -211,9 +208,8 @@ export async function getBankBalances() {
   for (const e of expenses) {
     spent[e.bankAccount] += expenseTotalToDate(e, now);
   }
-  for (const p of partnerPayouts) {
-    const account: BankAccount = p.kind === "PARTNER_JOE" ? "JOE" : "GABES";
-    spent[account] += Number(p.amount);
+  for (const p of payouts) {
+    spent[p.bankAccount] += Number(p.amount);
   }
 
   return (Object.keys(bankAccountLabel) as BankAccount[]).map((account) => ({

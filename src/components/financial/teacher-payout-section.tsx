@@ -6,10 +6,12 @@ import { Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { addTeacherPayout, deleteTeacherPayout } from "@/server/actions/payouts";
-import { formatCurrency, formatDate } from "@/lib/labels";
+import { formatCurrency, formatDate, bankAccountLabel } from "@/lib/labels";
+import type { BankAccount } from "@prisma/client";
 
-type Entry = { id: string; amount: number; paidAt: Date };
+type Entry = { id: string; amount: number; paidAt: Date; bankAccount: BankAccount };
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
@@ -17,11 +19,12 @@ function todayInputValue() {
 
 // One teacher's payments for one month — each entry typed in by hand (so
 // installments are just several entries, each with its own real payment
-// date), with its own delete, plus a form to log another. The sum of
-// these entries is what counts as this teacher's "Realizado" everywhere
-// else (Gasto efetuado, Em caixa, the Gastos page's Professores box, and
-// this teacher's row on the Pagamento de professores list). lifetimeTotal
-// is this teacher's running total across every month, not just this one.
+// date and account), with its own delete, plus a form to log another.
+// The sum of these entries is what counts as this teacher's "Realizado"
+// everywhere else (Gasto efetuado, Em caixa, the Gastos page's
+// Professores box, and this teacher's row on the Pagamento de
+// professores list). lifetimeTotal is this teacher's running total
+// across every month, not just this one.
 export function TeacherPayoutSection({
   teacherId,
   year,
@@ -41,6 +44,7 @@ export function TeacherPayoutSection({
   const remaining = Math.max(0, previsto - total);
   const [amount, setAmount] = useState(() => remaining.toFixed(2));
   const [date, setDate] = useState(todayInputValue);
+  const [bankAccount, setBankAccount] = useState<BankAccount>("JOE");
   const [isPending, startTransition] = useTransition();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
@@ -49,7 +53,7 @@ export function TeacherPayoutSection({
     const paidAt = new Date(date);
     startTransition(async () => {
       try {
-        await addTeacherPayout(teacherId, year, month, value, paidAt);
+        await addTeacherPayout(teacherId, year, month, value, paidAt, bankAccount);
         toast.success("Pagamento registrado.");
         setAmount(Math.max(0, remaining - value).toFixed(2));
         setDate(todayInputValue());
@@ -95,7 +99,9 @@ export function TeacherPayoutSection({
             <div key={e.id} className="flex items-center justify-between rounded-md border px-3 py-1.5 text-sm">
               <span>{formatCurrency(e.amount)}</span>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">{formatDate(e.paidAt)}</span>
+                <span className="text-xs text-muted-foreground">
+                  {formatDate(e.paidAt)} · {bankAccountLabel[e.bankAccount]}
+                </span>
                 <Button
                   type="button"
                   variant="ghost"
@@ -138,6 +144,21 @@ export function TeacherPayoutSection({
             onChange={(e) => setDate(e.target.value)}
             className="w-40"
           />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Conta</Label>
+          <Select value={bankAccount} onValueChange={(v) => setBankAccount(v as BankAccount)}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(bankAccountLabel).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <Button type="button" size="sm" disabled={isPending} onClick={submit}>
           {isPending && pendingDeleteId === null && <Loader2 className="animate-spin" />}
