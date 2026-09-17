@@ -11,14 +11,13 @@ import { formatDateTime, lessonStatusLabel, lessonStatusBadgeVariant } from "@/l
 import { LessonStatusSelect } from "@/components/lessons/lesson-status-select";
 import { LessonSummaryEditor } from "@/components/lessons/lesson-summary-editor";
 import { LessonRescheduleEditor } from "@/components/lessons/lesson-reschedule-editor";
-import { MakeupGivenToggle } from "@/components/lessons/makeup-given-toggle";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
 import type { Lesson, LessonStatus } from "@prisma/client";
 
 type ReportLesson = Lesson & {
   student: { user: { name: string } };
   teacher: { user: { name: string } };
-  rescheduledTo: { id: string; scheduledAt: Date; status: LessonStatus; durationMin: number } | null;
+  rescheduledTo: { id: string; scheduledAt: Date; status: LessonStatus; durationMin: number }[];
 };
 
 export function LessonsReportTable({
@@ -73,32 +72,26 @@ export function LessonsReportTable({
                 )}
               </TableCell>
               <TableCell>
-                <div className="flex items-center gap-3">
-                  {(reschedulableStatuses as readonly string[]).includes(l.status) ? (
-                    <>
-                      {canEdit(l) ? (
-                        <LessonRescheduleEditor lessonId={l.id} rescheduledTo={l.rescheduledTo} />
-                      ) : (
-                        <span className="text-sm text-muted-foreground">
-                          {l.rescheduledTo ? formatDateTime(l.rescheduledTo.scheduledAt) : "—"}
-                        </span>
-                      )}
-                      {l.rescheduledTo &&
-                        (canEdit(l) ? (
-                          <MakeupGivenToggle
-                            makeupLessonId={l.rescheduledTo.id}
-                            given={l.rescheduledTo.status === "COMPLETED"}
-                          />
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            {l.rescheduledTo.status === "COMPLETED" ? "Dada" : "Pendente"}
-                          </span>
-                        ))}
-                    </>
-                  ) : (
+                {(reschedulableStatuses as readonly string[]).includes(l.status) ? (
+                  canEdit(l) ? (
+                    <LessonRescheduleEditor lessonId={l.id} rescheduledTo={l.rescheduledTo} />
+                  ) : l.rescheduledTo.length === 0 ? (
                     <span className="text-sm text-muted-foreground">—</span>
-                  )}
-                </div>
+                  ) : (
+                    <div className="space-y-0.5">
+                      {l.rescheduledTo.map((r) => (
+                        <div key={r.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <span>{formatDateTime(r.scheduledAt)}</span>
+                          <span className="text-xs">
+                            {r.status === "COMPLETED" ? "Dada" : "Pendente"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                ) : (
+                  <span className="text-sm text-muted-foreground">—</span>
+                )}
               </TableCell>
               <TableCell className="max-w-64">
                 {canEdit(l) ? (

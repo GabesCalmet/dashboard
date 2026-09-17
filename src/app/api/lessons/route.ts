@@ -56,14 +56,12 @@ export async function GET(request: NextRequest) {
         homework: l.homework,
         observations: l.observations,
         meetLink: l.student.meetLink,
-        rescheduledTo: l.rescheduledTo
-          ? {
-              id: l.rescheduledTo.id,
-              scheduledAt: l.rescheduledTo.scheduledAt.toISOString(),
-              durationMin: l.rescheduledTo.durationMin,
-              status: l.rescheduledTo.status,
-            }
-          : null,
+        rescheduledTo: l.rescheduledTo.map((r) => ({
+          id: r.id,
+          scheduledAt: r.scheduledAt.toISOString(),
+          durationMin: r.durationMin,
+          status: r.status,
+        })),
       },
     };
   });

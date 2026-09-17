@@ -23,6 +23,7 @@ import { reschedulableStatuses } from "@/lib/validation/lesson";
 import { LessonRescheduleEditor } from "@/components/lessons/lesson-reschedule-editor";
 import { MakeupGivenToggle } from "@/components/lessons/makeup-given-toggle";
 import { MakeupRescheduleButton } from "@/components/lessons/makeup-reschedule-button";
+import type { LessonStatus } from "@prisma/client";
 
 export function LessonReportForm({
   lesson,
@@ -110,22 +111,14 @@ export function LessonReportForm({
             <p className="mb-1 text-xs font-medium text-muted-foreground">Reagendamento</p>
             <LessonRescheduleEditor
               lessonId={lesson.id}
-              rescheduledTo={
-                lesson.rescheduledTo
-                  ? {
-                      scheduledAt: new Date(lesson.rescheduledTo.scheduledAt),
-                      durationMin: lesson.rescheduledTo.durationMin,
-                    }
-                  : null
-              }
+              rescheduledTo={lesson.rescheduledTo.map((r) => ({
+                id: r.id,
+                scheduledAt: new Date(r.scheduledAt),
+                durationMin: r.durationMin,
+                status: r.status as LessonStatus,
+              }))}
             />
           </div>
-          {lesson.rescheduledTo && (
-            <MakeupGivenToggle
-              makeupLessonId={lesson.rescheduledTo.id}
-              given={lesson.rescheduledTo.status === "COMPLETED"}
-            />
-          )}
         </div>
       )}
 

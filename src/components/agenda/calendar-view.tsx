@@ -26,7 +26,7 @@ export type CalendarLessonEvent = {
   observations: string | null;
   meetLink: string | null;
   start: string;
-  rescheduledTo: { id: string; scheduledAt: string; durationMin: number; status: string } | null;
+  rescheduledTo: { id: string; scheduledAt: string; durationMin: number; status: string }[];
 };
 
 export function CalendarView({
@@ -56,7 +56,7 @@ export function CalendarView({
       observations: props.observations,
       meetLink: props.meetLink,
       start: arg.event.startStr,
-      rescheduledTo: props.rescheduledTo ?? null,
+      rescheduledTo: props.rescheduledTo ?? [],
     });
   }
 

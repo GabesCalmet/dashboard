@@ -55,8 +55,8 @@ export async function getAttendanceAlerts(): Promise<AttendanceAlert[]> {
   // cancellation — once a reagendamento (makeup) has been booked for it,
   // the class is considered made up and stops flagging, whether or not
   // that makeup has actually happened yet.
-  function isFlaggable(l: { status: LessonStatus; rescheduledTo: unknown }) {
-    return FLAG_STATUSES.includes(l.status) && !l.rescheduledTo;
+  function isFlaggable(l: { status: LessonStatus; rescheduledTo: unknown[] }) {
+    return FLAG_STATUSES.includes(l.status) && l.rescheduledTo.length === 0;
   }
 
   const alerts: AttendanceAlert[] = [];

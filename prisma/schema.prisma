@@ -412,12 +412,14 @@ model Lesson {
   // manually-flagged one that was never actually linked to an original).
   isMakeup    Boolean      @default(false)
 
-  // Set on the NEW (makeup) lesson created via the "Reagendamento" picker
+  // Set on each NEW (makeup) lesson created via the "Reagendamento" picker
   // when a lesson is canceled (CA/CP/CF) — points back to the lesson it
-  // replaces. Optional 1:1 self-relation.
-  rescheduledFromId String?  @unique
+  // replaces. 1:many self-relation — a single cancellation can be split
+  // across multiple makeup lessons (e.g. two 45min sessions replacing one
+  // 90min class).
+  rescheduledFromId String?
   rescheduledFrom   Lesson?  @relation("LessonReschedule", fields: [rescheduledFromId], references: [id], onDelete: SetNull)
-  rescheduledTo     Lesson?  @relation("LessonReschedule")
+  rescheduledTo     Lesson[] @relation("LessonReschedule")
 
   // post-lesson report (filled by teacher)
   contentTaught String? // free text, or a picked curriculum unit label ("Aula 12", "Teste 3")

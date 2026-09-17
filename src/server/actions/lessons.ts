@@ -129,12 +129,9 @@ export async function updateLessonStatus(lessonId: string, status: string) {
 
   // A reagendamento only makes sense while the lesson is CA/CP/CF — if the
   // status moved away from those (e.g. reverted back to Agendada), drop any
-  // makeup lesson that was booked for it.
+  // makeup lesson(s) booked for it.
   if (!(reschedulableStatuses as readonly string[]).includes(parsed.data)) {
-    const makeup = await prisma.lesson.findUnique({ where: { rescheduledFromId: lessonId } });
-    if (makeup) {
-      await prisma.lesson.delete({ where: { id: makeup.id } });
-    }
+    await prisma.lesson.deleteMany({ where: { rescheduledFromId: lessonId } });
   }
 
   await recordAudit({
@@ -334,10 +331,11 @@ async function requireLessonEditAccess(lessonId: string) {
   return { actor, lesson };
 }
 
-// Books (or reschedules) the makeup lesson for a canceled one (CA/CP/CF) —
-// creates a new Lesson linked via rescheduledFromId the first time, and
-// just moves its date/time/duration on subsequent calls.
-export async function scheduleLessonReschedule(
+// Books a new makeup lesson for a canceled one (CA/CP/CF) — always creates
+// a new Lesson linked via rescheduledFromId, since a single cancellation
+// can be split across multiple reposições (e.g. two 45min sessions
+// replacing one 90min class).
+export async function addLessonReschedule(
   lessonId: string,
   values: { date: string; time: string; endTime: string }
 ) {
@@ -349,23 +347,17 @@ export async function scheduleLessonReschedule(
   const scheduledAt = brazilDateTime(parsed.data.date, parsed.data.time);
   const durationMin = durationFromTimes(parsed.data.time, parsed.data.endTime) ?? lesson.durationMin;
 
-  const existing = await prisma.lesson.findUnique({ where: { rescheduledFromId: lessonId } });
-
-  if (existing) {
-    await prisma.lesson.update({ where: { id: existing.id }, data: { scheduledAt, durationMin } });
-  } else {
-    await prisma.lesson.create({
-      data: {
-        studentId: lesson.studentId,
-        teacherId: lesson.teacherId,
-        scheduledAt,
-        durationMin,
-        status: "MAKEUP",
-        isMakeup: true,
-        rescheduledFromId: lesson.id,
-      },
-    });
-  }
+  await prisma.lesson.create({
+    data: {
+      studentId: lesson.studentId,
+      teacherId: lesson.teacherId,
+      scheduledAt,
+      durationMin,
+      status: "MAKEUP",
+      isMakeup: true,
+      rescheduledFromId: lesson.id,
+    },
+  });
 
   await recordAudit({
     entityType: "Lesson",
@@ -378,18 +370,15 @@ export async function scheduleLessonReschedule(
   revalidateReportPaths(lesson.studentId);
 }
 
-// Removes the makeup lesson booked for a canceled lesson, if any.
-export async function clearLessonReschedule(lessonId: string) {
-  const { actor, lesson } = await requireLessonEditAccess(lessonId);
+// Removes one specific makeup lesson booked for a canceled lesson.
+export async function deleteLessonReschedule(makeupLessonId: string) {
+  const { actor, lesson } = await requireLessonEditAccess(makeupLessonId);
 
-  const existing = await prisma.lesson.findUnique({ where: { rescheduledFromId: lessonId } });
-  if (existing) {
-    await prisma.lesson.delete({ where: { id: existing.id } });
-  }
+  await prisma.lesson.delete({ where: { id: makeupLessonId } });
 
   await recordAudit({
     entityType: "Lesson",
-    entityId: lessonId,
+    entityId: makeupLessonId,
     action: "UPDATE",
     actor,
     changes: { reagendamento: null },
