@@ -101,11 +101,12 @@ function resolveTeacherAssignment(
 }
 
 // A class "happened" in some recorded sense if it's OK (dada), NC (não
-// compareceu), CT (cancelamento tarde) or R (reposição) — as opposed to
-// still SCHEDULED or one of the other cancellation codes, which never
-// occurred. CT counts here the same as NC: too late to fill that slot, so
-// the teacher is still paid for it.
-const REALIZED_STATUSES = ["COMPLETED", "NO_SHOW", "CANCELED_LATE", "MAKEUP"] as const;
+// compareceu), CT (cancelamento tarde), F (feriado) or R (reposição) — as
+// opposed to still SCHEDULED or one of the other cancellation codes,
+// which never occurred. CT and F count here the same as NC: not the
+// teacher's fault the slot didn't happen, so they're still paid for it —
+// a national holiday isn't discounted from their pay.
+const REALIZED_STATUSES = ["COMPLETED", "NO_SHOW", "CANCELED_LATE", "CANCELED_HOLIDAY", "MAKEUP"] as const;
 
 const teacherAssignmentSelect = {
   id: true,
