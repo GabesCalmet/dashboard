@@ -133,7 +133,14 @@ export function StudentDetailView({
   // one flagged directly via the status dropdown — not booked through the
   // Reagendamento picker — has no rescheduledFromId to key off once its
   // status has already moved on to COMPLETED.
-  const makeupCount = student.lessons.filter((l) => l.isMakeup && l.status === "COMPLETED").length;
+  // Counts distinct cancellations made up, not distinct makeup lesson rows —
+  // a single canceled class split across two reposição lessons (e.g. two
+  // 45min sessions replacing one 90min class) still only repays ONE
+  // cancellation, so it counts once here, grouped by rescheduledFromId.
+  // A makeup flagged directly via the status dropdown (no rescheduledFromId)
+  // has no cancellation to group under, so it counts on its own id instead.
+  const completedMakeups = student.lessons.filter((l) => l.isMakeup && l.status === "COMPLETED");
+  const makeupCount = new Set(completedMakeups.map((l) => l.rescheduledFromId ?? l.id)).size;
   const noShowCount = student.lessons.filter((l) => l.status === "NO_SHOW").length;
   // CT — canceled too late to fill the slot, so like NC it still counts as
   // a class given (teacher is paid for it — see REALIZED_STATUSES).
