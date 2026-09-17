@@ -217,6 +217,8 @@ export function StudentDetailView({
                   teacherId: student.teacherId,
                   teacherHistory: parseTeacherHistory(student.teacherHistory),
                   teacherPayRate: Number(student.teacherPayRate),
+                  teacherPayMode: student.teacherPayMode,
+                  teacherMonthlyAmount: Number(student.teacherMonthlyAmount),
                   courseId: student.courseId,
                   courseHistory: parseSelectHistory(student.courseHistory),
                   planId: student.planId,
@@ -476,7 +478,7 @@ function parseTeacherHistory(value: unknown): TeacherHistoryEntry[] {
   if (!Array.isArray(value)) return [];
   return value
     .filter(
-      (e): e is { id: string; from?: string; until?: string; rate?: number } =>
+      (e): e is Record<string, unknown> & { id: string } =>
         typeof e === "object" && e !== null && typeof (e as Record<string, unknown>).id === "string"
     )
     .map((e) => ({
@@ -484,6 +486,8 @@ function parseTeacherHistory(value: unknown): TeacherHistoryEntry[] {
       from: typeof e.from === "string" && e.from ? e.from : undefined,
       until: typeof e.until === "string" && e.until ? e.until : undefined,
       rate: typeof e.rate === "number" ? e.rate : undefined,
+      mode: e.mode === "MONTHLY" ? "MONTHLY" : undefined,
+      monthlyAmount: typeof e.monthlyAmount === "number" ? e.monthlyAmount : undefined,
     }));
 }
 

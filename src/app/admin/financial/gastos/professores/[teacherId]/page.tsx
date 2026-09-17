@@ -149,7 +149,7 @@ export default async function AdminTeacherPayrollDetailPage({
                     {s.studentName}
                   </Link>
                 </TableCell>
-                <TableCell>{formatCurrency(s.rate)}</TableCell>
+                <TableCell>{s.mode === "MONTHLY" ? "Mensal fixo" : formatCurrency(s.rate)}</TableCell>
                 <TableCell>{s.count}</TableCell>
                 <TableCell>{s.hours.toFixed(1)}h</TableCell>
                 <TableCell>{formatCurrency(s.previsto)}</TableCell>

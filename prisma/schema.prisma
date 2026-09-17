@@ -39,6 +39,11 @@ enum StudentStatus {
   CANCELED
 }
 
+enum TeacherPayMode {
+  HOURLY
+  MONTHLY
+}
+
 // The school's three receiving bank accounts — which one a given student's
 // payments go into.
 enum BankAccount {
@@ -221,12 +226,24 @@ model StudentProfile {
   // student/group — teacherPayRate mirrors it the same way, and payroll
   // (getTeacherPayrollForMonth/Detail) resolves it per lesson instead of
   // the teacher's own flat hourlyRate, falling back to that when unset.
-  teacherHistory    Json            @default("[]")
+  // An entry can instead carry "mode": "MONTHLY" + "monthlyAmount" —
+  // a flat fee for that period, unaffected by how many classes actually
+  // happen (previsto and realizado both just equal monthlyAmount), instead
+  // of "rate" × hours given. Absent "mode" means HOURLY, same as today.
+  teacherHistory        Json            @default("[]")
   // Mirrors whichever teacherHistory entry is in effect today — the
   // per-student/group amount the assigned teacher is paid per hour,
   // typically higher for a "grupo" cadastro (e.g. +R$5/hour per extra
-  // participant, entered manually here rather than computed).
-  teacherPayRate    Decimal         @default(0) @db.Decimal(10, 2)
+  // participant, entered manually here rather than computed). Only used
+  // when teacherPayMode is HOURLY.
+  teacherPayRate        Decimal         @default(0) @db.Decimal(10, 2)
+  // Whether the currently-assigned teacher is paid hourly (the default,
+  // teacherPayRate × hours given) or a flat monthly amount
+  // (teacherMonthlyAmount, regardless of classes given) for this
+  // student/group. Mirrors whichever teacherHistory entry is in effect
+  // today, same convention as teacherPayRate.
+  teacherPayMode        TeacherPayMode  @default(HOURLY)
+  teacherMonthlyAmount  Decimal         @default(0) @db.Decimal(10, 2)
   courseId          String?
   course            Course?         @relation(fields: [courseId], references: [id])
   // Record of past courses, same shape as teacherHistory — informational

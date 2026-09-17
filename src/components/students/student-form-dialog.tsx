@@ -37,6 +37,7 @@ import {
 import {
   TeacherAssignmentEditor,
   type TeacherHistoryEntry,
+  type TeacherPayMode,
 } from "@/components/students/teacher-assignment-editor";
 import { GroupMembersEditor } from "@/components/students/group-members-editor";
 import {
@@ -66,6 +67,8 @@ type StudentDefaults = {
   teacherId?: string | null;
   teacherHistory?: TeacherHistoryEntry[];
   teacherPayRate?: number;
+  teacherPayMode?: TeacherPayMode;
+  teacherMonthlyAmount?: number;
   courseId?: string | null;
   courseHistory?: SelectHistoryEntry[];
   planId?: string | null;
@@ -305,10 +308,14 @@ export function StudentFormDialog({
             valueFieldName="teacherId"
             historyFieldName="teacherHistory"
             rateFieldName="teacherPayRate"
+            modeFieldName="teacherPayMode"
+            monthlyAmountFieldName="teacherMonthlyAmount"
             options={teachers}
             defaultValue={student?.teacherId}
             defaultHistory={student?.teacherHistory ?? []}
             defaultRate={student?.teacherPayRate ?? 0}
+            defaultMode={student?.teacherPayMode ?? "HOURLY"}
+            defaultMonthlyAmount={student?.teacherMonthlyAmount ?? 0}
           />
 
           <SelectHistoryEditor

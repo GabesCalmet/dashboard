@@ -35,7 +35,8 @@ const selectHistoryField = z
   });
 
 // Submitted by TeacherAssignmentEditor — like selectHistoryField, but each
-// entry also carries the rate that teacher is paid per hour for this
+// entry also carries either an hourly rate (mode: HOURLY, the default) or
+// a flat monthly amount (mode: MONTHLY) that teacher is paid for this
 // student/group during that period.
 const teacherHistoryField = z
   .string()
@@ -52,6 +53,8 @@ const teacherHistoryField = z
           from: typeof e.from === "string" && e.from ? e.from : undefined,
           until: typeof e.until === "string" && e.until ? e.until : undefined,
           rate: typeof e.rate === "number" ? e.rate : undefined,
+          mode: e.mode === "MONTHLY" ? ("MONTHLY" as const) : undefined,
+          monthlyAmount: typeof e.monthlyAmount === "number" ? e.monthlyAmount : undefined,
         }));
     } catch {
       return [];
@@ -200,8 +203,14 @@ export const studentFormSchema = z.object({
   // The amount the assigned teacher is paid per hour for this specific
   // student/group — mirrors whichever teacherHistory entry is current, same
   // convention as monthlyValue/monthlyValueHistory. Payroll falls back to
-  // the teacher's own hourlyRate when this is unset (0).
+  // the teacher's own hourlyRate when this is unset (0). Only used when
+  // teacherPayMode is HOURLY.
   teacherPayRate: z.coerce.number().min(0, "Valor inválido").default(0),
+  teacherPayMode: z.enum(["HOURLY", "MONTHLY"]).default("HOURLY"),
+  // Flat amount the assigned teacher is paid per month for this
+  // student/group, regardless of classes given — only used when
+  // teacherPayMode is MONTHLY.
+  teacherMonthlyAmount: z.coerce.number().min(0, "Valor inválido").default(0),
   courseId: z.string().optional(),
   courseHistory: selectHistoryField,
   planId: z.string().optional(),
