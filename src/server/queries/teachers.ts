@@ -413,7 +413,9 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
     })
     .sort((a, b) => b.hours - a.hours);
 
-  const studentNameById = new Map(students.map((s) => [s.id, s.user.name]));
+  // A "grupo" cadastro should show its group name here, not the owner's
+  // own name — same rule as the student detail page header.
+  const studentNameById = new Map(students.map((s) => [s.id, s.groupName ?? s.user.name]));
   const studentTotals = [...byStudent.entries()]
     .map(([studentId, t]) => ({
       studentId,
