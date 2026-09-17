@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { CalendarClock, Loader2, X } from "lucide-react";
+import { CalendarClock, Loader2, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,9 +32,19 @@ export type RescheduledToEntry = {
   status: LessonStatus;
 };
 
-// Shows every reposição already booked against a canceled lesson (there can
-// be more than one — e.g. a 90min class split into two 45min makeups on
-// different days) and lets an admin/teacher edit, remove or add another one.
+type Draft = { key: number; date: string; time: string; endTime: string };
+
+let nextDraftKey = 0;
+function emptyDraft(): Draft {
+  return { key: nextDraftKey++, date: "", time: "", endTime: "" };
+}
+
+// Shows every reposição already booked against a canceled lesson, each
+// editable/removable in place, plus one or more blank date/time blocks to
+// book new ones — the "+" button adds another blank block for when a single
+// cancellation needs to be split across more than one day (e.g. a 90min
+// class replaced by two 45min sessions). All filled blocks are booked
+// together on "Salvar".
 export function LessonRescheduleEditor({
   lessonId,
   rescheduledTo,
@@ -43,9 +53,7 @@ export function LessonRescheduleEditor({
   rescheduledTo: RescheduledToEntry[];
 }) {
   const [open, setOpen] = useState(false);
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [drafts, setDrafts] = useState<Draft[]>([emptyDraft()]);
   const [isPending, startTransition] = useTransition();
 
   const triggerLabel =
@@ -55,19 +63,34 @@ export function LessonRescheduleEditor({
         ? formatDateTime(rescheduledTo[0].scheduledAt)
         : `${rescheduledTo.length} reposições agendadas`;
 
+  function updateDraft(key: number, field: "date" | "time" | "endTime", value: string) {
+    setDrafts((prev) => prev.map((d) => (d.key === key ? { ...d, [field]: value } : d)));
+  }
+
+  function addDraft() {
+    setDrafts((prev) => [...prev, emptyDraft()]);
+  }
+
+  function removeDraft(key: number) {
+    setDrafts((prev) => (prev.length > 1 ? prev.filter((d) => d.key !== key) : prev));
+  }
+
   function save() {
+    const filled = drafts.filter((d) => d.date && d.time && d.endTime);
     startTransition(async () => {
       try {
-        await addLessonReschedule(lessonId, { date, time, endTime });
-        toast.success("Reposição salva.");
-        setDate("");
-        setTime("");
-        setEndTime("");
+        for (const d of filled) {
+          await addLessonReschedule(lessonId, { date: d.date, time: d.time, endTime: d.endTime });
+        }
+        toast.success(filled.length > 1 ? "Reposições salvas." : "Reposição salva.");
+        setDrafts([emptyDraft()]);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Erro ao salvar reposição.");
       }
     });
   }
+
+  const canSave = drafts.some((d) => d.date && d.time && d.endTime);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -81,8 +104,8 @@ export function LessonRescheduleEditor({
         <DialogHeader>
           <DialogTitle>Reagendamento</DialogTitle>
           <DialogDescription>
-            Escolha a nova data e horário da reposição. Salve novamente com outra data caso mais
-            de um dia seja necessário para repor esta aula.
+            Escolha a nova data e horário da reposição. Use o botão de adicionar caso mais de um
+            dia seja necessário para repor esta aula.
           </DialogDescription>
         </DialogHeader>
 
@@ -91,39 +114,59 @@ export function LessonRescheduleEditor({
             <RescheduleEntryRow key={entry.id} entry={entry} />
           ))}
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="reschedule-date">Data</Label>
-              <Input
-                id="reschedule-date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
+          {drafts.map((d) => (
+            <div key={d.key} className="grid grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor={`reschedule-date-${d.key}`}>Data</Label>
+                <Input
+                  id={`reschedule-date-${d.key}`}
+                  type="date"
+                  value={d.date}
+                  onChange={(e) => updateDraft(d.key, "date", e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor={`reschedule-time-${d.key}`}>Início</Label>
+                <Input
+                  id={`reschedule-time-${d.key}`}
+                  type="time"
+                  value={d.time}
+                  onChange={(e) => updateDraft(d.key, "time", e.target.value)}
+                />
+              </div>
+              <div className="flex items-end gap-1.5">
+                <div className="flex-1 space-y-1.5">
+                  <Label htmlFor={`reschedule-end-time-${d.key}`}>Término</Label>
+                  <Input
+                    id={`reschedule-end-time-${d.key}`}
+                    type="time"
+                    value={d.endTime}
+                    onChange={(e) => updateDraft(d.key, "endTime", e.target.value)}
+                  />
+                </div>
+                {drafts.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="mb-0.5 shrink-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => removeDraft(d.key)}
+                    aria-label="Remover esta data"
+                  >
+                    <X className="size-4" />
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="reschedule-time">Início</Label>
-              <Input
-                id="reschedule-time"
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="reschedule-end-time">Término</Label>
-              <Input
-                id="reschedule-end-time"
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
-            </div>
-          </div>
+          ))}
+
+          <Button type="button" variant="outline" size="sm" onClick={addDraft}>
+            <Plus className="size-3.5" /> Adicionar outra data
+          </Button>
         </div>
 
         <DialogFooter>
-          <Button onClick={save} disabled={isPending || !date || !time || !endTime}>
+          <Button onClick={save} disabled={isPending || !canSave}>
             {isPending && <Loader2 className="animate-spin" />}
             Salvar
           </Button>
