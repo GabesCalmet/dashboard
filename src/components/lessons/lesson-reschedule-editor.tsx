@@ -179,29 +179,59 @@ function RescheduleEntryRow({ entry }: { entry: RescheduledToEntry }) {
   );
 }
 
+// Collapsed by default (just a "+" button) so it never sits open looking
+// like a stray, unsaved entry — expands into the date/time fields only when
+// clicked, and can be dismissed again via the X without adding anything.
 function AddRescheduleForm({ lessonId }: { lessonId: string }) {
+  const [expanded, setExpanded] = useState(false);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  function cancel() {
+    setExpanded(false);
+    setDate("");
+    setTime("");
+    setEndTime("");
+  }
 
   function add() {
     startTransition(async () => {
       try {
         await addLessonReschedule(lessonId, { date, time, endTime });
         toast.success("Reposição adicionada.");
-        setDate("");
-        setTime("");
-        setEndTime("");
+        cancel();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Erro ao adicionar reposição.");
       }
     });
   }
 
+  if (!expanded) {
+    return (
+      <Button type="button" size="sm" variant="outline" onClick={() => setExpanded(true)}>
+        <Plus className="size-3.5" /> Adicionar reposição
+      </Button>
+    );
+  }
+
   return (
     <div className="space-y-2 rounded-md border border-dashed p-3">
-      <p className="text-xs font-medium text-muted-foreground">Adicionar reposição</p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-muted-foreground">Adicionar reposição</p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-6 text-muted-foreground hover:text-destructive"
+          onClick={cancel}
+          disabled={isPending}
+          aria-label="Cancelar"
+        >
+          <X className="size-3.5" />
+        </Button>
+      </div>
       <div className="grid grid-cols-3 gap-2">
         <div className="space-y-1">
           <Label className="text-xs font-normal text-muted-foreground">Data</Label>
@@ -219,7 +249,6 @@ function AddRescheduleForm({ lessonId }: { lessonId: string }) {
       <Button
         type="button"
         size="sm"
-        variant="outline"
         onClick={add}
         disabled={isPending || !date || !time || !endTime}
       >
