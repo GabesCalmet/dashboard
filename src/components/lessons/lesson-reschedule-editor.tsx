@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { CalendarClock, Loader2, Plus, X } from "lucide-react";
+import { CalendarClock, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -43,6 +43,10 @@ export function LessonRescheduleEditor({
   rescheduledTo: RescheduledToEntry[];
 }) {
   const [open, setOpen] = useState(false);
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [isPending, startTransition] = useTransition();
 
   const triggerLabel =
     rescheduledTo.length === 0
@@ -50,6 +54,20 @@ export function LessonRescheduleEditor({
       : rescheduledTo.length === 1
         ? formatDateTime(rescheduledTo[0].scheduledAt)
         : `${rescheduledTo.length} reposições agendadas`;
+
+  function save() {
+    startTransition(async () => {
+      try {
+        await addLessonReschedule(lessonId, { date, time, endTime });
+        toast.success("Reposição salva.");
+        setDate("");
+        setTime("");
+        setEndTime("");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Erro ao salvar reposição.");
+      }
+    });
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -63,8 +81,8 @@ export function LessonRescheduleEditor({
         <DialogHeader>
           <DialogTitle>Reagendamento</DialogTitle>
           <DialogDescription>
-            Escolha a nova data e horário da reposição. Use o botão de adicionar caso mais de um
-            dia seja necessário para repor esta aula.
+            Escolha a nova data e horário da reposição. Salve novamente com outra data caso mais
+            de um dia seja necessário para repor esta aula.
           </DialogDescription>
         </DialogHeader>
 
@@ -73,12 +91,41 @@ export function LessonRescheduleEditor({
             <RescheduleEntryRow key={entry.id} entry={entry} />
           ))}
 
-          <AddRescheduleForm lessonId={lessonId} />
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="reschedule-date">Data</Label>
+              <Input
+                id="reschedule-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="reschedule-time">Início</Label>
+              <Input
+                id="reschedule-time"
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="reschedule-end-time">Término</Label>
+              <Input
+                id="reschedule-end-time"
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-            Fechar
+          <Button onClick={save} disabled={isPending || !date || !time || !endTime}>
+            {isPending && <Loader2 className="animate-spin" />}
+            Salvar
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -175,86 +222,6 @@ function RescheduleEntryRow({ entry }: { entry: RescheduledToEntry }) {
           </Button>
         </div>
       </div>
-    </div>
-  );
-}
-
-// Collapsed by default (just a "+" button) so it never sits open looking
-// like a stray, unsaved entry — expands into the date/time fields only when
-// clicked, and can be dismissed again via the X without adding anything.
-function AddRescheduleForm({ lessonId }: { lessonId: string }) {
-  const [expanded, setExpanded] = useState(false);
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [isPending, startTransition] = useTransition();
-
-  function cancel() {
-    setExpanded(false);
-    setDate("");
-    setTime("");
-    setEndTime("");
-  }
-
-  function add() {
-    startTransition(async () => {
-      try {
-        await addLessonReschedule(lessonId, { date, time, endTime });
-        toast.success("Reposição adicionada.");
-        cancel();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Erro ao adicionar reposição.");
-      }
-    });
-  }
-
-  if (!expanded) {
-    return (
-      <Button type="button" size="sm" variant="outline" onClick={() => setExpanded(true)}>
-        <Plus className="size-3.5" /> Adicionar reposição
-      </Button>
-    );
-  }
-
-  return (
-    <div className="space-y-2 rounded-md border border-dashed p-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-muted-foreground">Adicionar reposição</p>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-6 text-muted-foreground hover:text-destructive"
-          onClick={cancel}
-          disabled={isPending}
-          aria-label="Cancelar"
-        >
-          <X className="size-3.5" />
-        </Button>
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        <div className="space-y-1">
-          <Label className="text-xs font-normal text-muted-foreground">Data</Label>
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs font-normal text-muted-foreground">Início</Label>
-          <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs font-normal text-muted-foreground">Término</Label>
-          <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-        </div>
-      </div>
-      <Button
-        type="button"
-        size="sm"
-        onClick={add}
-        disabled={isPending || !date || !time || !endTime}
-      >
-        {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-        Adicionar
-      </Button>
     </div>
   );
 }
