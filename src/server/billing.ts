@@ -1,4 +1,5 @@
-import type { BankAccount } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import type { BankAccount, PaymentStatus } from "@prisma/client";
 
 // A student is billed as one or more "slots" per month: their own portion
 // (payerName: null, amount = monthlyValue), a slot for a third party if one
@@ -156,4 +157,75 @@ export function getBillingSlots(
   }
 
   return slots;
+}
+
+function dueDateFor(monthStart: Date, day: number) {
+  const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
+  return new Date(monthStart.getFullYear(), monthStart.getMonth(), Math.min(day, daysInMonth));
+}
+
+// Creates any still-missing Payment row for the given month across every
+// ACTIVE student's billing slots — the same idempotent logic the "Gerar
+// cobranças" admin action runs by hand (see generateMonthlyPayments),
+// extracted so the daily cron (/api/cron/mark-late-payments) can run it
+// automatically too. Without this, a month an admin forgot to generate has
+// no real Payment row at all, so it's invisible to the "Pagamentos
+// atrasados" dashboard box and the Atrasados page even once its due date
+// has passed — only the student's own Financeiro tab shows it (as a live,
+// never-persisted placeholder). A slot already overdue at creation time is
+// marked LATE immediately rather than a fresh Pendente, matching that same
+// placeholder's rule. Returns how many rows were created.
+export async function createMissingPaymentsForMonth(referenceMonth: Date) {
+  const students = await prisma.studentProfile.findMany({
+    where: { status: "ACTIVE" },
+    include: { groupMembers: { include: { user: true } } },
+  });
+
+  const now = new Date();
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+  const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
+
+  let created = 0;
+  for (const student of students) {
+    // Never bill a month before the student became billable — governed by
+    // billingStartDate when set, independent of when their classes
+    // actually started (startDate).
+    if ((student.billingStartDate ?? student.startDate) > monthEnd) continue;
+    for (const slot of getBillingSlots(withBillingGroupMembers(student), monthStart)) {
+      const existing = await prisma.payment.findFirst({
+        where: { studentId: student.id, referenceMonth: monthStart, payerName: slot.payerName },
+      });
+      if (existing) continue;
+
+      const dueDate = dueDateFor(monthStart, slot.dueDay);
+      const status: PaymentStatus = dueDate < now ? "LATE" : "PENDING";
+
+      await prisma.payment.create({
+        data: {
+          studentId: student.id,
+          referenceMonth: monthStart,
+          amount: slot.amount,
+          dueDate,
+          payerName: slot.payerName,
+          status,
+        },
+      });
+      created++;
+
+      // Only notify the student themselves — a third-party payer has no
+      // portal account to notify.
+      if (!slot.payerName) {
+        await prisma.notification.create({
+          data: {
+            userId: student.userId,
+            type: "PAYMENT_DUE",
+            title: "Pagamento do mês disponível",
+            message: "Sua mensalidade deste mês já está disponível para pagamento.",
+          },
+        });
+      }
+    }
+  }
+
+  return created;
 }

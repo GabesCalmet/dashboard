@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
-import { getBillingSlots, withBillingGroupMembers } from "@/server/billing";
+import { getBillingSlots, withBillingGroupMembers, createMissingPaymentsForMonth } from "@/server/billing";
 import type { PaymentStatus } from "@prisma/client";
 
 function dueDateFor(monthStart: Date, day: number) {
@@ -77,58 +77,9 @@ export async function setCobrancaStatus(
 
 export async function generateMonthlyPayments(referenceMonth: Date) {
   const actor = await requireRole("ADMIN");
-  const students = await prisma.studentProfile.findMany({
-    where: { status: "ACTIVE" },
-    include: { groupMembers: { include: { user: true } } },
-  });
-
-  const now = new Date();
   const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
-  const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
 
-  for (const student of students) {
-    // Never bill a month before the student became billable — governed by
-    // billingStartDate when set, independent of when their classes
-    // actually started (startDate).
-    if ((student.billingStartDate ?? student.startDate) > monthEnd) continue;
-    for (const slot of getBillingSlots(withBillingGroupMembers(student), monthStart)) {
-      const existing = await prisma.payment.findFirst({
-        where: { studentId: student.id, referenceMonth: monthStart, payerName: slot.payerName },
-      });
-      if (existing) continue;
-
-      const dueDate = dueDateFor(monthStart, slot.dueDay);
-      // Backfilling a past month (e.g. after fixing a billing bug) should
-      // never create a fresh "Pendente" row for a due date that's already
-      // gone by — matches the same LATE-if-overdue rule the live Cobranças
-      // placeholder already uses before a row exists.
-      const status: PaymentStatus = dueDate < now ? "LATE" : "PENDING";
-
-      await prisma.payment.create({
-        data: {
-          studentId: student.id,
-          referenceMonth: monthStart,
-          amount: slot.amount,
-          dueDate,
-          payerName: slot.payerName,
-          status,
-        },
-      });
-
-      // Only notify the student themselves — a third-party payer has no
-      // portal account to notify.
-      if (!slot.payerName) {
-        await prisma.notification.create({
-          data: {
-            userId: student.userId,
-            type: "PAYMENT_DUE",
-            title: "Pagamento do mês disponível",
-            message: "Sua mensalidade deste mês já está disponível para pagamento.",
-          },
-        });
-      }
-    }
-  }
+  await createMissingPaymentsForMonth(monthStart);
 
   await recordAudit({
     entityType: "Payment",
