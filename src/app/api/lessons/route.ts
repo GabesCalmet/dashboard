@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import { lessonStatusCalendarStyle, lessonStatusLabel } from "@/lib/labels";
+import { lessonStatusCalendarStyle, lessonStatusDisplayLabel } from "@/lib/labels";
 import type { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
@@ -49,7 +49,8 @@ export async function GET(request: NextRequest) {
         teacherId: l.teacherId,
         teacherName: l.teacher.user.name,
         status: l.status,
-        statusLabel: lessonStatusLabel[l.status],
+        statusLabel: lessonStatusDisplayLabel(l.status, l.isMakeup),
+        isMakeup: l.isMakeup,
         durationMin: l.durationMin,
         contentTaught: l.contentTaught,
         classFocus: l.classFocus,

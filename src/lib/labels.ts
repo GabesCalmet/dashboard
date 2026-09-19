@@ -143,6 +143,21 @@ export function toMakeupOutcome(status: LessonStatus): MakeupOutcome {
   return status === "COMPLETED" || status === "NO_SHOW" ? status : "MAKEUP";
 }
 
+// The label to show for a lesson's status wherever isMakeup context is
+// available (the Agenda dialog's own "Status da aula" picker, the calendar
+// event badge) — COMPLETED/NO_SHOW read as "Reposição Dada"/"Reposição Não
+// Compareceu" for a makeup lesson's own row instead of the generic, shared
+// wording, matching the dedicated picker used in Histórico de
+// aulas/Relatórios. MAKEUP already reads as "Reposição Marcada" generically
+// (a lesson can only be MAKEUP if it is one), so no override is needed
+// there.
+export function lessonStatusDisplayLabel(status: LessonStatus, isMakeup: boolean): string {
+  if (isMakeup && (status === "COMPLETED" || status === "NO_SHOW")) {
+    return makeupOutcomeLabel[status];
+  }
+  return lessonStatusLabel[status];
+}
+
 // Calendar event styling per status. Solid statuses (still to happen,
 // happened, no-show, reposição) fill the whole block; cancellations and
 // feriado are "hollow" — transparent fill, colored outline only — so a

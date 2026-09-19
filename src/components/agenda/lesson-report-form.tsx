@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { submitLessonReport } from "@/server/actions/lessons";
-import { lessonStatusLabel, reportableLessonStatuses } from "@/lib/labels";
+import { lessonStatusDisplayLabel, reportableLessonStatuses } from "@/lib/labels";
 import type { CalendarLessonEvent } from "@/components/agenda/calendar-view";
 import { curriculumUnits } from "@/lib/curriculum";
 import { CurriculumPicker } from "@/components/lessons/curriculum-picker";
@@ -93,7 +93,7 @@ export function LessonReportForm({
           <SelectContent>
             {reportableLessonStatuses.map((value) => (
               <SelectItem key={value} value={value}>
-                {lessonStatusLabel[value]}
+                {lessonStatusDisplayLabel(value, lesson.isMakeup)}
               </SelectItem>
             ))}
           </SelectContent>

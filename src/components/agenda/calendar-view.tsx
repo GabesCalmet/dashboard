@@ -19,6 +19,7 @@ export type CalendarLessonEvent = {
   teacherName: string;
   status: string;
   statusLabel: string;
+  isMakeup: boolean;
   durationMin: number;
   contentTaught: string | null;
   classFocus: string | null;
@@ -49,6 +50,7 @@ export function CalendarView({
       teacherName: props.teacherName,
       status: props.status,
       statusLabel: props.statusLabel,
+      isMakeup: props.isMakeup,
       durationMin: props.durationMin,
       contentTaught: props.contentTaught,
       classFocus: props.classFocus,
