@@ -29,7 +29,7 @@ export function StatCard({
         href && "transition-colors hover:border-accent/50"
       )}
     >
-      <CardContent className="flex items-start justify-between px-5">
+      <CardContent className="flex flex-col gap-3 px-5">
         <div className="min-w-0">
           <p className="text-xs font-medium text-muted-foreground">{label}</p>
           <p className="mt-1.5 text-2xl font-semibold tracking-tight">{value}</p>
@@ -46,7 +46,7 @@ export function StatCard({
         </div>
         <div
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-lg",
+            "flex size-9 shrink-0 items-center justify-center self-end rounded-lg",
             tone === "warning"
               ? "bg-warning/15 text-warning"
               : tone === "danger"
