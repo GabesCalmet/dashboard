@@ -77,7 +77,10 @@ export async function submitLessonReport(
     data: {
       scheduledAt,
       durationMin: data.durationMin,
-      status: data.status,
+      // Omitted entirely (not set to undefined-as-no-op by accident) for a
+      // makeup lesson — see the lessonReportSchema comment on why this
+      // form must never write status for one.
+      ...(data.status ? { status: data.status } : {}),
       contentTaught: data.contentTaught,
       classFocus: data.classFocus,
       observations: data.observations,

@@ -88,15 +88,18 @@ export function LessonReportForm({
       <div className="space-y-1.5">
         <Label>Status da aula</Label>
         {lesson.isMakeup ? (
-          <>
-            <input type="hidden" name="status" value={status} />
-            <MakeupOutcomeSelect
-              makeupLessonId={lesson.id}
-              status={toMakeupOutcome(status as LessonStatus)}
-              onChange={(next) => setStatus(next)}
-              onCanceled={onSaved}
-            />
-          </>
+          // No hidden "status" input here on purpose — a makeup lesson's
+          // status is exclusively owned by MakeupOutcomeSelect's own save,
+          // which fires immediately on pick. Submitting it again from this
+          // form's "Salvar relatório da aula" (a separate, independent
+          // request) could race it and revert a just-picked outcome back
+          // to stale data — see the lessonReportSchema comment.
+          <MakeupOutcomeSelect
+            makeupLessonId={lesson.id}
+            status={toMakeupOutcome(status as LessonStatus)}
+            onChange={(next) => setStatus(next)}
+            onCanceled={onSaved}
+          />
         ) : (
           <Select name="status" value={status} onValueChange={setStatus}>
             <SelectTrigger className="w-full">

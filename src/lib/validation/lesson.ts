@@ -8,25 +8,34 @@ export const lessonScheduleSchema = z.object({
   durationMin: z.coerce.number().int().min(15).max(240).default(50),
 });
 
+// status is optional here — a makeup lesson's own status is exclusively
+// owned by setMakeupOutcome (via MakeupOutcomeSelect), which writes it the
+// moment it's picked. If this report form also submitted a status value
+// for a makeup lesson, the two independent writes could race (whichever
+// request's write lands second at the DB wins), silently reverting a
+// just-picked "Reposição Dada"/"Não Compareceu" back to stale data. The
+// Agenda form only includes this field for a non-makeup lesson.
 export const lessonReportSchema = z.object({
   date: z.string().min(1),
   time: z.string().min(1),
   durationMin: z.coerce.number().int().min(15).max(240),
-  status: z.enum([
-    "SCHEDULED",
-    "COMPLETED",
-    "CANCELED_BY_STUDENT",
-    "NO_SHOW",
-    "CANCELED_BY_TEACHER",
-    "CANCELED_LATE",
-    "CANCELED_VACATION",
-    "CANCELED_HOLIDAY",
-    "MAKEUP",
-    "POWER_OUTAGE",
-    "TECH_ISSUE",
-    "OTHER",
-    "PAUSED",
-  ]),
+  status: z
+    .enum([
+      "SCHEDULED",
+      "COMPLETED",
+      "CANCELED_BY_STUDENT",
+      "NO_SHOW",
+      "CANCELED_BY_TEACHER",
+      "CANCELED_LATE",
+      "CANCELED_VACATION",
+      "CANCELED_HOLIDAY",
+      "MAKEUP",
+      "POWER_OUTAGE",
+      "TECH_ISSUE",
+      "OTHER",
+      "PAUSED",
+    ])
+    .optional(),
   contentTaught: z.string().optional(),
   classFocus: z.string().optional(),
   observations: z.string().optional(),
