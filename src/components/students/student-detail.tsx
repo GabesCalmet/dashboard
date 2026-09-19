@@ -280,6 +280,18 @@ export function StudentDetailView({
         </div>
       )}
 
+      <div className="mb-6 flex justify-center">
+        <div className="w-full max-w-md">
+          <LevelProgressCard
+            studentId={student.id}
+            level={student.level}
+            progress={student.levelProgress}
+            canManage={permissions.canManageLevel}
+            canPromote={permissions.canPromote}
+          />
+        </div>
+      </div>
+
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           label="Aulas contratadas/mês"
@@ -293,18 +305,6 @@ export function StudentDetailView({
           accent
         />
         <StatCard label="Aulas realizadas" value={String(realizedLessonsAllTime)} icon={Award} />
-      </div>
-
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Aulas Dadas" value={String(completedLessons)} icon={CheckCircle2} accent />
-        <StatCard label="Cancelamento Aluno" value={String(canceledByStudent)} icon={XCircle} />
-        <StatCard label="Não Compareceu" value={String(noShowCount)} icon={UserX} />
-        <StatCard label="Reposição Dada" value={String(makeupGivenCount)} icon={Repeat} />
-        <StatCard label="Cancelamento Professor" value={String(canceledByTeacher)} icon={XCircle} />
-        <StatCard label="Cancelamento Tarde" value={String(canceledLateCount)} icon={Clock3} />
-        <StatCard label="Reposição Não Compareceu" value={String(makeupNoShowCount)} icon={UserX} />
-        <StatCard label="Cancelamento Férias" value={String(canceledVacationCount)} icon={Palmtree} />
-        <StatCard label="Feriado" value={String(canceledHolidayCount)} icon={PartyPopper} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -428,6 +428,22 @@ export function StudentDetailView({
         </div>
 
         <div className="space-y-6">
+          <div className="space-y-3">
+            <StatCard label="Aulas Dadas" value={String(completedLessons)} icon={CheckCircle2} accent />
+            <StatCard label="Reposição Dada" value={String(makeupGivenCount)} icon={Repeat} />
+            <StatCard
+              label="Reposição Não Compareceu"
+              value={String(makeupNoShowCount)}
+              icon={UserX}
+            />
+            <StatCard label="Não Compareceu" value={String(noShowCount)} icon={UserX} />
+            <StatCard label="Cancelamento Tarde" value={String(canceledLateCount)} icon={Clock3} />
+            <StatCard label="Cancelamento Aluno" value={String(canceledByStudent)} icon={XCircle} />
+            <StatCard label="Cancelamento Professor" value={String(canceledByTeacher)} icon={XCircle} />
+            <StatCard label="Feriado" value={String(canceledHolidayCount)} icon={PartyPopper} />
+            <StatCard label="Cancelamento Férias" value={String(canceledVacationCount)} icon={Palmtree} />
+          </div>
+
           {permissions.canEdit && (
             <GroupMembersCard
               studentId={student.id}
@@ -449,14 +465,6 @@ export function StudentDetailView({
               canManage={permissions.canEdit}
             />
           )}
-
-          <LevelProgressCard
-            studentId={student.id}
-            level={student.level}
-            progress={student.levelProgress}
-            canManage={permissions.canManageLevel}
-            canPromote={permissions.canPromote}
-          />
 
           {student.levelHistory.length > 0 && (
             <Card>
