@@ -21,9 +21,10 @@ import { curriculumUnits } from "@/lib/curriculum";
 import { CurriculumPicker } from "@/components/lessons/curriculum-picker";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
 import { LessonRescheduleEditor } from "@/components/lessons/lesson-reschedule-editor";
-import { MakeupGivenToggle } from "@/components/lessons/makeup-given-toggle";
+import { MakeupOutcomeSelect } from "@/components/lessons/makeup-outcome-select";
 import { MakeupRescheduleButton } from "@/components/lessons/makeup-reschedule-button";
 import type { LessonStatus } from "@prisma/client";
+import type { MakeupOutcome } from "@/lib/labels";
 
 export function LessonReportForm({
   lesson,
@@ -133,10 +134,10 @@ export function LessonReportForm({
               onRescheduled={onSaved}
             />
           </div>
-          <MakeupGivenToggle
+          <MakeupOutcomeSelect
             makeupLessonId={lesson.id}
-            given={status === "COMPLETED"}
-            onChange={(given) => setStatus(given ? "COMPLETED" : "MAKEUP")}
+            status={status === "COMPLETED" || status === "NO_SHOW" ? status : "MAKEUP"}
+            onChange={(next: MakeupOutcome) => setStatus(next)}
           />
         </div>
       )}

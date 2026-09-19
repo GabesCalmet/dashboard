@@ -7,7 +7,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { formatDateTime, lessonStatusLabel, lessonStatusBadgeVariant } from "@/lib/labels";
+import {
+  formatDateTime,
+  lessonStatusLabel,
+  lessonStatusBadgeVariant,
+  makeupOutcomeShortLabel,
+} from "@/lib/labels";
 import { LessonStatusSelect } from "@/components/lessons/lesson-status-select";
 import { LessonSummaryEditor } from "@/components/lessons/lesson-summary-editor";
 import { LessonRescheduleEditor } from "@/components/lessons/lesson-reschedule-editor";
@@ -82,9 +87,7 @@ export function LessonsReportTable({
                       {l.rescheduledTo.map((r) => (
                         <div key={r.id} className="flex items-center gap-2 text-sm text-muted-foreground">
                           <span>{formatDateTime(r.scheduledAt)}</span>
-                          <span className="text-xs">
-                            {r.status === "COMPLETED" ? "Dada" : "Pendente"}
-                          </span>
+                          <span className="text-xs">{makeupOutcomeShortLabel(r.status)}</span>
                         </div>
                       ))}
                     </div>

@@ -55,18 +55,18 @@ export const expenseCategoryLabel: Record<ExpenseCategory, string> = {
 
 export const lessonStatusLabel: Record<LessonStatus, string> = {
   SCHEDULED: "Agendada",
-  COMPLETED: "OK — Aula dada",
-  CANCELED_BY_STUDENT: "CA — Cancelamento aluno",
-  NO_SHOW: "NC — Não compareceu",
-  CANCELED_BY_TEACHER: "CP — Cancelamento professor",
-  CANCELED_LATE: "CT — Cancelamento tarde",
-  CANCELED_VACATION: "CF — Cancelamento férias",
-  CANCELED_HOLIDAY: "F — Feriado",
-  MAKEUP: "R — Reposição",
+  COMPLETED: "Aula dada",
+  CANCELED_BY_STUDENT: "Cancelamento aluno",
+  NO_SHOW: "Não compareceu",
+  CANCELED_BY_TEACHER: "Cancelamento professor",
+  CANCELED_LATE: "Cancelamento tarde",
+  CANCELED_VACATION: "Cancelamento férias",
+  CANCELED_HOLIDAY: "Feriado",
+  MAKEUP: "Reposição marcada",
   POWER_OUTAGE: "Faltou energia",
   TECH_ISSUE: "Problema técnico",
   OTHER: "Outro",
-  PAUSED: "P — Pausado",
+  PAUSED: "Pausado",
 };
 
 // Short code shown in the quick status picker (Aulas de hoje).
@@ -112,6 +112,29 @@ export const quickLessonStatuses: LessonStatus[] = [
 // dedicated status. Still kept in LessonStatus/lessonStatusLabel so any
 // lesson already recorded with one of them keeps displaying correctly.
 export const reportableLessonStatuses: LessonStatus[] = ["SCHEDULED", ...quickLessonStatuses];
+
+// The 3 states a booked reposição (makeup lesson) can be in — a dedicated
+// wording distinct from the generic lessonStatusLabel above, shown in the
+// Reagendamento dialog and the "esta é uma aula de reposição" panel. Maps
+// 1:1 onto the same LessonStatus values (MAKEUP/COMPLETED/NO_SHOW) a makeup
+// lesson's own row already uses, so no schema change is needed to support
+// it — only these two are ever set once resolved (see setMakeupOutcome).
+export const makeupOutcomeOptions = ["MAKEUP", "COMPLETED", "NO_SHOW"] as const;
+export type MakeupOutcome = (typeof makeupOutcomeOptions)[number];
+
+export const makeupOutcomeLabel: Record<MakeupOutcome, string> = {
+  MAKEUP: "Reposição marcada",
+  COMPLETED: "Reposição dada",
+  NO_SHOW: "Reposição não compareceu",
+};
+
+// Compact form for table cells where "Reposição" is already implied by the
+// column/context.
+export function makeupOutcomeShortLabel(status: LessonStatus): string {
+  if (status === "COMPLETED") return "Dada";
+  if (status === "NO_SHOW") return "Não compareceu";
+  return "Marcada";
+}
 
 // Calendar event styling per status. Solid statuses (still to happen,
 // happened, no-show, reposição) fill the whole block; cancellations and

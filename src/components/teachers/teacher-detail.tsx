@@ -103,16 +103,16 @@ export function TeacherDetailView({
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="CA — Cancelamento aluno (mês)"
+          label="Cancelamento aluno (mês)"
           value={String(teacher.canceledByStudentThisMonth)}
           icon={XCircle}
         />
         <StatCard
-          label="CP — Cancelamento professor (mês)"
+          label="Cancelamento professor (mês)"
           value={String(teacher.canceledByTeacherThisMonth)}
           icon={XCircle}
         />
-        <StatCard label="R — Reposições (mês)" value={String(teacher.makeupThisMonth)} icon={Repeat} />
+        <StatCard label="Reposições (mês)" value={String(teacher.makeupThisMonth)} icon={Repeat} />
         <StatCard
           label="Horas trabalhadas (mês)"
           value={`${teacher.hoursTaughtThisMonth.toFixed(1)}h`}

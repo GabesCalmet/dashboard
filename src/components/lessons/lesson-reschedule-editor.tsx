@@ -15,14 +15,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   addLessonReschedule,
   deleteLessonReschedule,
   rescheduleMakeupLesson,
-  setMakeupGiven,
 } from "@/server/actions/lessons";
-import { formatDateTime } from "@/lib/labels";
+import { formatDateTime, type MakeupOutcome } from "@/lib/labels";
+import { MakeupOutcomeSelect } from "@/components/lessons/makeup-outcome-select";
 import type { LessonStatus } from "@prisma/client";
 
 export type RescheduledToEntry = {
@@ -182,7 +181,9 @@ function RescheduleEntryRow({ entry }: { entry: RescheduledToEntry }) {
   const [endTime, setEndTime] = useState(
     toTimeInput(addMinutes(entry.scheduledAt, entry.durationMin))
   );
-  const [given, setGiven] = useState(entry.status === "COMPLETED");
+  const [outcome, setOutcome] = useState<MakeupOutcome>(
+    entry.status === "COMPLETED" || entry.status === "NO_SHOW" ? entry.status : "MAKEUP"
+  );
   const [isPending, startTransition] = useTransition();
 
   function save() {
@@ -207,17 +208,6 @@ function RescheduleEntryRow({ entry }: { entry: RescheduledToEntry }) {
     });
   }
 
-  function toggleGiven(checked: boolean) {
-    startTransition(async () => {
-      try {
-        await setMakeupGiven(entry.id, checked);
-        setGiven(checked);
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Erro ao atualizar reposição.");
-      }
-    });
-  }
-
   return (
     <div className="space-y-2 rounded-md border p-3">
       <div className="grid grid-cols-3 gap-2">
@@ -234,15 +224,8 @@ function RescheduleEntryRow({ entry }: { entry: RescheduledToEntry }) {
           <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
         </div>
       </div>
-      <div className="flex items-center justify-between gap-2">
-        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Checkbox
-            checked={given}
-            disabled={isPending}
-            onCheckedChange={(checked) => toggleGiven(checked === true)}
-          />
-          Dada
-        </label>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <MakeupOutcomeSelect makeupLessonId={entry.id} status={outcome} onChange={setOutcome} />
         <div className="flex items-center gap-2">
           <Button
             type="button"

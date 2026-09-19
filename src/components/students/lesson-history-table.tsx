@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDateTime, formatWeekday } from "@/lib/labels";
-import { lessonStatusLabel, lessonStatusBadgeVariant } from "@/lib/labels";
+import { lessonStatusLabel, lessonStatusBadgeVariant, makeupOutcomeShortLabel } from "@/lib/labels";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
 import { LessonStatusSelect } from "@/components/lessons/lesson-status-select";
 import { LessonRescheduleEditor } from "@/components/lessons/lesson-reschedule-editor";
@@ -128,9 +128,7 @@ export function LessonHistoryTable({
                         {(l.rescheduledTo ?? []).map((r) => (
                           <div key={r.id} className="flex items-center gap-2 text-sm text-muted-foreground">
                             <span>{formatDateTime(r.scheduledAt)}</span>
-                            <span className="text-xs">
-                              {r.status === "COMPLETED" ? "Dada" : "Pendente"}
-                            </span>
+                            <span className="text-xs">{makeupOutcomeShortLabel(r.status)}</span>
                           </div>
                         ))}
                       </div>

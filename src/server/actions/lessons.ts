@@ -11,6 +11,7 @@ import {
   lessonSummarySchema,
   lessonObservationsSchema,
   lessonRescheduleSchema,
+  makeupOutcomeSchema,
   reschedulableStatuses,
 } from "@/lib/validation/lesson";
 import type { ActionState } from "@/server/actions/students";
@@ -417,14 +418,27 @@ export async function rescheduleMakeupLesson(
   revalidateReportPaths(lesson.studentId);
 }
 
-// Marks whether the booked makeup lesson was actually given — toggles the
-// makeup lesson's own status between MAKEUP (pending) and COMPLETED (dada).
-export async function setMakeupGiven(makeupLessonId: string, given: boolean) {
+// Sets a booked makeup lesson's own resolution — Reposição marcada
+// (MAKEUP, the initial booked-not-yet-resolved state), Reposição dada
+// (COMPLETED) or Reposição não compareceu (NO_SHOW). Both resolved states
+// already count toward the Reposições box (see student-detail.tsx) and as
+// a class given for teacher payroll (REALIZED_STATUSES in
+// queries/teachers.ts already includes MAKEUP/COMPLETED/NO_SHOW, so a
+// class the teacher taught is paid the moment it's booked — this only
+// tracks the outcome, not pay).
+export async function setMakeupOutcome(
+  makeupLessonId: string,
+  outcome: "MAKEUP" | "COMPLETED" | "NO_SHOW"
+) {
+  const parsed = makeupOutcomeSchema.safeParse(outcome);
+  if (!parsed.success) {
+    throw new Error("Status inválido.");
+  }
   const { actor, lesson } = await requireLessonEditAccess(makeupLessonId);
 
   await prisma.lesson.update({
     where: { id: makeupLessonId },
-    data: { status: given ? "COMPLETED" : "MAKEUP" },
+    data: { status: parsed.data },
   });
 
   await recordAudit({
@@ -432,7 +446,7 @@ export async function setMakeupGiven(makeupLessonId: string, given: boolean) {
     entityId: makeupLessonId,
     action: "STATUS_CHANGE",
     actor,
-    changes: { reposicaoDada: given },
+    changes: { reposicaoStatus: parsed.data },
   });
 
   revalidateReportPaths(lesson.studentId);

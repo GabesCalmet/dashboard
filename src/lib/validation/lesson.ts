@@ -71,3 +71,6 @@ export const lessonRescheduleSchema = z.object({
   time: z.string().min(1, "Informe o horário"),
   endTime: z.string().min(1, "Informe o horário de término"),
 });
+
+// The 3 states a booked reposição can resolve to — see setMakeupOutcome.
+export const makeupOutcomeSchema = z.enum(["MAKEUP", "COMPLETED", "NO_SHOW"]);
