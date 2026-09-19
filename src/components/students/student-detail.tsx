@@ -19,7 +19,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatCard } from "@/components/shared/stat-card";
 import { MonthNav } from "@/components/financial/month-nav";
-import { LevelProgressCard } from "@/components/students/level-progress-card";
 import { LessonHistoryTable } from "@/components/students/lesson-history-table";
 import { StudentPaymentsTable, type PaymentHistoryRow } from "@/components/students/student-payments-table";
 import { StudentFormDialog } from "@/components/students/student-form-dialog";
@@ -280,19 +279,7 @@ export function StudentDetailView({
         </div>
       )}
 
-      <div className="mb-6 flex justify-center">
-        <div className="w-full max-w-md">
-          <LevelProgressCard
-            studentId={student.id}
-            level={student.level}
-            progress={student.levelProgress}
-            canManage={permissions.canManageLevel}
-            canPromote={permissions.canPromote}
-          />
-        </div>
-      </div>
-
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard
           label="Aulas contratadas/mês"
           value={String(contractedLessonsThisMonth)}
@@ -304,7 +291,6 @@ export function StudentDetailView({
           icon={GraduationCap}
           accent
         />
-        <StatCard label="Aulas realizadas" value={String(realizedLessonsAllTime)} icon={Award} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -429,6 +415,7 @@ export function StudentDetailView({
 
         <div className="space-y-6">
           <div className="space-y-3">
+            <StatCard label="Aulas Realizadas" value={String(realizedLessonsAllTime)} icon={Award} />
             <StatCard label="Aulas Dadas" value={String(completedLessons)} icon={CheckCircle2} accent />
             <StatCard label="Reposição Dada" value={String(makeupGivenCount)} icon={Repeat} />
             <StatCard
