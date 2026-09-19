@@ -126,26 +126,30 @@ export function StudentDetailView({
   ).length;
   const canceledByStudent = student.lessons.filter((l) => l.status === "CANCELED_BY_STUDENT").length;
   const canceledByTeacher = student.lessons.filter((l) => l.status === "CANCELED_BY_TEACHER").length;
-  // Only counts a reposição once it's actually resolved — "Reposição dada"
-  // (COMPLETED) or "Reposição não compareceu" (NO_SHOW). A booked-but-
-  // unresolved reposição stays MAKEUP ("Reposição marcada") and isn't
-  // counted here yet. isMakeup (not rescheduledFromId) is what identifies
-  // it as a reposição at all, since one flagged directly via the status
-  // dropdown — not booked through the Reagendamento picker — has no
-  // rescheduledFromId to key off once its status has already moved on.
-  // Counts distinct cancellations made up, not distinct makeup lesson rows —
-  // a single canceled class split across two reposição lessons (e.g. two
-  // 45min sessions replacing one 90min class) still only repays ONE
-  // cancellation, so it counts once here, grouped by rescheduledFromId.
+  // Two separate boxes — Reposição Dada (COMPLETED) and Reposição Não
+  // Compareceu (NO_SHOW) — rather than one combined count, since the
+  // teacher is paid either way but the outcome itself is worth telling
+  // apart. A booked-but-unresolved reposição stays MAKEUP ("Reposição
+  // Marcada") and isn't counted in either box yet. isMakeup (not
+  // rescheduledFromId) is what identifies it as a reposição at all, since
+  // one flagged directly via the status dropdown — not booked through the
+  // Reagendamento picker — has no rescheduledFromId to key off once its
+  // status has already moved on.
+  // Each counts distinct cancellations made up, not distinct makeup lesson
+  // rows — a single canceled class split across two reposição lessons
+  // (e.g. two 45min sessions replacing one 90min class) still only repays
+  // ONE cancellation, so it counts once here, grouped by rescheduledFromId.
   // A makeup flagged directly via the status dropdown (no rescheduledFromId)
   // has no cancellation to group under, so it counts on its own id instead.
-  const resolvedMakeups = student.lessons.filter(
-    (l) => l.isMakeup && (l.status === "COMPLETED" || l.status === "NO_SHOW")
-  );
-  const makeupCount = new Set(resolvedMakeups.map((l) => l.rescheduledFromId ?? l.id)).size;
+  function countDistinctMakeups(status: "COMPLETED" | "NO_SHOW") {
+    const matches = student.lessons.filter((l) => l.isMakeup && l.status === status);
+    return new Set(matches.map((l) => l.rescheduledFromId ?? l.id)).size;
+  }
+  const makeupGivenCount = countDistinctMakeups("COMPLETED");
+  const makeupNoShowCount = countDistinctMakeups("NO_SHOW");
   // Excludes makeups — a reposição marked "não compareceu" is tracked in
-  // its own Reposições box above instead of inflating this one, matching
-  // "Aula dada" excluding makeups from the completed count.
+  // its own Reposição Não Compareceu box instead of inflating this one,
+  // matching "Aula dada" excluding makeups from the completed count.
   const noShowCount = student.lessons.filter((l) => l.status === "NO_SHOW" && !l.isMakeup).length;
   // CT — canceled too late to fill the slot, so like NC it still counts as
   // a class given (teacher is paid for it — see REALIZED_STATUSES).
@@ -291,15 +295,16 @@ export function StudentDetailView({
         <StatCard label="Aulas realizadas" value={String(realizedLessonsAllTime)} icon={Award} />
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-4 lg:grid-cols-8">
-        <StatCard label="Aulas dadas" value={String(completedLessons)} icon={CheckCircle2} accent />
-        <StatCard label="Cancelamento aluno" value={String(canceledByStudent)} icon={XCircle} />
-        <StatCard label="Cancelamento professor" value={String(canceledByTeacher)} icon={XCircle} />
-        <StatCard label="Cancelamento tarde" value={String(canceledLateCount)} icon={Clock3} />
-        <StatCard label="Cancelamento férias" value={String(canceledVacationCount)} icon={Palmtree} />
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-9">
+        <StatCard label="Aulas Dadas" value={String(completedLessons)} icon={CheckCircle2} accent />
+        <StatCard label="Cancelamento Aluno" value={String(canceledByStudent)} icon={XCircle} />
+        <StatCard label="Cancelamento Professor" value={String(canceledByTeacher)} icon={XCircle} />
+        <StatCard label="Cancelamento Tarde" value={String(canceledLateCount)} icon={Clock3} />
+        <StatCard label="Cancelamento Férias" value={String(canceledVacationCount)} icon={Palmtree} />
         <StatCard label="Feriado" value={String(canceledHolidayCount)} icon={PartyPopper} />
-        <StatCard label="Reposições" value={String(makeupCount)} icon={Repeat} />
-        <StatCard label="Não compareceu" value={String(noShowCount)} icon={UserX} />
+        <StatCard label="Reposição Dada" value={String(makeupGivenCount)} icon={Repeat} />
+        <StatCard label="Reposição Não Compareceu" value={String(makeupNoShowCount)} icon={UserX} />
+        <StatCard label="Não Compareceu" value={String(noShowCount)} icon={UserX} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

@@ -103,12 +103,12 @@ export function TeacherDetailView({
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Cancelamento aluno (mês)"
+          label="Cancelamento Aluno (mês)"
           value={String(teacher.canceledByStudentThisMonth)}
           icon={XCircle}
         />
         <StatCard
-          label="Cancelamento professor (mês)"
+          label="Cancelamento Professor (mês)"
           value={String(teacher.canceledByTeacherThisMonth)}
           icon={XCircle}
         />

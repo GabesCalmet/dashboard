@@ -371,28 +371,12 @@ export async function addLessonReschedule(
   revalidateReportPaths(lesson.studentId);
 }
 
-// Removes one specific makeup lesson booked for a canceled lesson.
-export async function deleteLessonReschedule(makeupLessonId: string) {
-  const { actor, lesson } = await requireLessonEditAccess(makeupLessonId);
-
-  await prisma.lesson.delete({ where: { id: makeupLessonId } });
-
-  await recordAudit({
-    entityType: "Lesson",
-    entityId: makeupLessonId,
-    action: "UPDATE",
-    actor,
-    changes: { reagendamento: null },
-  });
-
-  revalidateReportPaths(lesson.studentId);
-}
-
-// Moves a reposição's own date/time in place — unlike
-// scheduleLessonReschedule (which books a separate lesson linked via
-// rescheduledFromId to whatever it's replacing), a reposição that itself
-// needs to move doesn't need another lesson chained off it, just its own
-// scheduledAt/durationMin updated.
+// Moves a reposição's own date/time in place — unlike addLessonReschedule
+// (which books a separate lesson linked via rescheduledFromId to whatever
+// it's replacing), a reposição that itself needs to move doesn't need
+// another lesson chained off it, just its own scheduledAt/durationMin
+// updated. Only offered while the reposição is still "Reposição Marcada" —
+// see the Reagendamento column in Histórico de aulas/Relatórios.
 export async function rescheduleMakeupLesson(
   lessonId: string,
   values: { date: string; time: string; endTime: string }

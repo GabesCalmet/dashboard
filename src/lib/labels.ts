@@ -55,16 +55,16 @@ export const expenseCategoryLabel: Record<ExpenseCategory, string> = {
 
 export const lessonStatusLabel: Record<LessonStatus, string> = {
   SCHEDULED: "Agendada",
-  COMPLETED: "Aula dada",
-  CANCELED_BY_STUDENT: "Cancelamento aluno",
-  NO_SHOW: "Não compareceu",
-  CANCELED_BY_TEACHER: "Cancelamento professor",
-  CANCELED_LATE: "Cancelamento tarde",
-  CANCELED_VACATION: "Cancelamento férias",
+  COMPLETED: "Aula Dada",
+  CANCELED_BY_STUDENT: "Cancelamento Aluno",
+  NO_SHOW: "Não Compareceu",
+  CANCELED_BY_TEACHER: "Cancelamento Professor",
+  CANCELED_LATE: "Cancelamento Tarde",
+  CANCELED_VACATION: "Cancelamento Férias",
   CANCELED_HOLIDAY: "Feriado",
-  MAKEUP: "Reposição marcada",
-  POWER_OUTAGE: "Faltou energia",
-  TECH_ISSUE: "Problema técnico",
+  MAKEUP: "Reposição Marcada",
+  POWER_OUTAGE: "Faltou Energia",
+  TECH_ISSUE: "Problema Técnico",
   OTHER: "Outro",
   PAUSED: "Pausado",
 };
@@ -114,26 +114,33 @@ export const quickLessonStatuses: LessonStatus[] = [
 export const reportableLessonStatuses: LessonStatus[] = ["SCHEDULED", ...quickLessonStatuses];
 
 // The 3 states a booked reposição (makeup lesson) can be in — a dedicated
-// wording distinct from the generic lessonStatusLabel above, shown in the
-// Reagendamento dialog and the "esta é uma aula de reposição" panel. Maps
-// 1:1 onto the same LessonStatus values (MAKEUP/COMPLETED/NO_SHOW) a makeup
-// lesson's own row already uses, so no schema change is needed to support
-// it — only these two are ever set once resolved (see setMakeupOutcome).
+// wording distinct from the generic lessonStatusLabel above, shown next to
+// a makeup lesson's own row in the Histórico de aulas / Relatórios tables
+// (the only place its outcome is set — see setMakeupOutcome). Maps 1:1 onto
+// the same LessonStatus values (MAKEUP/COMPLETED/NO_SHOW) a makeup lesson's
+// own row already uses, so no schema change is needed to support it.
 export const makeupOutcomeOptions = ["MAKEUP", "COMPLETED", "NO_SHOW"] as const;
 export type MakeupOutcome = (typeof makeupOutcomeOptions)[number];
 
 export const makeupOutcomeLabel: Record<MakeupOutcome, string> = {
-  MAKEUP: "Reposição marcada",
-  COMPLETED: "Reposição dada",
-  NO_SHOW: "Reposição não compareceu",
+  MAKEUP: "Reposição Marcada",
+  COMPLETED: "Reposição Dada",
+  NO_SHOW: "Reposição Não Compareceu",
 };
 
 // Compact form for table cells where "Reposição" is already implied by the
 // column/context.
 export function makeupOutcomeShortLabel(status: LessonStatus): string {
   if (status === "COMPLETED") return "Dada";
-  if (status === "NO_SHOW") return "Não compareceu";
+  if (status === "NO_SHOW") return "Não Compareceu";
   return "Marcada";
+}
+
+// Narrows a makeup lesson's own (generic) LessonStatus down to the 3-value
+// MakeupOutcome union — any status other than COMPLETED/NO_SHOW means it's
+// still just booked (MAKEUP/"Reposição Marcada").
+export function toMakeupOutcome(status: LessonStatus): MakeupOutcome {
+  return status === "COMPLETED" || status === "NO_SHOW" ? status : "MAKEUP";
 }
 
 // Calendar event styling per status. Solid statuses (still to happen,

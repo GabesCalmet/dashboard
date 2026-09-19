@@ -12,8 +12,12 @@ import {
   lessonStatusLabel,
   lessonStatusBadgeVariant,
   makeupOutcomeShortLabel,
+  makeupOutcomeLabel,
+  toMakeupOutcome,
 } from "@/lib/labels";
 import { LessonStatusSelect } from "@/components/lessons/lesson-status-select";
+import { MakeupOutcomeSelect } from "@/components/lessons/makeup-outcome-select";
+import { MakeupRescheduleButton } from "@/components/lessons/makeup-reschedule-button";
 import { LessonSummaryEditor } from "@/components/lessons/lesson-summary-editor";
 import { LessonRescheduleEditor } from "@/components/lessons/lesson-reschedule-editor";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
@@ -68,7 +72,15 @@ export function LessonsReportTable({
               {showTeacher && <TableCell>{l.teacher.user.name}</TableCell>}
               <TableCell>{l.durationMin} min</TableCell>
               <TableCell>
-                {canEdit(l) ? (
+                {l.isMakeup ? (
+                  canEdit(l) ? (
+                    <MakeupOutcomeSelect makeupLessonId={l.id} status={toMakeupOutcome(l.status)} />
+                  ) : (
+                    <Badge variant={lessonStatusBadgeVariant[l.status as LessonStatus]}>
+                      {makeupOutcomeLabel[toMakeupOutcome(l.status)]}
+                    </Badge>
+                  )
+                ) : canEdit(l) ? (
                   <LessonStatusSelect lessonId={l.id} status={l.status} />
                 ) : (
                   <Badge variant={lessonStatusBadgeVariant[l.status as LessonStatus]}>
@@ -77,7 +89,17 @@ export function LessonsReportTable({
                 )}
               </TableCell>
               <TableCell>
-                {(reschedulableStatuses as readonly string[]).includes(l.status) ? (
+                {l.isMakeup ? (
+                  l.status === "MAKEUP" && canEdit(l) ? (
+                    <MakeupRescheduleButton
+                      lessonId={l.id}
+                      scheduledAt={l.scheduledAt}
+                      durationMin={l.durationMin}
+                    />
+                  ) : (
+                    <span className="text-sm text-muted-foreground">—</span>
+                  )
+                ) : (reschedulableStatuses as readonly string[]).includes(l.status) ? (
                   canEdit(l) ? (
                     <LessonRescheduleEditor lessonId={l.id} rescheduledTo={l.rescheduledTo} />
                   ) : l.rescheduledTo.length === 0 ? (

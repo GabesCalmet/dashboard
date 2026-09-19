@@ -13,11 +13,20 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatDateTime, formatWeekday } from "@/lib/labels";
-import { lessonStatusLabel, lessonStatusBadgeVariant, makeupOutcomeShortLabel } from "@/lib/labels";
+import {
+  formatDateTime,
+  formatWeekday,
+  lessonStatusLabel,
+  lessonStatusBadgeVariant,
+  makeupOutcomeShortLabel,
+  makeupOutcomeLabel,
+  toMakeupOutcome,
+} from "@/lib/labels";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
 import { LessonStatusSelect } from "@/components/lessons/lesson-status-select";
 import { LessonRescheduleEditor } from "@/components/lessons/lesson-reschedule-editor";
+import { MakeupOutcomeSelect } from "@/components/lessons/makeup-outcome-select";
+import { MakeupRescheduleButton } from "@/components/lessons/makeup-reschedule-button";
 import { LessonSummaryEditor } from "@/components/lessons/lesson-summary-editor";
 import { LessonObservationsEditor } from "@/components/lessons/lesson-observations-editor";
 import { DeleteLessonButton } from "@/components/lessons/delete-lesson-button";
@@ -107,7 +116,15 @@ export function LessonHistoryTable({
                 <TableCell>{l.durationMin} min</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
-                    {editable ? (
+                    {l.isMakeup ? (
+                      editable ? (
+                        <MakeupOutcomeSelect makeupLessonId={l.id} status={toMakeupOutcome(l.status)} />
+                      ) : (
+                        <Badge variant={lessonStatusBadgeVariant[l.status]}>
+                          {makeupOutcomeLabel[toMakeupOutcome(l.status)]}
+                        </Badge>
+                      )
+                    ) : editable ? (
                       <LessonStatusSelect lessonId={l.id} status={l.status} />
                     ) : (
                       <Badge variant={lessonStatusBadgeVariant[l.status]}>
@@ -118,7 +135,21 @@ export function LessonHistoryTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  {(reschedulableStatuses as readonly string[]).includes(l.status) ? (
+                  {l.isMakeup ? (
+                    l.status === "MAKEUP" ? (
+                      editable ? (
+                        <MakeupRescheduleButton
+                          lessonId={l.id}
+                          scheduledAt={l.scheduledAt}
+                          durationMin={l.durationMin}
+                        />
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )
+                  ) : (reschedulableStatuses as readonly string[]).includes(l.status) ? (
                     editable ? (
                       <LessonRescheduleEditor lessonId={l.id} rescheduledTo={l.rescheduledTo ?? []} />
                     ) : (l.rescheduledTo ?? []).length === 0 ? (

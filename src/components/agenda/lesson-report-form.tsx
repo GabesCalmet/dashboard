@@ -21,10 +21,7 @@ import { curriculumUnits } from "@/lib/curriculum";
 import { CurriculumPicker } from "@/components/lessons/curriculum-picker";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
 import { LessonRescheduleEditor } from "@/components/lessons/lesson-reschedule-editor";
-import { MakeupOutcomeSelect } from "@/components/lessons/makeup-outcome-select";
-import { MakeupRescheduleButton } from "@/components/lessons/makeup-reschedule-button";
 import type { LessonStatus } from "@prisma/client";
-import type { MakeupOutcome } from "@/lib/labels";
 
 export function LessonReportForm({
   lesson,
@@ -120,25 +117,6 @@ export function LessonReportForm({
               }))}
             />
           </div>
-        </div>
-      )}
-
-      {lesson.status === "MAKEUP" && (
-        <div className="flex items-center justify-between gap-3 rounded-md border p-3 sm:col-span-2">
-          <div>
-            <p className="mb-1 text-xs font-medium text-muted-foreground">Esta é uma aula de reposição</p>
-            <MakeupRescheduleButton
-              lessonId={lesson.id}
-              scheduledAt={start}
-              durationMin={lesson.durationMin}
-              onRescheduled={onSaved}
-            />
-          </div>
-          <MakeupOutcomeSelect
-            makeupLessonId={lesson.id}
-            status={status === "COMPLETED" || status === "NO_SHOW" ? status : "MAKEUP"}
-            onChange={(next: MakeupOutcome) => setStatus(next)}
-          />
         </div>
       )}
 
