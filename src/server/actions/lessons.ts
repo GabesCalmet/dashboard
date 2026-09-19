@@ -118,14 +118,7 @@ export async function updateLessonStatus(lessonId: string, status: string) {
 
   await prisma.lesson.update({
     where: { id: lessonId },
-    data: {
-      status: parsed.data,
-      reportedAt: new Date(),
-      // Sticky once set — see the isMakeup field comment on why this can't
-      // just be inferred from rescheduledFromId once status moves on to
-      // COMPLETED.
-      ...(parsed.data === "MAKEUP" ? { isMakeup: true } : {}),
-    },
+    data: { status: parsed.data, reportedAt: new Date() },
   });
 
   // A reagendamento only makes sense while the lesson is CA/CP/CF — if the
@@ -366,6 +359,27 @@ export async function addLessonReschedule(
     action: "UPDATE",
     actor,
     changes: { reagendamento: scheduledAt.toISOString() },
+  });
+
+  revalidateReportPaths(lesson.studentId);
+}
+
+// Cancels a booked reposição outright — deletes the makeup lesson row,
+// leaving the original cancellation unresolved again (its own Reagendamento
+// control goes back to "Agendar reposição" once this is gone, since
+// rescheduledTo simply becomes empty). Offered as "Cancelar Reagendamento"
+// in MakeupOutcomeSelect.
+export async function cancelLessonReschedule(makeupLessonId: string) {
+  const { actor, lesson } = await requireLessonEditAccess(makeupLessonId);
+
+  await prisma.lesson.delete({ where: { id: makeupLessonId } });
+
+  await recordAudit({
+    entityType: "Lesson",
+    entityId: makeupLessonId,
+    action: "DELETE",
+    actor,
+    changes: { reagendamentoCancelado: true },
   });
 
   revalidateReportPaths(lesson.studentId);

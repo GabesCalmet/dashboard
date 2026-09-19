@@ -15,12 +15,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { submitLessonReport } from "@/server/actions/lessons";
-import { lessonStatusDisplayLabel, reportableLessonStatuses } from "@/lib/labels";
+import { lessonStatusLabel, reportableLessonStatuses, toMakeupOutcome } from "@/lib/labels";
 import type { CalendarLessonEvent } from "@/components/agenda/calendar-view";
 import { curriculumUnits } from "@/lib/curriculum";
 import { CurriculumPicker } from "@/components/lessons/curriculum-picker";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
 import { LessonRescheduleEditor } from "@/components/lessons/lesson-reschedule-editor";
+import { MakeupOutcomeSelect } from "@/components/lessons/makeup-outcome-select";
 import type { LessonStatus } from "@prisma/client";
 
 export function LessonReportForm({
@@ -86,18 +87,30 @@ export function LessonReportForm({
       </div>
       <div className="space-y-1.5">
         <Label>Status da aula</Label>
-        <Select name="status" value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {reportableLessonStatuses.map((value) => (
-              <SelectItem key={value} value={value}>
-                {lessonStatusDisplayLabel(value, lesson.isMakeup)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {lesson.isMakeup ? (
+          <>
+            <input type="hidden" name="status" value={status} />
+            <MakeupOutcomeSelect
+              makeupLessonId={lesson.id}
+              status={toMakeupOutcome(status as LessonStatus)}
+              onChange={(next) => setStatus(next)}
+              onCanceled={onSaved}
+            />
+          </>
+        ) : (
+          <Select name="status" value={status} onValueChange={setStatus}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {reportableLessonStatuses.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {lessonStatusLabel[value]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <input type="hidden" name="contentTaught" value={mode === "unit" ? unit : text} />
