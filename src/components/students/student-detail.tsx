@@ -295,16 +295,16 @@ export function StudentDetailView({
         <StatCard label="Aulas realizadas" value={String(realizedLessonsAllTime)} icon={Award} />
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-9">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Aulas Dadas" value={String(completedLessons)} icon={CheckCircle2} accent />
         <StatCard label="Cancelamento Aluno" value={String(canceledByStudent)} icon={XCircle} />
+        <StatCard label="Não Compareceu" value={String(noShowCount)} icon={UserX} />
+        <StatCard label="Reposição Dada" value={String(makeupGivenCount)} icon={Repeat} />
         <StatCard label="Cancelamento Professor" value={String(canceledByTeacher)} icon={XCircle} />
         <StatCard label="Cancelamento Tarde" value={String(canceledLateCount)} icon={Clock3} />
+        <StatCard label="Reposição Não Compareceu" value={String(makeupNoShowCount)} icon={UserX} />
         <StatCard label="Cancelamento Férias" value={String(canceledVacationCount)} icon={Palmtree} />
         <StatCard label="Feriado" value={String(canceledHolidayCount)} icon={PartyPopper} />
-        <StatCard label="Reposição Dada" value={String(makeupGivenCount)} icon={Repeat} />
-        <StatCard label="Reposição Não Compareceu" value={String(makeupNoShowCount)} icon={UserX} />
-        <StatCard label="Não Compareceu" value={String(noShowCount)} icon={UserX} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
