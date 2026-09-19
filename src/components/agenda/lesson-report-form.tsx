@@ -54,120 +54,131 @@ export function LessonReportForm({
   }, [state]);
 
   return (
-    <form action={formAction} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <div className="space-y-1.5">
-        <Label htmlFor="date">Data</Label>
-        <Input
-          id="date"
-          name="date"
-          type="date"
-          defaultValue={start.toISOString().slice(0, 10)}
-          required
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="time">Horário</Label>
-        <Input
-          id="time"
-          name="time"
-          type="time"
-          defaultValue={start.toTimeString().slice(0, 5)}
-          required
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="durationMin">Duração (min)</Label>
-        <Input
-          id="durationMin"
-          name="durationMin"
-          type="number"
-          defaultValue={lesson.durationMin}
-          required
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label>Status da aula</Label>
-        {lesson.isMakeup ? (
-          // No hidden "status" input here on purpose — a makeup lesson's
-          // status is exclusively owned by MakeupOutcomeSelect's own save,
-          // which fires immediately on pick. Submitting it again from this
-          // form's "Salvar relatório da aula" (a separate, independent
-          // request) could race it and revert a just-picked outcome back
-          // to stale data — see the lessonReportSchema comment.
+    <div className="space-y-4">
+      {lesson.isMakeup && (
+        // Deliberately rendered OUTSIDE the <form> below. React resets
+        // uncontrolled descendant form fields after a <form action> submits
+        // successfully, and Radix's Select renders a hidden native <select>
+        // for form/a11y integration — as a descendant of that form, it was
+        // getting reset to its mount-time value ("Reposição Marcada") the
+        // instant "Salvar relatório da aula" succeeded, and Radix reported
+        // that reset back through onValueChange, silently reverting a
+        // freshly-picked "Reposição Dada"/"Não Compareceu". Being outside
+        // the form entirely avoids this altogether — its own save is
+        // already fully independent of the report form's submit.
+        <div className="space-y-1.5">
+          <Label>Status da aula</Label>
           <MakeupOutcomeSelect
             makeupLessonId={lesson.id}
             status={toMakeupOutcome(status as LessonStatus)}
             onChange={(next) => setStatus(next)}
             onCanceled={onSaved}
           />
-        ) : (
-          <Select name="status" value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {reportableLessonStatuses.map((value) => (
-                <SelectItem key={value} value={value}>
-                  {lessonStatusLabel[value]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
-
-      <input type="hidden" name="contentTaught" value={mode === "unit" ? unit : text} />
-      <input type="hidden" name="classFocus" value={focus} />
-
-      {(reschedulableStatuses as readonly string[]).includes(status) && (
-        <div className="flex items-center gap-3 rounded-md border p-3 sm:col-span-2">
-          <div className="flex-1">
-            <p className="mb-1 text-xs font-medium text-muted-foreground">Reagendamento</p>
-            <LessonRescheduleEditor
-              lessonId={lesson.id}
-              rescheduledTo={lesson.rescheduledTo.map((r) => ({
-                id: r.id,
-                scheduledAt: new Date(r.scheduledAt),
-                durationMin: r.durationMin,
-                status: r.status as LessonStatus,
-              }))}
-            />
-          </div>
         </div>
       )}
 
-      <div className="sm:col-span-2">
-        <Label className="mb-1.5 block">Conteúdo ensinado</Label>
-        <CurriculumPicker
-          mode={mode}
-          onModeChange={setMode}
-          text={text}
-          onTextChange={setText}
-          unit={unit}
-          onUnitChange={setUnit}
-          focus={focus}
-          onFocusChange={setFocus}
-        />
-      </div>
+      <form action={formAction} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="date">Data</Label>
+          <Input
+            id="date"
+            name="date"
+            type="date"
+            defaultValue={start.toISOString().slice(0, 10)}
+            required
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="time">Horário</Label>
+          <Input
+            id="time"
+            name="time"
+            type="time"
+            defaultValue={start.toTimeString().slice(0, 5)}
+            required
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="durationMin">Duração (min)</Label>
+          <Input
+            id="durationMin"
+            name="durationMin"
+            type="number"
+            defaultValue={lesson.durationMin}
+            required
+          />
+        </div>
+        {!lesson.isMakeup && (
+          <div className="space-y-1.5">
+            <Label>Status da aula</Label>
+            <Select name="status" value={status} onValueChange={setStatus}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {reportableLessonStatuses.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {lessonStatusLabel[value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
-      <div className="sm:col-span-2 space-y-1.5">
-        <Label htmlFor="observations">Observações</Label>
-        <Textarea
-          id="observations"
-          name="observations"
-          value={observations}
-          onChange={(e) => setObservations(e.target.value)}
-          placeholder="Notas livres sobre como a aula foi..."
-          rows={3}
-        />
-      </div>
+        <input type="hidden" name="contentTaught" value={mode === "unit" ? unit : text} />
+        <input type="hidden" name="classFocus" value={focus} />
 
-      <div className="sm:col-span-2">
-        <Button type="submit" disabled={isPending} className="w-full">
-          {isPending && <Loader2 className="animate-spin" />}
-          Salvar relatório da aula
-        </Button>
-      </div>
-    </form>
+        {(reschedulableStatuses as readonly string[]).includes(status) && (
+          <div className="flex items-center gap-3 rounded-md border p-3 sm:col-span-2">
+            <div className="flex-1">
+              <p className="mb-1 text-xs font-medium text-muted-foreground">Reagendamento</p>
+              <LessonRescheduleEditor
+                lessonId={lesson.id}
+                rescheduledTo={lesson.rescheduledTo.map((r) => ({
+                  id: r.id,
+                  scheduledAt: new Date(r.scheduledAt),
+                  durationMin: r.durationMin,
+                  status: r.status as LessonStatus,
+                }))}
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="sm:col-span-2">
+          <Label className="mb-1.5 block">Conteúdo ensinado</Label>
+          <CurriculumPicker
+            mode={mode}
+            onModeChange={setMode}
+            text={text}
+            onTextChange={setText}
+            unit={unit}
+            onUnitChange={setUnit}
+            focus={focus}
+            onFocusChange={setFocus}
+          />
+        </div>
+
+        <div className="sm:col-span-2 space-y-1.5">
+          <Label htmlFor="observations">Observações</Label>
+          <Textarea
+            id="observations"
+            name="observations"
+            value={observations}
+            onChange={(e) => setObservations(e.target.value)}
+            placeholder="Notas livres sobre como a aula foi..."
+            rows={3}
+          />
+        </div>
+
+        <div className="sm:col-span-2">
+          <Button type="submit" disabled={isPending} className="w-full">
+            {isPending && <Loader2 className="animate-spin" />}
+            Salvar relatório da aula
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 }
