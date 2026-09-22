@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
+import { TimeInput } from "@/components/ui/time-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -93,7 +94,7 @@ export function ScheduleLessonDialog({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="time">Horário</Label>
-            <Input id="time" name="time" type="time" required />
+            <TimeInput id="time" name="time" required />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="durationMin">Duração (min)</Label>

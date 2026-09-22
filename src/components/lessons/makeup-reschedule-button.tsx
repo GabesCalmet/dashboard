@@ -13,8 +13,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
+import { TimeInput } from "@/components/ui/time-input";
 import { Label } from "@/components/ui/label";
 import { rescheduleMakeupLesson } from "@/server/actions/lessons";
 
@@ -77,21 +77,11 @@ export function MakeupRescheduleButton({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="makeup-reschedule-time">Início</Label>
-            <Input
-              id="makeup-reschedule-time"
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-            />
+            <TimeInput id="makeup-reschedule-time" value={time} onChange={setTime} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="makeup-reschedule-end-time">Término</Label>
-            <Input
-              id="makeup-reschedule-end-time"
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-            />
+            <TimeInput id="makeup-reschedule-end-time" value={endTime} onChange={setEndTime} />
           </div>
         </div>
 

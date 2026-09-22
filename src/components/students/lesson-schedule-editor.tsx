@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
+import { TimeInput } from "@/components/ui/time-input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
@@ -157,17 +157,15 @@ export function LessonScheduleEditor({
                     <span className="w-20 shrink-0 text-sm font-medium">
                       {DAYS[d.weekday].name}
                     </span>
-                    <Input
-                      type="time"
+                    <TimeInput
                       value={d.start}
-                      onChange={(e) => updateDay(block._id, d.weekday, "start", e.target.value)}
+                      onChange={(v) => updateDay(block._id, d.weekday, "start", v)}
                       aria-label={`Início — ${DAYS[d.weekday].name}`}
                     />
                     <span className="shrink-0 text-sm text-muted-foreground">até</span>
-                    <Input
-                      type="time"
+                    <TimeInput
                       value={d.end}
-                      onChange={(e) => updateDay(block._id, d.weekday, "end", e.target.value)}
+                      onChange={(v) => updateDay(block._id, d.weekday, "end", v)}
                       aria-label={`Término — ${DAYS[d.weekday].name}`}
                     />
                   </div>

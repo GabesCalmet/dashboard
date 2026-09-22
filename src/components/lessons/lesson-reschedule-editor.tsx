@@ -13,8 +13,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
+import { TimeInput } from "@/components/ui/time-input";
 import { Label } from "@/components/ui/label";
 import { addLessonReschedule } from "@/server/actions/lessons";
 import { formatDateTime } from "@/lib/labels";
@@ -117,20 +117,18 @@ export function LessonRescheduleEditor({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor={`reschedule-time-${d.key}`}>Início</Label>
-                <Input
+                <TimeInput
                   id={`reschedule-time-${d.key}`}
-                  type="time"
                   value={d.time}
-                  onChange={(e) => updateDraft(d.key, "time", e.target.value)}
+                  onChange={(v) => updateDraft(d.key, "time", v)}
                 />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor={`reschedule-end-time-${d.key}`}>Término</Label>
-                <Input
+                <TimeInput
                   id={`reschedule-end-time-${d.key}`}
-                  type="time"
                   value={d.endTime}
-                  onChange={(e) => updateDraft(d.key, "endTime", e.target.value)}
+                  onChange={(v) => updateDraft(d.key, "endTime", v)}
                 />
               </div>
             </div>

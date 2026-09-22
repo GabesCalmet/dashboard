@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
+import { TimeInput } from "@/components/ui/time-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -90,10 +91,9 @@ export function LessonReportForm({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="time">Horário</Label>
-          <Input
+          <TimeInput
             id="time"
             name="time"
-            type="time"
             defaultValue={start.toTimeString().slice(0, 5)}
             required
           />
