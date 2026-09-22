@@ -471,12 +471,12 @@ export async function getStudentPaymentHistory(studentId: string) {
 // month — the "you need to chase these down" list, as opposed to the
 // Receita page's Cobranças table which only ever shows one month at a
 // time. Kept up to date by the daily mark-late-payments cron (see
-// /api/cron/mark-late-payments) plus whatever's set by hand. Excludes
-// canceled students — once someone's canceled, whatever they still owe is
+// /api/cron/mark-late-payments) plus whatever's set by hand. Only ACTIVE
+// students — once someone's canceled or paused, whatever they still owe is
 // tracked elsewhere, not chased down on this list.
 export async function getLatePayments() {
   const payments = await prisma.payment.findMany({
-    where: { status: "LATE", student: { status: { not: "CANCELED" } } },
+    where: { status: "LATE", student: { status: "ACTIVE" } },
     include: {
       student: {
         include: { user: true, teacher: { include: { user: true } }, groupMembers: { include: { user: true } } },

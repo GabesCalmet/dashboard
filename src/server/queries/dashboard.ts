@@ -55,9 +55,8 @@ export async function getAdminDashboardData(referenceMonth?: { year: number; mon
     }),
     // Not scoped to the browsed month — an overdue payment from any month
     // still needs chasing down regardless of which month is on screen.
-    // Excludes canceled students, matching the Atrasados page this box
-    // links to.
-    prisma.payment.count({ where: { status: "LATE", student: { status: { not: "CANCELED" } } } }),
+    // Only ACTIVE students, matching the Atrasados page this box links to.
+    prisma.payment.count({ where: { status: "LATE", student: { status: "ACTIVE" } } }),
   ]);
 
   // Ticket médio = each course's real total (own portion + whatever a
