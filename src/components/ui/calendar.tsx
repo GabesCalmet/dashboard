@@ -8,6 +8,8 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
+const now = new Date();
+
 export function Calendar({
   className,
   classNames,
@@ -17,6 +19,9 @@ export function Calendar({
     <DayPicker
       locale={ptBR}
       showOutsideDays
+      captionLayout="dropdown"
+      startMonth={new Date(now.getFullYear() - 100, 0)}
+      endMonth={new Date(now.getFullYear() + 10, 11)}
       className={cn("p-3", className)}
       classNames={{
         months: "flex flex-col gap-4",
@@ -30,7 +35,12 @@ export function Calendar({
           buttonVariants({ variant: "outline" }),
           "size-7 bg-transparent p-0 opacity-70 hover:opacity-100"
         ),
-        month_caption: "flex justify-center pt-1 text-sm font-medium capitalize",
+        month_caption: "flex justify-center items-center pt-1 text-sm font-medium capitalize",
+        dropdowns: "flex items-center justify-center gap-1.5",
+        dropdown_root: "relative",
+        months_dropdown:
+          "h-7 rounded-md border border-input bg-background px-1.5 text-sm capitalize outline-none",
+        years_dropdown: "h-7 rounded-md border border-input bg-background px-1.5 text-sm outline-none",
         weekdays: "flex",
         weekday: "text-muted-foreground w-9 text-xs font-normal capitalize",
         week: "flex w-full mt-1",
