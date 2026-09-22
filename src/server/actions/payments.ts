@@ -75,6 +75,39 @@ export async function setCobrancaStatus(
   revalidatePath("/admin/financial/receita");
 }
 
+// Manual fallback for the daily cron (/api/cron/mark-late-payments) — runs
+// the exact same two sweeps (auto-generate this month's missing cobranças,
+// then flip any overdue PENDING to LATE) on demand, for when the scheduled
+// cron didn't fire (e.g. a paused/rate-limited Vercel account). Safe to run
+// any time; both sweeps are idempotent no-ops for anything already correct.
+export async function runLatePaymentsSweep() {
+  const actor = await requireRole("ADMIN");
+
+  const generated = await createMissingPaymentsForMonth(new Date());
+
+  const { count: markedLate } = await prisma.payment.updateMany({
+    where: { status: "PENDING", dueDate: { lt: new Date() } },
+    data: { status: "LATE" },
+  });
+
+  await recordAudit({
+    entityType: "Payment",
+    entityId: "manual-sweep",
+    action: "UPDATE",
+    actor,
+    changes: { generated, markedLate },
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/financial");
+  revalidatePath("/admin/financial/receita");
+  revalidatePath("/admin/financial/atrasados");
+  revalidatePath("/admin/students/[id]", "page");
+  revalidatePath("/coordinator/students/[id]", "page");
+
+  return { generated, markedLate };
+}
+
 export async function generateMonthlyPayments(referenceMonth: Date) {
   const actor = await requireRole("ADMIN");
   const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);

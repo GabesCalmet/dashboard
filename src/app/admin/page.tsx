@@ -19,6 +19,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { GrowthChart } from "@/components/shared/growth-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MonthNav } from "@/components/financial/month-nav";
+import { SweepLatePaymentsButton } from "@/components/financial/sweep-late-payments-button";
 import { getAdminDashboardData } from "@/server/queries/dashboard";
 import { getAttendanceAlerts } from "@/server/queries/alerts";
 import { formatCurrency } from "@/lib/labels";
@@ -46,6 +47,7 @@ export default async function AdminDashboardPage({
       <PageHeader
         title="Dashboard"
         description="Visão geral da Upfront English School."
+        actions={<SweepLatePaymentsButton />}
       />
 
       <div className="mb-4">
