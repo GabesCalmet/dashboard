@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { bankAccountLabel } from "@/lib/labels";
@@ -42,12 +43,7 @@ export function PayoutAddFields({
       </div>
       <div className="space-y-1.5">
         <Label htmlFor={`${idPrefix}-date`}>Data do pagamento</Label>
-        <Input
-          id={`${idPrefix}-date`}
-          type="date"
-          value={date}
-          onChange={(e) => onDateChange(e.target.value)}
-        />
+        <DateInput id={`${idPrefix}-date`} value={date} onChange={onDateChange} />
       </div>
       <div className="space-y-1.5">
         <Label>Conta</Label>

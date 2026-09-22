@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -80,10 +81,9 @@ export function LessonReportForm({
       <form action={formAction} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="date">Data</Label>
-          <Input
+          <DateInput
             id="date"
             name="date"
-            type="date"
             defaultValue={start.toISOString().slice(0, 10)}
             required
           />

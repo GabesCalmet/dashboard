@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
@@ -110,17 +111,15 @@ export function MonthlyValueHistoryEditor({
           <div className="space-y-1.5">
             <Label className="text-xs font-normal text-muted-foreground">Vigência</Label>
             <div className="flex items-center gap-2">
-              <Input
-                type="date"
+              <DateInput
                 value={entry.from ?? ""}
-                onChange={(e) => updateEntry(entry._id, "from", e.target.value)}
+                onChange={(iso) => updateEntry(entry._id, "from", iso)}
                 aria-label="Vigente desde"
               />
               <span className="shrink-0 text-xs text-muted-foreground">até</span>
-              <Input
-                type="date"
+              <DateInput
                 value={entry.until ?? ""}
-                onChange={(e) => updateEntry(entry._id, "until", e.target.value)}
+                onChange={(iso) => updateEntry(entry._id, "until", iso)}
                 placeholder="Atual"
                 aria-label="Vigente até"
               />

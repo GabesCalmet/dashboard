@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -88,7 +89,7 @@ export function ScheduleLessonDialog({
 
           <div className="space-y-1.5">
             <Label htmlFor="date">Data</Label>
-            <Input id="date" name="date" type="date" required />
+            <DateInput id="date" name="date" required />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="time">Horário</Label>

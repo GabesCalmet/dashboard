@@ -13,6 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -222,7 +223,7 @@ export function StudentFormDialog({
 
             <div className="space-y-1.5">
               <Label htmlFor="birthDate">Data de nascimento</Label>
-              <Input id="birthDate" name="birthDate" type="date" defaultValue={student?.birthDate} />
+              <DateInput id="birthDate" name="birthDate" defaultValue={student?.birthDate} />
             </div>
 
             <MonthlyValueHistoryEditor
@@ -268,14 +269,13 @@ export function StudentFormDialog({
 
           <div className="space-y-1.5">
             <Label htmlFor="startDate">Data de início das aulas</Label>
-            <Input id="startDate" name="startDate" type="date" defaultValue={student?.startDate} />
+            <DateInput id="startDate" name="startDate" defaultValue={student?.startDate} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="billingStartDate">Início da cobrança (opcional)</Label>
-            <Input
+            <DateInput
               id="billingStartDate"
               name="billingStartDate"
-              type="date"
               defaultValue={student?.billingStartDate}
               placeholder="Mesma data das aulas"
             />
@@ -285,7 +285,7 @@ export function StudentFormDialog({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="endDate">Data de término (opcional)</Label>
-            <Input id="endDate" name="endDate" type="date" defaultValue={student?.endDate} />
+            <DateInput id="endDate" name="endDate" defaultValue={student?.endDate} />
           </div>
 
           <div className="space-y-1.5 sm:col-span-2">

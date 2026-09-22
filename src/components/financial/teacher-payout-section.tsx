@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { addTeacherPayout } from "@/server/actions/payouts";
@@ -99,11 +100,10 @@ export function TeacherPayoutSection({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor={`payout-date-${teacherId}-${year}-${month}`}>Data do pagamento</Label>
-          <Input
+          <DateInput
             id={`payout-date-${teacherId}-${year}-${month}`}
-            type="date"
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={setDate}
             className="w-40"
           />
         </div>

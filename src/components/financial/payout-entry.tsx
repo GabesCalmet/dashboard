@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Pencil, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -114,12 +115,7 @@ export function PayoutEntry({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor={`edit-date-${entry.id}`}>Data do pagamento</Label>
-            <Input
-              id={`edit-date-${entry.id}`}
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
+            <DateInput id={`edit-date-${entry.id}`} value={date} onChange={setDate} />
           </div>
           <div className="space-y-1.5">
             <Label>Conta</Label>

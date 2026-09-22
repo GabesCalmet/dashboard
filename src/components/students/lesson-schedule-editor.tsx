@@ -4,6 +4,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
@@ -176,18 +177,16 @@ export function LessonScheduleEditor({
 
             <div className="flex items-center gap-2">
               <Label className="shrink-0 text-xs font-normal text-muted-foreground">Vigência:</Label>
-              <Input
-                type="date"
+              <DateInput
                 value={block.from}
-                onChange={(e) => updateBlockRange(block._id, "from", e.target.value)}
+                onChange={(iso) => updateBlockRange(block._id, "from", iso)}
                 aria-label="Vigente desde"
                 className="h-8"
               />
               <span className="shrink-0 text-xs text-muted-foreground">até</span>
-              <Input
-                type="date"
+              <DateInput
                 value={block.until}
-                onChange={(e) => updateBlockRange(block._id, "until", e.target.value)}
+                onChange={(iso) => updateBlockRange(block._id, "until", iso)}
                 placeholder="Atual"
                 aria-label="Vigente até"
                 className="h-8"

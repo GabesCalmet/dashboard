@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { rescheduleMakeupLesson } from "@/server/actions/lessons";
 
@@ -68,11 +69,10 @@ export function MakeupRescheduleButton({
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1.5">
             <Label htmlFor="makeup-reschedule-date">Data</Label>
-            <Input
+            <DateInput
               id="makeup-reschedule-date"
-              type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(iso) => setDate(iso)}
             />
           </div>
           <div className="space-y-1.5">

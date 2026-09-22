@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { addLessonReschedule } from "@/server/actions/lessons";
 import { formatDateTime } from "@/lib/labels";
@@ -108,11 +109,10 @@ export function LessonRescheduleEditor({
             <div key={d.key} className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor={`reschedule-date-${d.key}`}>Data</Label>
-                <Input
+                <DateInput
                   id={`reschedule-date-${d.key}`}
-                  type="date"
                   value={d.date}
-                  onChange={(e) => updateDraft(d.key, "date", e.target.value)}
+                  onChange={(iso) => updateDraft(d.key, "date", iso)}
                 />
               </div>
               <div className="space-y-1.5">

@@ -13,6 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -145,10 +146,9 @@ export function ExpenseFormDialog({
             <Label htmlFor="date">
               {frequency === "RECURRING" ? "Início da recorrência" : "Data"}
             </Label>
-            <Input
+            <DateInput
               id="date"
               name="date"
-              type="date"
               defaultValue={expense?.date ?? defaultDate}
               required
             />
@@ -170,7 +170,7 @@ export function ExpenseFormDialog({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="endDate">Encerra em (opcional)</Label>
-                <Input id="endDate" name="endDate" type="date" defaultValue={expense?.endDate} />
+                <DateInput id="endDate" name="endDate" defaultValue={expense?.endDate} />
               </div>
             </>
           )}

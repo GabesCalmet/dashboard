@@ -13,6 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createTeacher, updateTeacher } from "@/server/actions/teachers";
@@ -96,11 +97,11 @@ export function TeacherFormDialog({ teacher }: { teacher?: TeacherDefaults }) {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="admissionDate">Data de admissão</Label>
-            <Input id="admissionDate" name="admissionDate" type="date" defaultValue={teacher?.admissionDate} />
+            <DateInput id="admissionDate" name="admissionDate" defaultValue={teacher?.admissionDate} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="endDate">Data de término (opcional)</Label>
-            <Input id="endDate" name="endDate" type="date" defaultValue={teacher?.endDate} />
+            <DateInput id="endDate" name="endDate" defaultValue={teacher?.endDate} />
           </div>
 
           <MonthlyValueHistoryEditor
