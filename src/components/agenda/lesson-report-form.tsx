@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { submitLessonReport } from "@/server/actions/lessons";
-import { lessonStatusLabel, reportableLessonStatuses, toMakeupOutcome } from "@/lib/labels";
+import { lessonStatusLabel, reportableLessonStatuses, toMakeupOutcome, formatDateTime } from "@/lib/labels";
 import type { CalendarLessonEvent } from "@/components/agenda/calendar-view";
 import { curriculumUnits } from "@/lib/curriculum";
 import { CurriculumPicker } from "@/components/lessons/curriculum-picker";
@@ -71,12 +71,19 @@ export function LessonReportForm({
         // already fully independent of the report form's submit.
         <div className="space-y-1.5">
           <Label>Status da aula</Label>
-          <MakeupOutcomeSelect
-            makeupLessonId={lesson.id}
-            status={toMakeupOutcome(status as LessonStatus)}
-            onChange={(next) => setStatus(next)}
-            onCanceled={onSaved}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <MakeupOutcomeSelect
+              makeupLessonId={lesson.id}
+              status={toMakeupOutcome(status as LessonStatus)}
+              onChange={(next) => setStatus(next)}
+              onCanceled={onSaved}
+            />
+            {lesson.rescheduledFrom && (
+              <span className="text-xs text-muted-foreground">
+                Substitui aula de {formatDateTime(lesson.rescheduledFrom.scheduledAt)}
+              </span>
+            )}
+          </div>
         </div>
       )}
 

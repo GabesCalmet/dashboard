@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
       student: { include: { user: true } },
       teacher: { include: { user: true } },
       rescheduledTo: { select: { id: true, scheduledAt: true, durationMin: true, status: true } },
+      rescheduledFrom: { select: { id: true, scheduledAt: true } },
     },
     orderBy: { scheduledAt: "asc" },
     take: 500,
@@ -63,6 +64,9 @@ export async function GET(request: NextRequest) {
           durationMin: r.durationMin,
           status: r.status,
         })),
+        rescheduledFrom: l.rescheduledFrom
+          ? { id: l.rescheduledFrom.id, scheduledAt: l.rescheduledFrom.scheduledAt.toISOString() }
+          : null,
       },
     };
   });
