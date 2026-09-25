@@ -17,6 +17,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { TimeInput } from "@/components/ui/time-input";
 import { Label } from "@/components/ui/label";
 import { rescheduleMakeupLesson } from "@/server/actions/lessons";
+import { toBrazilDateString, toBrazilTimeString } from "@/lib/timezone";
 
 // Moves a reposição's own date/time — as opposed to LessonRescheduleEditor,
 // which books a separate makeup lesson for a canceled one, this just
@@ -97,11 +98,11 @@ export function MakeupRescheduleButton({
 }
 
 function toDateInput(d: Date) {
-  return new Date(d).toISOString().slice(0, 10);
+  return toBrazilDateString(new Date(d));
 }
 
 function toTimeInput(d: Date) {
-  return new Date(d).toTimeString().slice(0, 5);
+  return toBrazilTimeString(new Date(d));
 }
 
 function addMinutes(d: Date, minutes: number) {

@@ -24,6 +24,7 @@ import { CurriculumPicker } from "@/components/lessons/curriculum-picker";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
 import { LessonRescheduleEditor } from "@/components/lessons/lesson-reschedule-editor";
 import { MakeupOutcomeSelect } from "@/components/lessons/makeup-outcome-select";
+import { toBrazilDateString, toBrazilTimeString } from "@/lib/timezone";
 import type { LessonStatus } from "@prisma/client";
 
 export function LessonReportForm({
@@ -85,7 +86,7 @@ export function LessonReportForm({
           <DateInput
             id="date"
             name="date"
-            defaultValue={start.toISOString().slice(0, 10)}
+            defaultValue={toBrazilDateString(start)}
             required
           />
         </div>
@@ -94,7 +95,7 @@ export function LessonReportForm({
           <TimeInput
             id="time"
             name="time"
-            defaultValue={start.toTimeString().slice(0, 5)}
+            defaultValue={toBrazilTimeString(start)}
             required
           />
         </div>

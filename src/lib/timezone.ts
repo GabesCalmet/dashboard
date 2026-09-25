@@ -27,3 +27,22 @@ export const BRAZIL_UTC_OFFSET_MS = 3 * 60 * 60 * 1000;
 export function endOfBrazilDay(utcMidnight: Date): Date {
   return new Date(utcMidnight.getTime() + 24 * 60 * 60 * 1000 + BRAZIL_UTC_OFFSET_MS - 1);
 }
+
+// Inverse of brazilDateTime — formats a real instant (e.g. a lesson's
+// scheduledAt) back into the "YYYY-MM-DD"/"HH:mm" Brazil wall-clock values
+// a DateInput/TimeInput pair expects to prefill. date.toISOString() alone
+// reads the UTC calendar day, which is one day ahead of the Brazil day for
+// any lesson at or after 21:00 Brazil time (21:00 Brazil = 00:00 UTC next
+// day) — pairing that with a same-instant time read some other way (e.g.
+// toTimeString(), which follows the runtime's own local zone, not Brazil's)
+// silently produces a mismatched date+time and shifts the lesson by a day
+// the moment the form is saved. Shifting the instant by the fixed offset
+// first and reading its UTC components keeps date and time always
+// consistent with each other and independent of the runtime's own zone.
+export function toBrazilDateString(date: Date): string {
+  return new Date(date.getTime() - BRAZIL_UTC_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+export function toBrazilTimeString(date: Date): string {
+  return new Date(date.getTime() - BRAZIL_UTC_OFFSET_MS).toISOString().slice(11, 16);
+}
