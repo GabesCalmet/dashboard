@@ -44,7 +44,7 @@ export default async function AdminTeacherPayrollPage({
 
       <PageHeader
         title="Pagamento de professores"
-        description="Previsto (todas as aulas do mês) e realizado (o que já foi registrado como pago — use o + para lançar um pagamento, inclusive em partes)."
+        description="Previsto (todas as aulas do mês), acumulado (o que já é devido pelas aulas dadas até hoje) e realizado (o que já foi registrado como pago — use o + para lançar um pagamento, inclusive em partes)."
       />
 
       <div className="mb-4">
@@ -57,6 +57,7 @@ export default async function AdminTeacherPayrollPage({
             <TableRow>
               <TableHead>Professor</TableHead>
               <TableHead>Previsto</TableHead>
+              <TableHead>Acumulado</TableHead>
               <TableHead>Realizado</TableHead>
             </TableRow>
           </TableHeader>
@@ -72,6 +73,7 @@ export default async function AdminTeacherPayrollPage({
                   </Link>
                 </TableCell>
                 <TableCell>{formatCurrency(r.previsto)}</TableCell>
+                <TableCell>{formatCurrency(r.realizado)}</TableCell>
                 <TableCell>
                   <TeacherPayoutCell
                     teacherId={r.teacherId}
@@ -90,7 +92,7 @@ export default async function AdminTeacherPayrollPage({
             ))}
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={3} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
                   Nenhum professor ativo.
                 </TableCell>
               </TableRow>
@@ -101,6 +103,7 @@ export default async function AdminTeacherPayrollPage({
               <TableRow>
                 <TableCell>Total</TableCell>
                 <TableCell>{formatCurrency(totals.previsto)}</TableCell>
+                <TableCell>{formatCurrency(totals.realizado)}</TableCell>
                 <TableCell>{formatCurrency(totalRealizado)}</TableCell>
               </TableRow>
             </TableFooter>
