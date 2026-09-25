@@ -79,8 +79,8 @@ function parseValueHistory(value: unknown): ValueHistoryEntry[] {
 // Resolves what a value (monthlyValue, dueDay, ...) should be for a
 // specific reference month — using the historical entry in effect then, if
 // one was configured, falling back to the current flat value for any month
-// no history entry covers (which is every month for a student who's never
-// had a change recorded).
+// no history entry covers (which is every month for a student/member who's
+// never had a change recorded).
 export function resolveHistoricalAmount(current: unknown, history: unknown, referenceMonth: Date) {
   const entries = parseValueHistory(history);
   if (entries.length === 0) return Number(current);
@@ -94,7 +94,23 @@ export function resolveHistoricalAmount(current: unknown, history: unknown, refe
     if (until && until < monthStart) return false;
     return true;
   });
-  return match ? match.amount : Number(current);
+  if (match) return match.amount;
+
+  // No entry covers this month. Every entry actually entered in this app
+  // carries a real "from" (the full history is recorded, not left with an
+  // implicit "since forever" baseline) — so if the reference month is
+  // before every one of them, the value genuinely hadn't started applying
+  // yet (e.g. a "grupo" member who joined mid-year), and falling back to
+  // today's current value would wrongly resurrect a charge for months
+  // before they even joined. Only fall back to current for a month that's
+  // NOT before the earliest entry (e.g. a gap after the last "until", or
+  // an entry left with no "from" at all, meaning "since forever").
+  const boundedFroms = entries.filter((e) => e.from).map((e) => new Date(e.from!).getTime());
+  const hasUnboundedEntry = entries.some((e) => !e.from);
+  if (!hasUnboundedEntry && boundedFroms.length > 0 && monthEnd.getTime() < Math.min(...boundedFroms)) {
+    return 0;
+  }
+  return Number(current);
 }
 
 export function getBillingSlots(
