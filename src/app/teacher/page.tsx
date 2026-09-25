@@ -70,13 +70,13 @@ export default async function TeacherDashboardPage({
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <StatCard
-            label="Pagamento previsto (mês)"
+            label="Previsto (mês)"
             value={formatCurrency(data.payrollPrevisto)}
             icon={Wallet}
             href={`/teacher/payroll?month=${monthParam(year, month)}`}
           />
           <StatCard
-            label="Pagamento realizado (mês)"
+            label="Atual (mês)"
             value={formatCurrency(data.payrollRealizado)}
             icon={DollarSign}
             accent
