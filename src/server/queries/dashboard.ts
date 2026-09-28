@@ -34,7 +34,14 @@ export async function getAdminDashboardData(referenceMonth?: { year: number; mon
       where: {
         scheduledAt: { gte: monthStart, lte: monthEnd },
         status: {
-          in: ["CANCELED_BY_STUDENT", "CANCELED_BY_TEACHER", "CANCELED_LATE", "CANCELED_HOLIDAY", "NO_SHOW"],
+          in: [
+            "CANCELED_BY_STUDENT",
+            "CANCELED_BY_STUDENT_NO_MAKEUP",
+            "CANCELED_BY_TEACHER",
+            "CANCELED_LATE",
+            "CANCELED_HOLIDAY",
+            "NO_SHOW",
+          ],
         },
       },
     }),

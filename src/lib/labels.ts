@@ -57,6 +57,7 @@ export const lessonStatusLabel: Record<LessonStatus, string> = {
   SCHEDULED: "Agendada",
   COMPLETED: "Aula Dada",
   CANCELED_BY_STUDENT: "Cancelamento Aluno",
+  CANCELED_BY_STUDENT_NO_MAKEUP: "Cancelamento Aluno (Sem Rep)",
   NO_SHOW: "Não Compareceu",
   CANCELED_BY_TEACHER: "Cancelamento Professor",
   CANCELED_LATE: "Cancelamento Tarde",
@@ -74,6 +75,7 @@ export const lessonStatusCode: Record<LessonStatus, string> = {
   SCHEDULED: "—",
   COMPLETED: "OK",
   CANCELED_BY_STUDENT: "CA",
+  CANCELED_BY_STUDENT_NO_MAKEUP: "CASR",
   NO_SHOW: "NC",
   CANCELED_BY_TEACHER: "CP",
   CANCELED_LATE: "CT",
@@ -99,6 +101,7 @@ export const quickLessonStatuses: LessonStatus[] = [
   "NO_SHOW",
   "CANCELED_LATE",
   "CANCELED_BY_STUDENT",
+  "CANCELED_BY_STUDENT_NO_MAKEUP",
   "CANCELED_BY_TEACHER",
   "CANCELED_VACATION",
   "CANCELED_HOLIDAY",
@@ -170,6 +173,10 @@ export const lessonStatusCalendarStyle: Record<
   COMPLETED: { background: "#1f9d55", border: "#1f9d55", text: "#ffffff" }, // verde — dada
   CANCELED_BY_TEACHER: { background: "transparent", border: "#d64545", text: "#f2a5a5" }, // vazado vermelho — CP
   CANCELED_BY_STUDENT: { background: "transparent", border: "#e0b400", text: "#f2d878" }, // vazado amarelo — CA
+  // Solid (not vazado) like CT/NC — a cancellation with no reposição booked
+  // still counts as a class given, so it shouldn't read as an
+  // open/unresolved cancellation.
+  CANCELED_BY_STUDENT_NO_MAKEUP: { background: "#e0b400", border: "#e0b400", text: "#1a1a1a" }, // amarelo sólido — CASR
   NO_SHOW: { background: "#e8720c", border: "#e8720c", text: "#ffffff" }, // laranja — NC
   // Solid (not vazado) like NC — a late cancellation counts as a class
   // given, so it shouldn't read as an open/unresolved cancellation.
@@ -190,6 +197,7 @@ export const lessonStatusBadgeVariant: Record<
   SCHEDULED: "secondary",
   COMPLETED: "success",
   CANCELED_BY_STUDENT: "destructive",
+  CANCELED_BY_STUDENT_NO_MAKEUP: "destructive",
   NO_SHOW: "destructive",
   CANCELED_BY_TEACHER: "destructive",
   CANCELED_LATE: "destructive",

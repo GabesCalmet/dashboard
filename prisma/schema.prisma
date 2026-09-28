@@ -56,6 +56,7 @@ enum LessonStatus {
   SCHEDULED
   COMPLETED // OK - aula dada
   CANCELED_BY_STUDENT // CA
+  CANCELED_BY_STUDENT_NO_MAKEUP // CASR - cancelamento aluno sem reposição, conta como aula dada (como CT)
   NO_SHOW // NC
   CANCELED_BY_TEACHER // CP
   CANCELED_LATE // CT - cancelamento tarde, conta como aula dada (como NC)

@@ -98,11 +98,17 @@ export function StudentDetailView({
   const lessonsThisMonth = student.lessons.filter(
     (l) => l.scheduledAt >= monthStart && l.scheduledAt <= monthEnd
   );
-  // A lesson counts as "realizada" once it's COMPLETED, NO_SHOW (NC) or
-  // CANCELED_LATE (CT) — same rule as REALIZED_STATUSES in teachers.ts
-  // (a reposição only adds to this once its own row flips to COMPLETED,
-  // which this already covers without special-casing isMakeup).
-  const REALIZED_LESSON_STATUSES: readonly string[] = ["COMPLETED", "NO_SHOW", "CANCELED_LATE"];
+  // A lesson counts as "realizada" once it's COMPLETED, NO_SHOW (NC),
+  // CANCELED_LATE (CT) or CANCELED_BY_STUDENT_NO_MAKEUP (CASR) — same rule
+  // as REALIZED_STATUSES in teachers.ts (a reposição only adds to this once
+  // its own row flips to COMPLETED, which this already covers without
+  // special-casing isMakeup).
+  const REALIZED_LESSON_STATUSES: readonly string[] = [
+    "COMPLETED",
+    "NO_SHOW",
+    "CANCELED_LATE",
+    "CANCELED_BY_STUDENT_NO_MAKEUP",
+  ];
 
   // Top row: "Aulas contratadas/mês" and "Aulas realizadas (do mês)" track
   // whichever month the MonthNav above is browsing; "Aulas realizadas"
@@ -124,6 +130,11 @@ export function StudentDetailView({
     (l) => l.status === "COMPLETED" && !l.isMakeup
   ).length;
   const canceledByStudent = student.lessons.filter((l) => l.status === "CANCELED_BY_STUDENT").length;
+  // CASR — student canceled with no reposição booked, so like CT it still
+  // counts as a class given (teacher is paid for it — see REALIZED_STATUSES).
+  const canceledByStudentNoMakeup = student.lessons.filter(
+    (l) => l.status === "CANCELED_BY_STUDENT_NO_MAKEUP"
+  ).length;
   const canceledByTeacher = student.lessons.filter((l) => l.status === "CANCELED_BY_TEACHER").length;
   // Two separate boxes — Reposição Dada (COMPLETED) and Reposição Não
   // Compareceu (NO_SHOW) — rather than one combined count, since the
@@ -426,6 +437,11 @@ export function StudentDetailView({
             <StatCard label="Não Compareceu" value={String(noShowCount)} icon={UserX} />
             <StatCard label="Cancelamento Tarde" value={String(canceledLateCount)} icon={Clock3} />
             <StatCard label="Cancelamento Aluno" value={String(canceledByStudent)} icon={XCircle} />
+            <StatCard
+              label="Cancelamento Aluno (Sem Rep)"
+              value={String(canceledByStudentNoMakeup)}
+              icon={XCircle}
+            />
             <StatCard label="Cancelamento Professor" value={String(canceledByTeacher)} icon={XCircle} />
             <StatCard label="Feriado" value={String(canceledHolidayCount)} icon={PartyPopper} />
             <StatCard label="Cancelamento Férias" value={String(canceledVacationCount)} icon={Palmtree} />
