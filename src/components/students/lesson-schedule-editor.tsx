@@ -8,10 +8,12 @@ import { TimeInput } from "@/components/ui/time-input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
-// Flat shape persisted to the DB — one row per weekday/time. from/until
-// (both optional) scope when that specific entry is in effect: undefined
-// means "since enrollment" / "still ongoing". Entries sharing the same
-// from/until are grouped back into one visual block when the editor loads.
+// Flat shape persisted to the DB — one row per weekday/time; a weekday can
+// appear more than once (e.g. two separate classes on the same Monday).
+// from/until (both optional) scope when that specific entry is in effect:
+// undefined means "since enrollment" / "still ongoing". Entries sharing the
+// same from/until are grouped back into one visual block when the editor
+// loads.
 export type ScheduleEntry = {
   weekday: number;
   start: string;
@@ -30,7 +32,7 @@ const DAYS = [
   { value: 6, label: "S", name: "Sábado" },
 ];
 
-type BlockDay = { weekday: number; start: string; end: string };
+type BlockDay = { _id: number; weekday: number; start: string; end: string };
 type Block = { _id: number; from: string; until: string; days: BlockDay[] };
 
 let nextId = 0;
@@ -50,9 +52,22 @@ function toBlocks(entries: ScheduleEntry[]): Block[] {
       block = { _id: nextId++, from, until, days: [] };
       groups.set(key, block);
     }
-    block.days.push({ weekday: e.weekday, start: e.start, end: e.end });
+    block.days.push({ _id: nextId++, weekday: e.weekday, start: e.start, end: e.end });
   }
   return [...groups.values()];
+}
+
+// Groups a block's days by weekday, keeping weekday order and each
+// weekday's own slots in insertion order — so a second same-day class
+// added later renders right under the first instead of jumping elsewhere.
+function groupByWeekday(days: BlockDay[]): [number, BlockDay[]][] {
+  const groups = new Map<number, BlockDay[]>();
+  for (const d of days) {
+    const list = groups.get(d.weekday) ?? [];
+    list.push(d);
+    groups.set(d.weekday, list);
+  }
+  return [...groups.entries()].sort((a, b) => a[0] - b[0]);
 }
 
 export function LessonScheduleEditor({
@@ -76,6 +91,8 @@ export function LessonScheduleEditor({
     setBlocks((prev) => prev.map((b) => (b._id === id ? { ...b, [field]: value } : b)));
   }
 
+  // Toggling a weekday circle on adds its first time slot; toggling it off
+  // removes every slot that day has (including any extra ones added below).
   function toggleDay(blockId: number, weekday: number) {
     setBlocks((prev) =>
       prev.map((b) => {
@@ -83,25 +100,55 @@ export function LessonScheduleEditor({
         const exists = b.days.some((d) => d.weekday === weekday);
         const days = exists
           ? b.days.filter((d) => d.weekday !== weekday)
-          : [...b.days, { weekday, start: "", end: "" }].sort((a, c) => a.weekday - c.weekday);
+          : [...b.days, { _id: nextId++, weekday, start: "", end: "" }].sort(
+              (a, c) => a.weekday - c.weekday
+            );
         return { ...b, days };
       })
     );
   }
 
-  function updateDay(blockId: number, weekday: number, field: "start" | "end", value: string) {
+  // Adds another time slot for a weekday that already has at least one —
+  // e.g. a student with back-to-back classes the same day.
+  function addTimeSlot(blockId: number, weekday: number) {
+    setBlocks((prev) =>
+      prev.map((b) => {
+        if (b._id !== blockId) return b;
+        const days = [...b.days];
+        let insertAt = days.length;
+        for (let i = days.length - 1; i >= 0; i--) {
+          if (days[i].weekday === weekday) {
+            insertAt = i + 1;
+            break;
+          }
+        }
+        days.splice(insertAt, 0, { _id: nextId++, weekday, start: "", end: "" });
+        return { ...b, days };
+      })
+    );
+  }
+
+  function removeTimeSlot(blockId: number, dayId: number) {
+    setBlocks((prev) =>
+      prev.map((b) => (b._id !== blockId ? b : { ...b, days: b.days.filter((d) => d._id !== dayId) }))
+    );
+  }
+
+  function updateDay(blockId: number, dayId: number, field: "start" | "end", value: string) {
     setBlocks((prev) =>
       prev.map((b) =>
         b._id !== blockId
           ? b
-          : { ...b, days: b.days.map((d) => (d.weekday === weekday ? { ...d, [field]: value } : d)) }
+          : { ...b, days: b.days.map((d) => (d._id === dayId ? { ...d, [field]: value } : d)) }
       )
     );
   }
 
   const schedule: ScheduleEntry[] = blocks.flatMap((b) =>
     b.days.map((d) => ({
-      ...d,
+      weekday: d.weekday,
+      start: d.start,
+      end: d.end,
       from: b.from || undefined,
       until: b.until || undefined,
     }))
@@ -152,22 +199,49 @@ export function LessonScheduleEditor({
 
             {block.days.length > 0 && (
               <div className="space-y-2">
-                {block.days.map((d) => (
-                  <div key={d.weekday} className="flex items-center gap-2">
-                    <span className="w-20 shrink-0 text-sm font-medium">
-                      {DAYS[d.weekday].name}
-                    </span>
-                    <TimeInput
-                      value={d.start}
-                      onChange={(v) => updateDay(block._id, d.weekday, "start", v)}
-                      aria-label={`Início — ${DAYS[d.weekday].name}`}
-                    />
-                    <span className="shrink-0 text-sm text-muted-foreground">até</span>
-                    <TimeInput
-                      value={d.end}
-                      onChange={(v) => updateDay(block._id, d.weekday, "end", v)}
-                      aria-label={`Término — ${DAYS[d.weekday].name}`}
-                    />
+                {groupByWeekday(block.days).map(([weekday, entries]) => (
+                  <div key={weekday} className="space-y-2">
+                    {entries.map((d, idx) => (
+                      <div key={d._id} className="flex items-center gap-2">
+                        <span className="w-20 shrink-0 text-sm font-medium">
+                          {idx === 0 ? DAYS[weekday].name : ""}
+                        </span>
+                        <TimeInput
+                          value={d.start}
+                          onChange={(v) => updateDay(block._id, d._id, "start", v)}
+                          aria-label={`Início — ${DAYS[weekday].name}`}
+                        />
+                        <span className="shrink-0 text-sm text-muted-foreground">até</span>
+                        <TimeInput
+                          value={d.end}
+                          onChange={(v) => updateDay(block._id, d._id, "end", v)}
+                          aria-label={`Término — ${DAYS[weekday].name}`}
+                        />
+                        {idx === entries.length - 1 ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="shrink-0 text-muted-foreground hover:text-foreground"
+                            onClick={() => addTimeSlot(block._id, weekday)}
+                            aria-label={`Adicionar outro horário — ${DAYS[weekday].name}`}
+                          >
+                            <Plus className="size-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="shrink-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => removeTimeSlot(block._id, d._id)}
+                            aria-label={`Remover este horário — ${DAYS[weekday].name}`}
+                          >
+                            <X className="size-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
