@@ -407,6 +407,7 @@ export function StudentDetailView({
                 <StudentPaymentsTable
                   payments={paymentHistory}
                   studentId={student.id}
+                  studentName={student.user.name}
                   editable={permissions.canEdit}
                 />
               </TabsContent>

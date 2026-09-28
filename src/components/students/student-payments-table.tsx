@@ -38,10 +38,15 @@ export type PaymentHistoryRow = {
 export function StudentPaymentsTable({
   payments,
   studentId,
+  studentName,
   editable = false,
 }: {
   payments: PaymentHistoryRow[];
   studentId: string;
+  // The primary/owner student's own name — shown for any row with no
+  // payerName (their own billing slot), instead of a generic "Aluno" that
+  // doesn't say which of a "grupo" cadastro's several names it actually is.
+  studentName: string;
   // Lets an admin change a cobrança's status directly from the student's
   // own page — same action (setCobrancaStatus) the admin Cobranças table
   // uses, so it works for both real rows and not-yet-generated placeholders.
@@ -88,7 +93,7 @@ export function StudentPaymentsTable({
               <TableRow key={p.id ?? `${p.referenceMonth.toISOString()}::${p.payerName ?? ""}`}>
                 <TableCell>{formatCalendarMonthYear(p.referenceMonth)}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {p.payerName ?? "Aluno"}
+                  {p.payerName ?? studentName}
                 </TableCell>
                 <TableCell>{formatCurrency(p.amount)}</TableCell>
                 <TableCell>{formatCalendarDate(p.dueDate)}</TableCell>
