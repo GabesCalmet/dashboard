@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
 import { resolveHistoricalAmount } from "@/server/billing";
-import type { TeacherPayMode } from "@prisma/client";
+import { reschedulableStatuses } from "@/lib/validation/lesson";
+import type { TeacherPayMode, LessonStatus } from "@prisma/client";
 
 type TeacherHistoryEntry = {
   id: string;
@@ -125,6 +126,80 @@ const teacherAssignmentSelect = {
   teacherMonthlyAmount: true,
 } as const;
 
+// A canceled lesson (CA/CP/CF) whose own reposição was booked into the SAME
+// month it was canceled in isn't counted toward Previsto separately from
+// that reposição — together they represent one class, not two, so counting
+// both would double the forecast for what was really a single slot. A
+// reposição booked into a DIFFERENT month leaves the original alone: it
+// still counts toward this month's forecast as normal, and the reposição
+// counts toward whichever month it actually landed in instead.
+function isAbsorbedCancellation(
+  lesson: { status: LessonStatus; rescheduledTo: { scheduledAt: Date }[] },
+  monthStart: Date,
+  monthEnd: Date
+): boolean {
+  if (!(reschedulableStatuses as readonly string[]).includes(lesson.status)) return false;
+  return lesson.rescheduledTo.some((r) => r.scheduledAt >= monthStart && r.scheduledAt <= monthEnd);
+}
+
+// Same aggregate shape prisma.lesson.groupBy would produce (_count._all,
+// _sum.durationMin), computed from an already-filtered lesson list instead
+// — needed because isAbsorbedCancellation has to inspect each lesson's
+// rescheduledTo before it can be safely grouped, which a DB-side groupBy
+// can't express.
+function aggregateByStatus(lessons: { status: LessonStatus; durationMin: number }[]) {
+  const map = new Map<LessonStatus, { count: number; duration: number }>();
+  for (const l of lessons) {
+    const e = map.get(l.status) ?? { count: 0, duration: 0 };
+    e.count += 1;
+    e.duration += l.durationMin;
+    map.set(l.status, e);
+  }
+  return [...map.entries()].map(([status, v]) => ({
+    status,
+    _count: { _all: v.count },
+    _sum: { durationMin: v.duration },
+  }));
+}
+
+function aggregateByStudentStatus(
+  lessons: { studentId: string; status: LessonStatus; durationMin: number }[]
+) {
+  const map = new Map<
+    string,
+    { studentId: string; status: LessonStatus; count: number; duration: number }
+  >();
+  for (const l of lessons) {
+    const key = `${l.studentId}::${l.status}`;
+    const e = map.get(key) ?? { studentId: l.studentId, status: l.status, count: 0, duration: 0 };
+    e.count += 1;
+    e.duration += l.durationMin;
+    map.set(key, e);
+  }
+  return [...map.values()].map((v) => ({
+    studentId: v.studentId,
+    status: v.status,
+    _count: { _all: v.count },
+    _sum: { durationMin: v.duration },
+  }));
+}
+
+function groupLessonsByTeacherStudentStatus(
+  lessons: { teacherId: string; studentId: string; status: LessonStatus; durationMin: number }[]
+) {
+  const map = new Map<
+    string,
+    { teacherId: string; studentId: string; status: LessonStatus; durationMin: number }
+  >();
+  for (const l of lessons) {
+    const key = `${l.teacherId}::${l.studentId}::${l.status}`;
+    const entry = map.get(key) ?? { teacherId: l.teacherId, studentId: l.studentId, status: l.status, durationMin: 0 };
+    entry.durationMin += l.durationMin;
+    map.set(key, entry);
+  }
+  return [...map.values()];
+}
+
 // Per-teacher payroll for a given month — "previsto" is the full amount
 // supposing every class on the calendar that month is given, however it
 // actually turns out later (a cancellation doesn't reduce it — it's a
@@ -144,15 +219,20 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
   const monthStart = new Date(year, month, 1);
   const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
-  const [teachers, lessonsByTeacherStudent, assignedStudents] = await Promise.all([
+  const [teachers, lessons, assignedStudents] = await Promise.all([
     prisma.teacherProfile.findMany({
       where: { user: { active: true } },
       include: { user: true },
     }),
-    prisma.lesson.groupBy({
-      by: ["teacherId", "studentId", "status"],
+    prisma.lesson.findMany({
       where: { scheduledAt: { gte: monthStart, lte: monthEnd } },
-      _sum: { durationMin: true },
+      select: {
+        teacherId: true,
+        studentId: true,
+        status: true,
+        durationMin: true,
+        rescheduledTo: { select: { scheduledAt: true } },
+      },
     }),
     // Every currently-active student with a teacher assigned — on top of
     // the lesson-driven roster below, so a MONTHLY-fixed assignment still
@@ -163,7 +243,11 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
     }),
   ]);
 
-  const lessonStudentIds = [...new Set(lessonsByTeacherStudent.map((g) => g.studentId))];
+  const lessonsByTeacherStudent = groupLessonsByTeacherStudentStatus(
+    lessons.filter((l) => !isAbsorbedCancellation(l, monthStart, monthEnd))
+  );
+
+  const lessonStudentIds = [...new Set(lessons.map((l) => l.studentId))];
   const missingIds = lessonStudentIds.filter((id) => !assignedStudents.some((s) => s.id === id));
   const extraStudents = missingIds.length
     ? await prisma.studentProfile.findMany({
@@ -195,7 +279,7 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
       const student = studentById.get(g.studentId);
       if (!student) continue;
       const assignment = resolveTeacherAssignment(student, t.id, monthStart, fallbackHourlyRate);
-      const pay = ((g._sum.durationMin ?? 0) / 60) * assignment.rate;
+      const pay = (g.durationMin / 60) * assignment.rate;
       previsto += pay;
       if ((REALIZED_STATUSES as readonly string[]).includes(g.status)) realizado += pay;
     }
@@ -300,24 +384,24 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
   });
   if (!teacher) return null;
 
-  const [statusBreakdown, studentBreakdown, assignedStudents] = await Promise.all([
-    prisma.lesson.groupBy({
-      by: ["status"],
+  const [lessons, assignedStudents] = await Promise.all([
+    prisma.lesson.findMany({
       where: { teacherId, scheduledAt: { gte: monthStart, lte: monthEnd } },
-      _count: { _all: true },
-      _sum: { durationMin: true },
-    }),
-    prisma.lesson.groupBy({
-      by: ["studentId", "status"],
-      where: { teacherId, scheduledAt: { gte: monthStart, lte: monthEnd } },
-      _count: { _all: true },
-      _sum: { durationMin: true },
+      select: {
+        studentId: true,
+        status: true,
+        durationMin: true,
+        rescheduledTo: { select: { scheduledAt: true } },
+      },
     }),
     // Every student currently assigned to this teacher — on top of the
     // lesson-driven roster below, so a MONTHLY-fixed assignment still
     // shows up (and gets paid) even in a month with no generated lessons.
     prisma.studentProfile.findMany({ where: { teacherId }, include: { user: true } }),
   ]);
+  const countedLessons = lessons.filter((l) => !isAbsorbedCancellation(l, monthStart, monthEnd));
+  const statusBreakdown = aggregateByStatus(countedLessons);
+  const studentBreakdown = aggregateByStudentStatus(countedLessons);
 
   const fallbackHourlyRate = resolveHistoricalAmount(
     teacher.hourlyRate,
