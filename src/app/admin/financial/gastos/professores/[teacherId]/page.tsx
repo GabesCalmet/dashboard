@@ -95,7 +95,7 @@ export default async function AdminTeacherPayrollDetailPage({
                 <TableCell>{formatCurrency(g.pay)}</TableCell>
                 <TableCell className="space-x-1.5">
                   {g.countsAsPrevisto && <Badge variant="outline">Previsto</Badge>}
-                  {g.countsAsRealizado && <Badge variant="success">Realizado</Badge>}
+                  {g.countsAsRealizado && <Badge variant="success">Atual</Badge>}
                   {!g.countsAsPrevisto && !g.countsAsRealizado && (
                     <span className="text-sm text-muted-foreground">—</span>
                   )}
@@ -113,7 +113,7 @@ export default async function AdminTeacherPayrollDetailPage({
           {detail.groups.length > 0 && (
             <TableFooter>
               <TableRow>
-                <TableCell colSpan={3}>Total previsto / realizado</TableCell>
+                <TableCell colSpan={3}>Total previsto / atual</TableCell>
                 <TableCell colSpan={2} className="space-x-3">
                   <span>{formatCurrency(detail.totals.previsto)}</span>
                   <span className="text-muted-foreground">/</span>
@@ -130,12 +130,18 @@ export default async function AdminTeacherPayrollDetailPage({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Aluno</TableHead>
-              <TableHead>Valor/hora</TableHead>
-              <TableHead>Aulas</TableHead>
+              <TableHead rowSpan={2} className="align-bottom">Aluno</TableHead>
+              <TableHead rowSpan={2} className="align-bottom">Valor/hora</TableHead>
+              <TableHead colSpan={3} className="border-l text-center">Previsto</TableHead>
+              <TableHead colSpan={3} className="border-l text-center">Atual</TableHead>
+            </TableRow>
+            <TableRow>
+              <TableHead className="border-l">Aulas</TableHead>
               <TableHead>Horas</TableHead>
-              <TableHead>Previsto</TableHead>
-              <TableHead>Realizado</TableHead>
+              <TableHead>Valor</TableHead>
+              <TableHead className="border-l">Aulas</TableHead>
+              <TableHead>Horas</TableHead>
+              <TableHead>Valor</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -150,15 +156,17 @@ export default async function AdminTeacherPayrollDetailPage({
                   </Link>
                 </TableCell>
                 <TableCell>{s.mode === "MONTHLY" ? "Mensal fixo" : formatCurrency(s.rate)}</TableCell>
-                <TableCell>{s.count}</TableCell>
+                <TableCell className="border-l">{s.count}</TableCell>
                 <TableCell>{s.hours.toFixed(1)}h</TableCell>
                 <TableCell>{formatCurrency(s.previsto)}</TableCell>
+                <TableCell className="border-l">{s.realizedCount}</TableCell>
+                <TableCell>{s.realizedHours.toFixed(1)}h</TableCell>
                 <TableCell>{formatCurrency(s.realizado)}</TableCell>
               </TableRow>
             ))}
             {detail.students.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
                   Nenhum aluno neste mês.
                 </TableCell>
               </TableRow>

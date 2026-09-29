@@ -339,7 +339,21 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
   const payByStatus = new Map<string, number>();
   const byStudent = new Map<
     string,
-    { hours: number; previsto: number; realizado: number; count: number; rate: number; mode: TeacherPayMode }
+    {
+      hours: number;
+      previsto: number;
+      realizado: number;
+      count: number;
+      // Aulas/horas already given so far (REALIZED_STATUSES only) — the
+      // attendance-side counterpart to "realizado", so the money figure
+      // is traceable to how many classes it's actually backed by instead
+      // of showing up with no context, same "count/hours" pair Previsto
+      // already gets.
+      realizedCount: number;
+      realizedHours: number;
+      rate: number;
+      mode: TeacherPayMode;
+    }
   >();
 
   // Flat-fee assignments first — count fully as previsto/realizado
@@ -353,6 +367,8 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
         previsto: assignment.monthlyAmount,
         realizado: assignment.monthlyAmount,
         count: 0,
+        realizedCount: 0,
+        realizedHours: 0,
         rate: 0,
         mode: "MONTHLY",
       });
@@ -365,20 +381,28 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
       ? resolveTeacherAssignment(student, teacherId, monthStart, fallbackHourlyRate)
       : { assigned: false, mode: "HOURLY" as const, rate: fallbackHourlyRate, monthlyAmount: 0 };
     const hours = (g._sum.durationMin ?? 0) / 60;
+    const isRealized = (REALIZED_STATUSES as readonly string[]).includes(g.status);
 
     if (assignment.mode === "MONTHLY") {
       // Already counted as a flat fee above — only track hours/count here,
-      // for attendance context, not pay.
+      // for attendance context, not pay. A flat-fee student is paid in
+      // full regardless of attendance, so their "realized" hours/count
+      // just mirror the total — there's no partial-payment concept to
+      // track separately here.
       const entry = byStudent.get(g.studentId) ?? {
         hours: 0,
         previsto: assignment.monthlyAmount,
         realizado: assignment.monthlyAmount,
         count: 0,
+        realizedCount: 0,
+        realizedHours: 0,
         rate: 0,
         mode: "MONTHLY" as const,
       };
       entry.hours += hours;
       entry.count += g._count._all;
+      entry.realizedHours += hours;
+      entry.realizedCount += g._count._all;
       byStudent.set(g.studentId, entry);
       continue;
     }
@@ -393,6 +417,8 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
       previsto: 0,
       realizado: 0,
       count: 0,
+      realizedCount: 0,
+      realizedHours: 0,
       rate,
       mode: "HOURLY" as const,
     };
@@ -403,7 +429,11 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
     // Horas × Valor/hora always equals Previsto on this row.
     entry.hours += hours;
     entry.previsto += pay;
-    if ((REALIZED_STATUSES as readonly string[]).includes(g.status)) entry.realizado += pay;
+    if (isRealized) {
+      entry.realizado += pay;
+      entry.realizedCount += g._count._all;
+      entry.realizedHours += hours;
+    }
     byStudent.set(g.studentId, entry);
   }
 

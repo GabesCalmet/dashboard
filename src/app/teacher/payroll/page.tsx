@@ -46,12 +46,18 @@ export default async function TeacherPayrollPage({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Aluno</TableHead>
-              <TableHead>Valor/hora</TableHead>
-              <TableHead>Aulas</TableHead>
+              <TableHead rowSpan={2} className="align-bottom">Aluno</TableHead>
+              <TableHead rowSpan={2} className="align-bottom">Valor/hora</TableHead>
+              <TableHead colSpan={3} className="border-l text-center">Previsto</TableHead>
+              <TableHead colSpan={3} className="border-l text-center">Atual</TableHead>
+            </TableRow>
+            <TableRow>
+              <TableHead className="border-l">Aulas</TableHead>
               <TableHead>Horas</TableHead>
-              <TableHead>Previsto</TableHead>
-              <TableHead>Realizado</TableHead>
+              <TableHead>Valor</TableHead>
+              <TableHead className="border-l">Aulas</TableHead>
+              <TableHead>Horas</TableHead>
+              <TableHead>Valor</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -66,15 +72,17 @@ export default async function TeacherPayrollPage({
                   </Link>
                 </TableCell>
                 <TableCell>{formatCurrency(s.rate)}</TableCell>
-                <TableCell>{s.count}</TableCell>
+                <TableCell className="border-l">{s.count}</TableCell>
                 <TableCell>{s.hours.toFixed(1)}h</TableCell>
                 <TableCell>{formatCurrency(s.previsto)}</TableCell>
+                <TableCell className="border-l">{s.realizedCount}</TableCell>
+                <TableCell>{s.realizedHours.toFixed(1)}h</TableCell>
                 <TableCell>{formatCurrency(s.realizado)}</TableCell>
               </TableRow>
             ))}
             {!detail || detail.students.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
                   Nenhum aluno neste mês.
                 </TableCell>
               </TableRow>
