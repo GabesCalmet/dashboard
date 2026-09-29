@@ -1,7 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { bankAccountLabel } from "@/lib/labels";
-import { getBillingSlots, withBillingGroupMembers, resolveSlotStudentName } from "@/server/billing";
+import {
+  getBillingSlots,
+  withBillingGroupMembers,
+  resolveSlotStudentName,
+  isSlotBillableForMonth,
+} from "@/server/billing";
 import { getTeacherPayrollForMonth, getTeacherFeriasForYear } from "@/server/queries/teachers";
 import { getPaidTeacherPayrollTotal, getPartnerPayoutAmount } from "@/server/queries/payouts";
 import type { BankAccount, Expense, PaymentStatus } from "@prisma/client";
@@ -41,43 +46,56 @@ export async function getFinancialOverview(year?: number, month?: number) {
   // month, or a placeholder (not yet billed) so nobody's missing just
   // because "Gerar cobranças" hasn't been run yet. billingStartDate (when
   // set) governs this independently of startDate — classes and billing
-  // don't have to start the same month. Students not yet billable don't
-  // get placeholders for months before that, even though "active" — a
-  // real Payment row (if one somehow exists) is never hidden, only the
-  // synthesized placeholder is skipped.
+  // don't have to start the same month. A slot is only billable once its
+  // own resolved due date actually falls on/after billingStartDate
+  // (isSlotBillableForMonth), not just "sometime in the same month" — that
+  // distinction matters whenever billingStartDate lands after a slot's
+  // dueDay within that month. A real Payment row (if one somehow exists)
+  // is never hidden, only the synthesized placeholder is skipped.
   const rows = activeStudents
     .filter((s) => (s.billingStartDate ?? s.startDate) <= monthEnd || studentIdsWithPayment.has(s.id))
-    .flatMap((s) =>
-      getBillingSlots(withBillingGroupMembers(s), monthStart).map((slot) => {
-        const payment = paymentBySlot.get(`${s.id}::${slot.payerName ?? ""}`);
-        if (payment) {
+    .flatMap((s) => {
+      const billingStart = s.billingStartDate ?? s.startDate;
+      return getBillingSlots(withBillingGroupMembers(s), monthStart)
+        .filter(
+          (slot) =>
+            paymentBySlot.has(`${s.id}::${slot.payerName ?? ""}`) ||
+            isSlotBillableForMonth(billingStart, monthStart, slot.dueDay)
+        )
+        .map((slot) => {
+          const payment = paymentBySlot.get(`${s.id}::${slot.payerName ?? ""}`);
+          if (payment) {
+            return {
+              id: payment.id,
+              studentId: s.id,
+              studentName: resolveSlotStudentName(payment.payerName, s),
+              teacherName: s.teacher?.user.name ?? null,
+              payerName: payment.payerName,
+              amount: Number(payment.amount),
+              dueDate: payment.dueDate,
+              status: payment.status,
+              bankAccount: slot.bankAccount,
+            };
+          }
+          const dueDate = new Date(
+            monthStart.getFullYear(),
+            monthStart.getMonth(),
+            Math.min(slot.dueDay, daysInMonth)
+          );
+          const status: PaymentStatus = dueDate < now ? "LATE" : "PENDING";
           return {
-            id: payment.id,
+            id: null,
             studentId: s.id,
-            studentName: resolveSlotStudentName(payment.payerName, s),
+            studentName: resolveSlotStudentName(slot.payerName, s),
             teacherName: s.teacher?.user.name ?? null,
-            payerName: payment.payerName,
-            amount: Number(payment.amount),
-            dueDate: payment.dueDate,
-            status: payment.status,
+            payerName: slot.payerName,
+            amount: slot.amount,
+            dueDate,
+            status,
             bankAccount: slot.bankAccount,
           };
-        }
-        const dueDate = new Date(monthStart.getFullYear(), monthStart.getMonth(), Math.min(slot.dueDay, daysInMonth));
-        const status: PaymentStatus = dueDate < now ? "LATE" : "PENDING";
-        return {
-          id: null,
-          studentId: s.id,
-          studentName: resolveSlotStudentName(slot.payerName, s),
-          teacherName: s.teacher?.user.name ?? null,
-          payerName: slot.payerName,
-          amount: slot.amount,
-          dueDate,
-          status,
-          bankAccount: slot.bankAccount,
-        };
-      })
-    )
+        });
+    })
     .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
 
   // A paused row means nothing is owed for that month — it never counts
@@ -446,7 +464,7 @@ export async function getStudentPaymentHistory(studentId: string) {
           status: real.status,
           bankAccount: slot.bankAccount,
         });
-      } else if (student.status === "ACTIVE") {
+      } else if (student.status === "ACTIVE" && isSlotBillableForMonth(billingStart, cursor, slot.dueDay)) {
         const dueDate = new Date(cursor.getFullYear(), cursor.getMonth(), Math.min(slot.dueDay, daysInMonth));
         rows.push({
           id: null,

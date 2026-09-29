@@ -175,9 +175,23 @@ export function getBillingSlots(
   return slots;
 }
 
-function dueDateFor(monthStart: Date, day: number) {
+export function dueDateFor(monthStart: Date, day: number) {
   const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
   return new Date(monthStart.getFullYear(), monthStart.getMonth(), Math.min(day, daysInMonth));
+}
+
+// A slot's charge for a given month is only real once its actual due date
+// falls on/after the student became billable — checking billingStart
+// against the whole MONTH (as every caller here used to) treats the entire
+// month as billable the moment any day of it is on/after billingStartDate,
+// which can produce a due date that's earlier than enrollment itself (e.g.
+// billingStartDate the 15th, dueDay the 1st — the resolved due date, the
+// 1st, is two weeks before the student even started). Comparing the actual
+// resolved due date instead means a student who starts partway through a
+// month with an early dueDay correctly gets billed starting the following
+// month, not a nonsensical charge due before they existed.
+export function isSlotBillableForMonth(billingStart: Date, monthStart: Date, dueDay: number): boolean {
+  return dueDateFor(monthStart, dueDay) >= billingStart;
 }
 
 // Creates any still-missing Payment row for the given month across every
@@ -203,11 +217,15 @@ export async function createMissingPaymentsForMonth(referenceMonth: Date) {
 
   let created = 0;
   for (const student of students) {
-    // Never bill a month before the student became billable — governed by
-    // billingStartDate when set, independent of when their classes
-    // actually started (startDate).
-    if ((student.billingStartDate ?? student.startDate) > monthEnd) continue;
+    const billingStart = student.billingStartDate ?? student.startDate;
+    // Fast skip — the whole month is still ahead of billingStartDate, so no
+    // slot in it could possibly be billable yet.
+    if (billingStart > monthEnd) continue;
     for (const slot of getBillingSlots(withBillingGroupMembers(student), monthStart)) {
+      // The real check — this slot's own resolved due date must actually
+      // fall on/after billingStartDate, not just somewhere in the same
+      // month (see isSlotBillableForMonth).
+      if (!isSlotBillableForMonth(billingStart, monthStart, slot.dueDay)) continue;
       const existing = await prisma.payment.findFirst({
         where: { studentId: student.id, referenceMonth: monthStart, payerName: slot.payerName },
       });
