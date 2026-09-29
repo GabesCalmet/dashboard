@@ -272,15 +272,16 @@ export function StudentFormDialog({
             <DateInput id="startDate" name="startDate" defaultValue={student?.startDate} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="billingStartDate">Início da cobrança (opcional)</Label>
+            <Label htmlFor="billingStartDate">Início da cobrança</Label>
             <DateInput
               id="billingStartDate"
               name="billingStartDate"
-              defaultValue={student?.billingStartDate}
-              placeholder="Mesma data das aulas"
+              defaultValue={student?.billingStartDate ?? student?.startDate}
+              required
             />
             <p className="text-xs text-muted-foreground">
-              Deixe em branco para cobrar a partir da data de início das aulas.
+              O primeiro mês cobrado é o que já contém esta data — informe o dia exato em que a
+              cobrança deve começar, mesmo que seja diferente do início das aulas.
             </p>
           </div>
           <div className="space-y-1.5">
