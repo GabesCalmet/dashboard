@@ -541,6 +541,7 @@ model Payout {
   // one regardless of whether it's a teacher or a partner payout.
   bankAccount BankAccount   @default(JOE)
   paidAt    DateTime        @default(now())
+  notes     String?
 
   @@index([kind, teacherId, year, month])
   @@map("payouts")

@@ -2,18 +2,25 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Pencil, Trash2, Loader2 } from "lucide-react";
+import { Pencil, Trash2, Loader2, MessageSquareText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { updatePayout, deletePayout } from "@/server/actions/payouts";
 import { formatCurrency, formatDate, bankAccountLabel } from "@/lib/labels";
 import type { BankAccount } from "@prisma/client";
 
-export type PayoutEntryData = { id: string; amount: number; paidAt: Date; bankAccount: BankAccount };
+export type PayoutEntryData = {
+  id: string;
+  amount: number;
+  paidAt: Date;
+  bankAccount: BankAccount;
+  notes?: string | null;
+};
 
 function toInputDate(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -36,12 +43,14 @@ export function PayoutEntry({
   const [amount, setAmount] = useState(() => entry.amount.toFixed(2));
   const [date, setDate] = useState(() => toInputDate(entry.paidAt));
   const [bankAccount, setBankAccount] = useState<BankAccount>(entry.bankAccount);
+  const [notes, setNotes] = useState(() => entry.notes ?? "");
   const [isPending, startTransition] = useTransition();
 
   function resetToEntry() {
     setAmount(entry.amount.toFixed(2));
     setDate(toInputDate(entry.paidAt));
     setBankAccount(entry.bankAccount);
+    setNotes(entry.notes ?? "");
   }
 
   function save() {
@@ -49,7 +58,7 @@ export function PayoutEntry({
     const paidAt = new Date(date);
     startTransition(async () => {
       try {
-        await updatePayout(entry.id, value, paidAt, bankAccount);
+        await updatePayout(entry.id, value, paidAt, bankAccount, notes);
         toast.success("Pagamento atualizado.");
         setOpen(false);
       } catch (err) {
@@ -84,17 +93,23 @@ export function PayoutEntry({
         {variant === "chip" ? (
           <button
             type="button"
+            title={entry.notes ?? undefined}
             className="inline-flex items-center gap-1.5 rounded-md border bg-muted/40 px-2 py-1 text-xs hover:border-accent"
           >
             {label}
+            {entry.notes && <MessageSquareText className="size-3 text-muted-foreground" />}
             <Pencil className="size-3 text-muted-foreground" />
           </button>
         ) : (
           <button
             type="button"
+            title={entry.notes ?? undefined}
             className="flex w-full items-center justify-between rounded-md border px-3 py-1.5 text-sm hover:border-accent"
           >
-            <span>{label}</span>
+            <span className="flex items-center gap-1.5">
+              {label}
+              {entry.notes && <MessageSquareText className="size-3.5 text-muted-foreground" />}
+            </span>
             <Pencil className="size-3.5 text-muted-foreground" />
           </button>
         )}
@@ -131,6 +146,15 @@ export function PayoutEntry({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={`edit-notes-${entry.id}`}>Observações (opcional)</Label>
+            <Textarea
+              id={`edit-notes-${entry.id}`}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+            />
           </div>
           <div className="flex gap-2">
             <Button type="button" size="sm" className="flex-1" disabled={isPending} onClick={save}>

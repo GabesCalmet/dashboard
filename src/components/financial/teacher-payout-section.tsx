@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { addTeacherPayout } from "@/server/actions/payouts";
 import { PayoutEntry, type PayoutEntryData } from "@/components/financial/payout-entry";
@@ -44,6 +45,7 @@ export function TeacherPayoutSection({
   const [amount, setAmount] = useState(() => remaining.toFixed(2));
   const [date, setDate] = useState(todayInputValue);
   const [bankAccount, setBankAccount] = useState<BankAccount>("JOE");
+  const [notes, setNotes] = useState("");
   const [isPending, startTransition] = useTransition();
 
   function submit() {
@@ -51,10 +53,11 @@ export function TeacherPayoutSection({
     const paidAt = new Date(date);
     startTransition(async () => {
       try {
-        await addTeacherPayout(teacherId, year, month, value, paidAt, bankAccount);
+        await addTeacherPayout(teacherId, year, month, value, paidAt, bankAccount, notes);
         toast.success("Pagamento registrado.");
         setAmount(Math.max(0, remaining - value).toFixed(2));
         setDate(todayInputValue());
+        setNotes("");
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Erro ao registrar pagamento.");
       }
@@ -126,6 +129,16 @@ export function TeacherPayoutSection({
           {isPending && <Loader2 className="animate-spin" />}
           <Plus className="size-3.5" /> Registrar pagamento
         </Button>
+      </div>
+      <div className="mt-2 space-y-1.5">
+        <Label htmlFor={`payout-notes-${teacherId}-${year}-${month}`}>Observações (opcional)</Label>
+        <Textarea
+          id={`payout-notes-${teacherId}-${year}-${month}`}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          className="max-w-md"
+        />
       </div>
     </div>
   );

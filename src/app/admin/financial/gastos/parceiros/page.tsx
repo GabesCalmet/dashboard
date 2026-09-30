@@ -83,6 +83,7 @@ export default async function AdminParceirosPage({
                       amount: Number(e.amount),
                       paidAt: e.paidAt,
                       bankAccount: e.bankAccount,
+                      notes: e.notes,
                     }))}
                   />
                 </TableCell>

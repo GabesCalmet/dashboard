@@ -85,6 +85,7 @@ export default async function AdminTeacherPayrollPage({
                       amount: Number(p.amount),
                       paidAt: p.paidAt,
                       bankAccount: p.bankAccount,
+                      notes: p.notes,
                     }))}
                   />
                 </TableCell>

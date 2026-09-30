@@ -31,14 +31,15 @@ export async function addTeacherPayout(
   month: number,
   amount: number,
   paidAt: Date,
-  bankAccount: BankAccount
+  bankAccount: BankAccount,
+  notes?: string
 ) {
   const actor = await requireRole("ADMIN");
   if (!Number.isFinite(amount) || amount <= 0) throw new Error("Informe um valor válido.");
   if (Number.isNaN(paidAt.getTime())) throw new Error("Informe uma data válida.");
 
   const payout = await prisma.payout.create({
-    data: { kind: "TEACHER", teacherId, year, month, amount, paidAt, bankAccount },
+    data: { kind: "TEACHER", teacherId, year, month, amount, paidAt, bankAccount, notes: notes || null },
   });
 
   await recordAudit({
@@ -46,7 +47,16 @@ export async function addTeacherPayout(
     entityId: payout.id,
     action: "CREATE",
     actor,
-    changes: { kind: "TEACHER", teacherId, year, month, amount, paidAt: paidAt.toISOString(), bankAccount },
+    changes: {
+      kind: "TEACHER",
+      teacherId,
+      year,
+      month,
+      amount,
+      paidAt: paidAt.toISOString(),
+      bankAccount,
+      notes: notes || null,
+    },
   });
 
   revalidatePayoutPaths(teacherId);
@@ -65,14 +75,15 @@ export async function addPartnerPayout(
   month: number,
   amount: number,
   paidAt: Date,
-  bankAccount: BankAccount
+  bankAccount: BankAccount,
+  notes?: string
 ) {
   const actor = await requireRole("ADMIN");
   if (!Number.isFinite(amount) || amount <= 0) throw new Error("Informe um valor válido.");
   if (Number.isNaN(paidAt.getTime())) throw new Error("Informe uma data válida.");
 
   const payout = await prisma.payout.create({
-    data: { kind, year, month, amount, paidAt, bankAccount },
+    data: { kind, year, month, amount, paidAt, bankAccount, notes: notes || null },
   });
 
   await recordAudit({
@@ -80,7 +91,7 @@ export async function addPartnerPayout(
     entityId: payout.id,
     action: "CREATE",
     actor,
-    changes: { kind, year, month, amount, paidAt: paidAt.toISOString(), bankAccount },
+    changes: { kind, year, month, amount, paidAt: paidAt.toISOString(), bankAccount, notes: notes || null },
   });
 
   revalidatePayoutPaths();
@@ -90,7 +101,13 @@ export async function addPartnerPayout(
 // amount, date, and/or account can all be corrected without deleting and
 // re-adding the entry (which would lose its place in the list and
 // generate a duplicate audit trail).
-export async function updatePayout(payoutId: string, amount: number, paidAt: Date, bankAccount: BankAccount) {
+export async function updatePayout(
+  payoutId: string,
+  amount: number,
+  paidAt: Date,
+  bankAccount: BankAccount,
+  notes?: string
+) {
   const actor = await requireRole("ADMIN");
   if (!Number.isFinite(amount) || amount <= 0) throw new Error("Informe um valor válido.");
   if (Number.isNaN(paidAt.getTime())) throw new Error("Informe uma data válida.");
@@ -99,7 +116,7 @@ export async function updatePayout(payoutId: string, amount: number, paidAt: Dat
 
   await prisma.payout.update({
     where: { id: payoutId },
-    data: { amount, paidAt, bankAccount },
+    data: { amount, paidAt, bankAccount, notes: notes || null },
   });
 
   await recordAudit({
@@ -108,8 +125,13 @@ export async function updatePayout(payoutId: string, amount: number, paidAt: Dat
     action: "UPDATE",
     actor,
     changes: {
-      before: { amount: Number(payout.amount), paidAt: payout.paidAt, bankAccount: payout.bankAccount },
-      after: { amount, paidAt: paidAt.toISOString(), bankAccount },
+      before: {
+        amount: Number(payout.amount),
+        paidAt: payout.paidAt,
+        bankAccount: payout.bankAccount,
+        notes: payout.notes,
+      },
+      after: { amount, paidAt: paidAt.toISOString(), bankAccount, notes: notes || null },
     },
   });
 

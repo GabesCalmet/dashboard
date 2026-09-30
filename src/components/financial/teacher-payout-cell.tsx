@@ -41,6 +41,7 @@ export function TeacherPayoutCell({
   const [amount, setAmount] = useState(() => remaining.toFixed(2));
   const [date, setDate] = useState(todayInputValue);
   const [bankAccount, setBankAccount] = useState<BankAccount>("JOE");
+  const [notes, setNotes] = useState("");
   const [isPending, startTransition] = useTransition();
 
   function submit() {
@@ -48,7 +49,7 @@ export function TeacherPayoutCell({
     const paidAt = new Date(date);
     startTransition(async () => {
       try {
-        await addTeacherPayout(teacherId, year, month, value, paidAt, bankAccount);
+        await addTeacherPayout(teacherId, year, month, value, paidAt, bankAccount, notes);
         toast.success("Pagamento registrado.");
         setOpen(false);
       } catch (err) {
@@ -76,6 +77,7 @@ export function TeacherPayoutCell({
               setAmount(remaining.toFixed(2));
               setDate(todayInputValue());
               setBankAccount("JOE");
+              setNotes("");
             }
           }}
         >
@@ -94,6 +96,8 @@ export function TeacherPayoutCell({
                 onDateChange={setDate}
                 bankAccount={bankAccount}
                 onBankAccountChange={setBankAccount}
+                notes={notes}
+                onNotesChange={setNotes}
               />
               <Button type="button" size="sm" className="w-full" disabled={isPending} onClick={submit}>
                 {isPending && <Loader2 className="animate-spin" />}

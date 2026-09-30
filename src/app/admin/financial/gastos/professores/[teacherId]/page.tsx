@@ -70,6 +70,7 @@ export default async function AdminTeacherPayrollDetailPage({
             amount: Number(p.amount),
             paidAt: p.paidAt,
             bankAccount: p.bankAccount,
+            notes: p.notes,
           }))}
           lifetimeTotal={lifetimeTotal}
         />

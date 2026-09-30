@@ -3,12 +3,13 @@
 import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { bankAccountLabel } from "@/lib/labels";
 import type { BankAccount } from "@prisma/client";
 
-// The amount/date/account fields shared by every "add a payment" popover
-// (teacher or partner) — kept in one place so the three fields stay
+// The amount/date/account/notes fields shared by every "add a payment"
+// popover (teacher or partner) — kept in one place so the fields stay
 // identical wherever a new payout is logged.
 export function PayoutAddFields({
   idPrefix,
@@ -18,6 +19,8 @@ export function PayoutAddFields({
   onDateChange,
   bankAccount,
   onBankAccountChange,
+  notes,
+  onNotesChange,
 }: {
   idPrefix: string;
   amount: string;
@@ -26,6 +29,8 @@ export function PayoutAddFields({
   onDateChange: (value: string) => void;
   bankAccount: BankAccount;
   onBankAccountChange: (value: BankAccount) => void;
+  notes: string;
+  onNotesChange: (value: string) => void;
 }) {
   return (
     <>
@@ -59,6 +64,15 @@ export function PayoutAddFields({
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-notes`}>Observações (opcional)</Label>
+        <Textarea
+          id={`${idPrefix}-notes`}
+          value={notes}
+          onChange={(e) => onNotesChange(e.target.value)}
+          rows={2}
+        />
       </div>
     </>
   );
