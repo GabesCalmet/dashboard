@@ -218,6 +218,7 @@ export const studentFormSchema = z.object({
   monthlyValue: z.coerce.number().min(0, "Valor inválido"),
   monthlyValueHistory: numericHistoryField,
   bankAccount: z.enum(["GABES", "JOE", "ASAAS"]).default("JOE"),
+  bankAccountHistory: selectHistoryField,
   dueDay: z.coerce.number().int().min(1).max(31).default(10),
   dueDayHistory: numericHistoryField,
   // Third party (e.g. a company) covering part or all of monthlyValue,

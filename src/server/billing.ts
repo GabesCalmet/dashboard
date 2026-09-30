@@ -113,6 +113,49 @@ export function resolveHistoricalAmount(current: unknown, history: unknown, refe
   return Number(current);
 }
 
+type SelectHistoryEntry = { id: string; from?: string; until?: string };
+
+function parseSelectHistory(value: unknown): SelectHistoryEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (e): e is SelectHistoryEntry =>
+        typeof e === "object" && e !== null && typeof (e as Record<string, unknown>).id === "string"
+    )
+    .map((e) => ({
+      id: (e as Record<string, unknown>).id as string,
+      from: typeof e.from === "string" && e.from ? e.from : undefined,
+      until: typeof e.until === "string" && e.until ? e.until : undefined,
+    }));
+}
+
+// Resolves which bank account a payment should route to for a specific
+// reference month — same month-overlap convention as
+// resolveHistoricalAmount, but for an id-based value (BankAccount) instead
+// of a number, since a student can switch accounts mid-course. Falls back
+// to the current flat value for any month no history entry covers — unlike
+// an amount, there's no "hasn't started yet" concept for which account
+// routes a payment, so there's nothing to resolve to instead of current.
+export function resolveHistoricalBankAccount(
+  current: BankAccount,
+  history: unknown,
+  referenceMonth: Date
+): BankAccount {
+  const entries = parseSelectHistory(history);
+  if (entries.length === 0) return current;
+
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+  const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
+  const match = entries.find((e) => {
+    const from = e.from ? new Date(e.from) : null;
+    const until = e.until ? new Date(e.until) : null;
+    if (from && from > monthEnd) return false;
+    if (until && until < monthStart) return false;
+    return true;
+  });
+  return match ? (match.id as BankAccount) : current;
+}
+
 export function getBillingSlots(
   student: {
     monthlyValue: unknown;
@@ -120,6 +163,7 @@ export function getBillingSlots(
     dueDay: number;
     dueDayHistory?: unknown;
     bankAccount: BankAccount;
+    bankAccountHistory?: unknown;
     thirdPartyAmount: unknown;
     thirdPartyPayerName: string | null;
     thirdPartyDueDay: number | null;
@@ -139,6 +183,11 @@ export function getBillingSlots(
 ): BillingSlot[] {
   const own = resolveHistoricalAmount(student.monthlyValue, student.monthlyValueHistory, referenceMonth);
   const dueDay = resolveHistoricalAmount(student.dueDay, student.dueDayHistory, referenceMonth);
+  const ownBankAccount = resolveHistoricalBankAccount(
+    student.bankAccount,
+    student.bankAccountHistory,
+    referenceMonth
+  );
   const thirdPartyAmt = student.thirdPartyAmount ? Number(student.thirdPartyAmount) : 0;
   const slots: BillingSlot[] = [];
 
@@ -147,12 +196,12 @@ export function getBillingSlots(
       payerName: student.thirdPartyPayerName,
       amount: thirdPartyAmt,
       dueDay: student.thirdPartyDueDay,
-      bankAccount: student.thirdPartyBankAccount ?? student.bankAccount,
+      bankAccount: student.thirdPartyBankAccount ?? ownBankAccount,
     });
   }
 
   if (own > 0) {
-    slots.push({ payerName: null, amount: own, dueDay, bankAccount: student.bankAccount });
+    slots.push({ payerName: null, amount: own, dueDay, bankAccount: ownBankAccount });
   }
 
   for (const member of student.groupMembers ?? []) {

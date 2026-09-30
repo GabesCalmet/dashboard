@@ -257,6 +257,7 @@ export function StudentDetailView({
                   monthlyValue: Number(student.monthlyValue),
                   monthlyValueHistory: parseValueHistory(student.monthlyValueHistory),
                   bankAccount: student.bankAccount,
+                  bankAccountHistory: parseSelectHistory(student.bankAccountHistory),
                   dueDay: student.dueDay,
                   dueDayHistory: parseValueHistory(student.dueDayHistory),
                   thirdPartyPayerName: student.thirdPartyPayerName,

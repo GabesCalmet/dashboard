@@ -265,6 +265,13 @@ model StudentProfile {
   // reference month from this instead when generating/previewing cobranças.
   monthlyValueHistory Json          @default("[]")
   bankAccount       BankAccount     @default(JOE) // which of the school's 3 accounts receives this student's payments
+  // History of bankAccount changes over time, same shape/sync rule as
+  // monthlyValueHistory — bankAccount always mirrors whichever entry is in
+  // effect today (or the most recent one); getBillingSlots resolves the
+  // historically-correct account for a given reference month from this, so
+  // a student who switches accounts mid-course keeps routing past months'
+  // payments to whichever account was actually in effect then.
+  bankAccountHistory Json           @default("[]")
   dueDay            Int             @default(10) // day of the month the invoice ("boleto") is due, 1-31
   // History of dueDay changes over time, same shape/sync rule as
   // monthlyValueHistory — dueDay always mirrors whichever entry is in

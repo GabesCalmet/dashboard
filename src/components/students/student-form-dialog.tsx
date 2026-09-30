@@ -50,6 +50,11 @@ import type { CourseLevel, StudentStatus, BankAccount } from "@prisma/client";
 
 type Option = { id: string; label: string };
 
+const bankAccountOptions: Option[] = Object.entries(bankAccountLabel).map(([id, label]) => ({
+  id,
+  label,
+}));
+
 type StudentDefaults = {
   id: string;
   name: string;
@@ -77,6 +82,7 @@ type StudentDefaults = {
   monthlyValue: number;
   monthlyValueHistory?: ValueHistoryEntry[];
   bankAccount?: BankAccount;
+  bankAccountHistory?: SelectHistoryEntry[];
   dueDay?: number;
   dueDayHistory?: ValueHistoryEntry[];
   thirdPartyPayerName?: string | null;
@@ -233,21 +239,14 @@ export function StudentFormDialog({
               defaultHistory={student?.monthlyValueHistory ?? []}
             />
 
-            <div className="space-y-1.5">
-              <Label>Conta bancária</Label>
-              <Select name="bankAccount" defaultValue={student?.bankAccount ?? "JOE"} required>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(bankAccountLabel).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <SelectHistoryEditor
+              label="Conta bancária"
+              valueFieldName="bankAccount"
+              historyFieldName="bankAccountHistory"
+              options={bankAccountOptions}
+              defaultValue={student?.bankAccount ?? "JOE"}
+              defaultHistory={student?.bankAccountHistory ?? []}
+            />
 
             <MonthlyValueHistoryEditor
               label="Dia de vencimento do boleto"
