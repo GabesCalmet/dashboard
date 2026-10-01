@@ -48,6 +48,29 @@ export async function getStudentDetail(studentId: string) {
   });
 }
 
+// Just enough to build one student's "Relatório Mensal de Aulas" PDF for a
+// given month — the student/teacher names, their flat contracted lesson
+// count (for "Aulas contratadas", independent of how many weekdays this
+// particular month actually has), and every lesson scheduled in that exact
+// month (for the stat boxes and the "Detalhamento das aulas" table).
+export async function getStudentMonthlyReportData(
+  studentId: string,
+  monthStart: Date,
+  monthEnd: Date
+) {
+  return prisma.studentProfile.findUnique({
+    where: { id: studentId },
+    include: {
+      user: true,
+      teacher: { include: { user: true } },
+      lessons: {
+        where: { scheduledAt: { gte: monthStart, lte: monthEnd } },
+        orderBy: { scheduledAt: "asc" },
+      },
+    },
+  });
+}
+
 export async function listActiveTeachersForSelect() {
   return prisma.teacherProfile.findMany({
     where: { user: { active: true } },

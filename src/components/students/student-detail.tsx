@@ -29,6 +29,7 @@ import type { TeacherHistoryEntry } from "@/components/students/teacher-assignme
 import { DeleteStudentButton } from "@/components/students/delete-student-button";
 import { GroupMembersCard } from "@/components/students/group-members-card";
 import { ResyncLessonsButton } from "@/components/students/resync-lessons-button";
+import { MonthlyReportButton } from "@/components/students/monthly-report-button";
 import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
 import { SetPasswordButton } from "@/components/shared/set-password-button";
 import { AuditTrail } from "@/components/shared/audit-trail";
@@ -216,6 +217,13 @@ export function StudentDetailView({
         </div>
         {(permissions.canEdit || permissions.canDelete) && (
           <div className="flex items-center gap-2">
+            {permissions.canEdit && (
+              <MonthlyReportButton
+                studentId={student.id}
+                year={refMonthDate.getFullYear()}
+                month={refMonthDate.getMonth()}
+              />
+            )}
             {permissions.canEdit && editOptions && (
               <StudentFormDialog
                 teachers={editOptions.teachers}
