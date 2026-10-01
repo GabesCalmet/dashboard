@@ -81,6 +81,7 @@ type StudentDefaults = {
   planHistory?: SelectHistoryEntry[];
   monthlyValue: number;
   monthlyValueHistory?: ValueHistoryEntry[];
+  lessonsPerMonth?: number;
   bankAccount?: BankAccount;
   bankAccountHistory?: SelectHistoryEntry[];
   dueDay?: number;
@@ -238,6 +239,23 @@ export function StudentFormDialog({
               defaultAmount={student?.monthlyValue ?? 0}
               defaultHistory={student?.monthlyValueHistory ?? []}
             />
+
+            <div className="space-y-1.5">
+              <Label htmlFor="lessonsPerMonth">Aulas contratadas/mês</Label>
+              <Input
+                id="lessonsPerMonth"
+                name="lessonsPerMonth"
+                type="number"
+                min={0}
+                defaultValue={student?.lessonsPerMonth ?? 4}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Quantidade de aulas contratadas por mês — usada no relatório mensal e nas
+                estatísticas de aulas restantes, independente de quantos dias da semana caem no
+                mês.
+              </p>
+            </div>
 
             <SelectHistoryEditor
               label="Conta bancária"
