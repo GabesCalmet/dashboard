@@ -34,6 +34,9 @@ export function MonthlyValueHistoryEditor({
   min,
   max,
   onChange,
+  extraFieldLabel,
+  extraFieldName,
+  defaultExtraValue,
 }: {
   label?: string;
   // Label shown on the numeric field itself — the outer `label` is just
@@ -52,12 +55,22 @@ export function MonthlyValueHistoryEditor({
   min?: number;
   max?: number;
   onChange?: (amount: number, history: ValueHistoryEntry[]) => void;
+  // An unrelated flat field (no vigência of its own) rendered inline next
+  // to the amount — e.g. "Aulas contratadas/mês" sitting right beside
+  // "Valor (R$)" since they're set together at a glance, even though they
+  // don't share a history/vigência. Only one shared value is tracked
+  // (not one per vigência block) — if more than one amount block exists,
+  // every block's row edits the same underlying value, kept in sync.
+  extraFieldLabel?: string;
+  extraFieldName?: string;
+  defaultExtraValue?: number;
 }) {
   const [entries, setEntries] = useState<EditorEntry[]>(() =>
     defaultHistory.length > 0
       ? defaultHistory.map((e) => ({ ...e, _id: nextId++ }))
       : [{ amount: defaultAmount, _id: nextId++ }]
   );
+  const [extraValue, setExtraValue] = useState(defaultExtraValue ?? 0);
 
   function addEntry() {
     setEntries((prev) => [...prev, { amount: 0, _id: nextId++ }]);
@@ -94,6 +107,7 @@ export function MonthlyValueHistoryEditor({
       {historyFieldName && (
         <input type="hidden" name={historyFieldName} value={JSON.stringify(history)} />
       )}
+      {extraFieldName && <input type="hidden" name={extraFieldName} value={extraValue} />}
 
       {entries.map((entry) => (
         <div key={entry._id} className="flex flex-wrap items-end gap-2 rounded-lg border p-3">
@@ -108,6 +122,17 @@ export function MonthlyValueHistoryEditor({
               onChange={(e) => updateEntry(entry._id, "amount", e.target.value)}
             />
           </div>
+          {extraFieldLabel && (
+            <div className="w-32 space-y-1.5">
+              <Label className="text-xs font-normal text-muted-foreground">{extraFieldLabel}</Label>
+              <Input
+                type="number"
+                min={0}
+                value={extraValue}
+                onChange={(e) => setExtraValue(Number(e.target.value))}
+              />
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label className="text-xs font-normal text-muted-foreground">Vigência</Label>
             <div className="flex items-center gap-2">
