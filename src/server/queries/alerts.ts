@@ -37,9 +37,11 @@ export type AttendanceAlert = {
 };
 
 // A student is flagged when, among lessons reported since their last
-// dismissal, either: two CA/CP/NC happened in the same calendar month
-// (yellow), or the two most recent reported lessons back-to-back were both
-// CA/CP/NC (red — the stronger signal wins when both apply).
+// dismissal, either: any two reported lessons back-to-back were both
+// CA/CP/NC (red — stays red even if normal classes happened since; it only
+// clears once the admin dismisses it), or two CA/CP/NC happened in the
+// same calendar month without being back-to-back (yellow — a rough patch
+// that's since resolved, as opposed to an active streak).
 export async function getAttendanceAlerts(): Promise<AttendanceAlert[]> {
   const students = await prisma.studentProfile.findMany({
     where: { status: "ACTIVE" },
@@ -61,6 +63,22 @@ export async function getAttendanceAlerts(): Promise<AttendanceAlert[]> {
     return FLAG_STATUSES.includes(l.status) && l.rescheduledTo.length === 0;
   }
 
+  // Finds the most recent pair of adjacent reported lessons that were both
+  // flaggable, scanning the whole list rather than only the literal last
+  // two — a streak from earlier in the undismissed window still counts as
+  // "two in a row" even if later classes went fine, since the point is
+  // whether it ever happened, not just whether it's still the latest news.
+  function findConsecutivePair<T extends { status: LessonStatus; rescheduledTo: unknown[] }>(
+    lessons: T[]
+  ): [T, T] | null {
+    for (let i = lessons.length - 1; i >= 1; i--) {
+      if (isFlaggable(lessons[i]) && isFlaggable(lessons[i - 1])) {
+        return [lessons[i - 1], lessons[i]];
+      }
+    }
+    return null;
+  }
+
   const alerts: AttendanceAlert[] = [];
 
   for (const student of students) {
@@ -71,8 +89,8 @@ export async function getAttendanceAlerts(): Promise<AttendanceAlert[]> {
     );
     if (relevantLessons.length === 0) continue;
 
-    const lastTwo = relevantLessons.slice(-2);
-    const isConsecutive = lastTwo.length === 2 && lastTwo.every(isFlaggable);
+    const consecutivePair = findConsecutivePair(relevantLessons);
+    const isConsecutive = consecutivePair !== null;
 
     const monthGroups = new Map<
       string,
@@ -96,7 +114,7 @@ export async function getAttendanceAlerts(): Promise<AttendanceAlert[]> {
     const reason = isConsecutive
       ? "2 aulas seguidas canceladas ou não compareceu"
       : `2 cancelamentos/faltas em ${triggeringMonth!.label}`;
-    const flaggedLessons = isConsecutive ? lastTwo : triggeringMonth!.lessons;
+    const flaggedLessons = isConsecutive ? consecutivePair! : triggeringMonth!.lessons;
 
     alerts.push({
       studentId: student.id,
