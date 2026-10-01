@@ -260,6 +260,7 @@ export function StudentDetailView({
                   teacherPayRate: Number(student.teacherPayRate),
                   teacherPayMode: student.teacherPayMode,
                   teacherMonthlyAmount: Number(student.teacherMonthlyAmount),
+                  teacherPercentage: Number(student.teacherPercentage),
                   courseId: student.courseId,
                   courseHistory: parseSelectHistory(student.courseHistory),
                   planId: student.planId,
@@ -533,8 +534,9 @@ function parseTeacherHistory(value: unknown): TeacherHistoryEntry[] {
       from: typeof e.from === "string" && e.from ? e.from : undefined,
       until: typeof e.until === "string" && e.until ? e.until : undefined,
       rate: typeof e.rate === "number" ? e.rate : undefined,
-      mode: e.mode === "MONTHLY" ? "MONTHLY" : undefined,
+      mode: e.mode === "MONTHLY" ? "MONTHLY" : e.mode === "PERCENTAGE" ? "PERCENTAGE" : undefined,
       monthlyAmount: typeof e.monthlyAmount === "number" ? e.monthlyAmount : undefined,
+      percentage: typeof e.percentage === "number" ? e.percentage : undefined,
     }));
 }
 

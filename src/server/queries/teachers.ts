@@ -11,6 +11,7 @@ type TeacherHistoryEntry = {
   rate?: number;
   mode?: TeacherPayMode;
   monthlyAmount?: number;
+  percentage?: number;
 };
 
 function parseTeacherHistory(value: unknown): TeacherHistoryEntry[] {
@@ -25,8 +26,9 @@ function parseTeacherHistory(value: unknown): TeacherHistoryEntry[] {
       from: typeof e.from === "string" && e.from ? e.from : undefined,
       until: typeof e.until === "string" && e.until ? e.until : undefined,
       rate: typeof e.rate === "number" ? e.rate : undefined,
-      mode: e.mode === "MONTHLY" ? "MONTHLY" : undefined,
+      mode: e.mode === "MONTHLY" ? "MONTHLY" : e.mode === "PERCENTAGE" ? "PERCENTAGE" : undefined,
       monthlyAmount: typeof e.monthlyAmount === "number" ? e.monthlyAmount : undefined,
+      percentage: typeof e.percentage === "number" ? e.percentage : undefined,
     }));
 }
 
@@ -38,18 +40,23 @@ type TeacherAssignment = {
   mode: TeacherPayMode;
   rate: number;
   monthlyAmount: number;
+  // Only set (and only meaningful) when mode is PERCENTAGE — the configured
+  // percentage itself, for display; monthlyAmount already carries the
+  // resolved R$ figure it works out to for this month.
+  percentage: number;
 };
 
 // Resolves how a teacher is paid for a specific student/group in a given
-// month — hourly (rate × hours given) or a flat monthly amount
-// (unaffected by how many classes actually happen) — from the student's
-// teacherHistory entry for that teacher covering the month, if one was
-// configured; else the student's current flat
-// teacherPayRate/teacherPayMode/teacherMonthlyAmount, for a still-current
-// assignment that's never had a change recorded; the teacher's own flat
-// hourlyRate is the last-resort fallback for HOURLY, so payroll for a
-// student nobody has configured a rate for yet keeps working exactly as
-// it did before this feature existed.
+// month — hourly (rate × hours given), a flat monthly amount, or a
+// percentage of that month's monthlyValue (both of the latter unaffected
+// by how many classes actually happen) — from the student's teacherHistory
+// entry for that teacher covering the month, if one was configured; else
+// the student's current flat
+// teacherPayRate/teacherPayMode/teacherMonthlyAmount/teacherPercentage, for
+// a still-current assignment that's never had a change recorded; the
+// teacher's own flat hourlyRate is the last-resort fallback for HOURLY, so
+// payroll for a student nobody has configured a rate for yet keeps working
+// exactly as it did before this feature existed.
 function resolveTeacherAssignment(
   student: {
     teacherId: string | null;
@@ -57,6 +64,9 @@ function resolveTeacherAssignment(
     teacherPayRate: unknown;
     teacherPayMode: TeacherPayMode;
     teacherMonthlyAmount: unknown;
+    teacherPercentage: unknown;
+    monthlyValue: unknown;
+    monthlyValueHistory: unknown;
   },
   teacherId: string,
   referenceMonth: Date,
@@ -73,12 +83,30 @@ function resolveTeacherAssignment(
     if (until && until < monthStart) return false;
     return true;
   });
+  const resolvedMonthlyValue = () =>
+    resolveHistoricalAmount(student.monthlyValue, student.monthlyValueHistory, monthStart);
 
   if (match?.mode === "MONTHLY") {
-    return { assigned: true, mode: "MONTHLY", rate: 0, monthlyAmount: match.monthlyAmount ?? 0 };
+    return {
+      assigned: true,
+      mode: "MONTHLY",
+      rate: 0,
+      monthlyAmount: match.monthlyAmount ?? 0,
+      percentage: 0,
+    };
+  }
+  if (match?.mode === "PERCENTAGE") {
+    const percentage = match.percentage ?? 0;
+    return {
+      assigned: true,
+      mode: "PERCENTAGE",
+      rate: 0,
+      monthlyAmount: (resolvedMonthlyValue() * percentage) / 100,
+      percentage,
+    };
   }
   if (match && typeof match.rate === "number" && match.rate > 0) {
-    return { assigned: true, mode: "HOURLY", rate: match.rate, monthlyAmount: 0 };
+    return { assigned: true, mode: "HOURLY", rate: match.rate, monthlyAmount: 0, percentage: 0 };
   }
   if (student.teacherId === teacherId) {
     if (student.teacherPayMode === "MONTHLY") {
@@ -87,18 +115,37 @@ function resolveTeacherAssignment(
         mode: "MONTHLY",
         rate: 0,
         monthlyAmount: Number(student.teacherMonthlyAmount),
+        percentage: 0,
+      };
+    }
+    if (student.teacherPayMode === "PERCENTAGE") {
+      const percentage = Number(student.teacherPercentage);
+      return {
+        assigned: true,
+        mode: "PERCENTAGE",
+        rate: 0,
+        monthlyAmount: (resolvedMonthlyValue() * percentage) / 100,
+        percentage,
       };
     }
     const rate = Number(student.teacherPayRate) > 0 ? Number(student.teacherPayRate) : fallbackHourlyRate;
-    return { assigned: true, mode: "HOURLY", rate, monthlyAmount: 0 };
+    return { assigned: true, mode: "HOURLY", rate, monthlyAmount: 0, percentage: 0 };
   }
   // A history entry named this teacher for the month but had no usable
   // rate/mode of its own — still a real assignment, just priced at
   // fallback, same as the pre-MONTHLY-mode behavior.
   if (match) {
-    return { assigned: true, mode: "HOURLY", rate: fallbackHourlyRate, monthlyAmount: 0 };
+    return { assigned: true, mode: "HOURLY", rate: fallbackHourlyRate, monthlyAmount: 0, percentage: 0 };
   }
-  return { assigned: false, mode: "HOURLY", rate: fallbackHourlyRate, monthlyAmount: 0 };
+  return { assigned: false, mode: "HOURLY", rate: fallbackHourlyRate, monthlyAmount: 0, percentage: 0 };
+}
+
+// MONTHLY and PERCENTAGE both resolve to a flat amount for the month,
+// already computed into assignment.monthlyAmount — unaffected by how many
+// lessons the student actually had, unlike HOURLY — so every place that
+// handles "this assignment pays a flat fee, not per lesson" checks both.
+function isFlatAssignment(mode: TeacherPayMode): boolean {
+  return mode === "MONTHLY" || mode === "PERCENTAGE";
 }
 
 // A class "happened" in some recorded sense if it's OK (dada), NC (não
@@ -124,6 +171,9 @@ const teacherAssignmentSelect = {
   teacherPayRate: true,
   teacherPayMode: true,
   teacherMonthlyAmount: true,
+  teacherPercentage: true,
+  monthlyValue: true,
+  monthlyValueHistory: true,
 } as const;
 
 // A canceled lesson (CA/CP/CF) whose own reposição was booked into the SAME
@@ -266,7 +316,7 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
 
     for (const student of students) {
       const assignment = resolveTeacherAssignment(student, t.id, monthStart, fallbackHourlyRate);
-      if (assignment.assigned && assignment.mode === "MONTHLY") {
+      if (assignment.assigned && isFlatAssignment(assignment.mode)) {
         previsto += assignment.monthlyAmount;
         realizado += assignment.monthlyAmount;
         flatHandled.add(student.id);
@@ -437,6 +487,7 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
       realizedHours: number;
       rate: number;
       mode: TeacherPayMode;
+      percentage: number;
     }
   >();
 
@@ -445,7 +496,7 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
   // month (including zero).
   for (const student of assignedStudents) {
     const assignment = resolveTeacherAssignment(student, teacherId, monthStart, fallbackHourlyRate);
-    if (assignment.assigned && assignment.mode === "MONTHLY") {
+    if (assignment.assigned && isFlatAssignment(assignment.mode)) {
       byStudent.set(student.id, {
         hours: 0,
         previsto: assignment.monthlyAmount,
@@ -454,7 +505,8 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
         realizedCount: 0,
         realizedHours: 0,
         rate: 0,
-        mode: "MONTHLY",
+        mode: assignment.mode,
+        percentage: assignment.percentage,
       });
     }
   }
@@ -463,11 +515,11 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
     const student = studentById.get(g.studentId);
     const assignment = student
       ? resolveTeacherAssignment(student, teacherId, monthStart, fallbackHourlyRate)
-      : { assigned: false, mode: "HOURLY" as const, rate: fallbackHourlyRate, monthlyAmount: 0 };
+      : { assigned: false, mode: "HOURLY" as const, rate: fallbackHourlyRate, monthlyAmount: 0, percentage: 0 };
     const hours = (g._sum.durationMin ?? 0) / 60;
     const isRealized = (REALIZED_STATUSES as readonly string[]).includes(g.status);
 
-    if (assignment.mode === "MONTHLY") {
+    if (isFlatAssignment(assignment.mode)) {
       // Already counted as a flat fee above — only track hours/count here,
       // for attendance context, not pay. A flat-fee student is paid in
       // full regardless of attendance, so their "realized" hours/count
@@ -481,7 +533,8 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
         realizedCount: 0,
         realizedHours: 0,
         rate: 0,
-        mode: "MONTHLY" as const,
+        mode: assignment.mode,
+        percentage: assignment.percentage,
       };
       entry.hours += hours;
       entry.count += g._count._all;
@@ -505,6 +558,7 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
       realizedHours: 0,
       rate,
       mode: "HOURLY" as const,
+      percentage: 0,
     };
     entry.count += g._count._all;
     // Previsto counts every class regardless of status — it's a forecast

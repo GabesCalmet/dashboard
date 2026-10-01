@@ -54,7 +54,7 @@ export function MonthlyValueHistoryEditor({
   step?: string;
   min?: number;
   max?: number;
-  onChange?: (amount: number, history: ValueHistoryEntry[]) => void;
+  onChange?: (amount: number, history: ValueHistoryEntry[], extraValue: number) => void;
   // An unrelated flat field (no vigência of its own) rendered inline next
   // to the amount — e.g. "Aulas contratadas/mês" sitting right beside
   // "Valor (R$)" since they're set together at a glance, even though they
@@ -98,7 +98,7 @@ export function MonthlyValueHistoryEditor({
   const currentAmount = resolveCurrentAmount(history);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => onChange?.(currentAmount, history), [JSON.stringify(history)]);
+  useEffect(() => onChange?.(currentAmount, history, extraValue), [JSON.stringify(history), extraValue]);
 
   return (
     <div className="space-y-2 sm:col-span-2">

@@ -75,6 +75,7 @@ type StudentDefaults = {
   teacherPayRate?: number;
   teacherPayMode?: TeacherPayMode;
   teacherMonthlyAmount?: number;
+  teacherPercentage?: number;
   courseId?: string | null;
   courseHistory?: SelectHistoryEntry[];
   planId?: string | null;
@@ -119,6 +120,12 @@ export function StudentFormDialog({
   const [studentType, setStudentType] = useState<"individual" | "grupo">(
     student?.isGroup ? "grupo" : "individual"
   );
+  // Lifted out of the monthlyValue editor purely so TeacherAssignmentEditor
+  // can show a live "≈ R$/aula" preview beside the Mensal fixo/Percentual
+  // inputs — not otherwise used here, since each editor still submits its
+  // own fields.
+  const [lessonsPerMonth, setLessonsPerMonth] = useState(student?.lessonsPerMonth ?? 4);
+  const [monthlyValue, setMonthlyValue] = useState(student?.monthlyValue ?? 0);
   useActionToast(state, () => setOpen(false));
 
   return (
@@ -241,6 +248,10 @@ export function StudentFormDialog({
               extraFieldLabel="Aulas/mês"
               extraFieldName="lessonsPerMonth"
               defaultExtraValue={student?.lessonsPerMonth ?? 4}
+              onChange={(amount, _history, extraValue) => {
+                setMonthlyValue(amount);
+                setLessonsPerMonth(extraValue);
+              }}
             />
 
             <SelectHistoryEditor
@@ -314,12 +325,16 @@ export function StudentFormDialog({
             rateFieldName="teacherPayRate"
             modeFieldName="teacherPayMode"
             monthlyAmountFieldName="teacherMonthlyAmount"
+            percentageFieldName="teacherPercentage"
             options={teachers}
             defaultValue={student?.teacherId}
             defaultHistory={student?.teacherHistory ?? []}
             defaultRate={student?.teacherPayRate ?? 0}
             defaultMode={student?.teacherPayMode ?? "HOURLY"}
             defaultMonthlyAmount={student?.teacherMonthlyAmount ?? 0}
+            defaultPercentage={student?.teacherPercentage ?? 0}
+            lessonsPerMonth={lessonsPerMonth}
+            monthlyValue={monthlyValue}
           />
 
           <SelectHistoryEditor
