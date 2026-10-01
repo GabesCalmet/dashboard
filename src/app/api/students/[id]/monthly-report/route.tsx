@@ -95,7 +95,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   return new NextResponse(new Uint8Array(pdfBuffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      // "inline" (not "attachment") so the browser opens its own PDF
+      // viewer in the new tab instead of triggering an immediate save —
+      // that viewer has its own download/print controls once the user has
+      // actually looked at the report.
+      "Content-Disposition": `inline; filename="${filename}"`,
     },
   });
 }
