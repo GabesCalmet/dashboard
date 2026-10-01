@@ -94,7 +94,12 @@ const styles = StyleSheet.create({
   },
   statusBadgeCompact: { fontSize: 7, paddingVertical: 1, paddingHorizontal: 5 },
 
-  bottomImage: { width: "100%" },
+  // Pinned to the true bottom of the page (out of normal flow) rather than
+  // following directly after the last row, so a light month's leftover
+  // whitespace lands between the table and "Regras gerais" instead of below
+  // the footer — the page always ends flush with the template's own bottom
+  // edge.
+  bottomImage: { width: "100%", position: "absolute", left: 0, bottom: 0 },
 });
 
 const STATUS_TONE_STYLE: Record<StatusTone, { backgroundColor: string; color: string }> = {
