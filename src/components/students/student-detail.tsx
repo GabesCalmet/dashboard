@@ -215,15 +215,17 @@ export function StudentDetailView({
             </p>
           </div>
         </div>
+        {permissions.canEdit && (
+          <div className="flex flex-1 items-center justify-center">
+            <MonthlyReportButton
+              studentId={student.id}
+              year={refMonthDate.getFullYear()}
+              month={refMonthDate.getMonth()}
+            />
+          </div>
+        )}
         {(permissions.canEdit || permissions.canDelete) && (
           <div className="flex items-center gap-2">
-            {permissions.canEdit && (
-              <MonthlyReportButton
-                studentId={student.id}
-                year={refMonthDate.getFullYear()}
-                month={refMonthDate.getMonth()}
-              />
-            )}
             {permissions.canEdit && editOptions && (
               <StudentFormDialog
                 teachers={editOptions.teachers}

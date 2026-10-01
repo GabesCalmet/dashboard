@@ -14,7 +14,7 @@ export function MonthlyReportButton({
   month: number;
 }) {
   return (
-    <Button asChild variant="outline">
+    <Button asChild size="lg">
       <a href={`/api/students/${studentId}/monthly-report?year=${year}&month=${month}`} download>
         <FileDown className="size-4" /> Gerar relatório
       </a>
