@@ -62,13 +62,18 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       horario: toBrazilTimeString(l.scheduledAt),
       status: lessonStatusDisplayLabel(l.status, l.isMakeup),
       statusTone: statusTone(l.status, l.isMakeup),
-      observacoes: l.contentTaught ?? "",
+      // Resumo (contentTaught) left out of Observações for now, per request.
+      observacoes: "",
     };
   });
 
-  const period = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(
+  const periodRaw = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(
     monthStart
   );
+  // Only the leading letter is capitalized ("Outubro de 2026") — CSS
+  // text-transform:capitalize would also capitalize "de", which looks wrong
+  // in Portuguese.
+  const period = periodRaw.charAt(0).toUpperCase() + periodRaw.slice(1);
   const studentName = student.groupName ?? student.user.name;
 
   const pdfBuffer = await renderToBuffer(
