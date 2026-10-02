@@ -48,15 +48,29 @@ export async function getStudentDetail(studentId: string) {
   });
 }
 
+// Minimal lookup used only to resolve the billing-cycle window a monthly
+// report should cover (see dueDateFor/resolveHistoricalAmount call sites in
+// the report route) before fetching the full report data for that window —
+// needed up front since the window itself depends on the student's dueDay.
+export async function getStudentDueDayInfo(studentId: string) {
+  return prisma.studentProfile.findUnique({
+    where: { id: studentId },
+    select: { dueDay: true, dueDayHistory: true },
+  });
+}
+
 // Just enough to build one student's "Relatório Mensal de Aulas" PDF for a
-// given month — the student/teacher names, their flat contracted lesson
+// given period — the student/teacher names, their flat contracted lesson
 // count (for "Aulas contratadas", independent of how many weekdays this
-// particular month actually has), and every lesson scheduled in that exact
-// month (for the stat boxes and the "Detalhamento das aulas" table).
+// particular period actually has), and every lesson scheduled within it
+// (for the stat boxes and the "Detalhamento das aulas" table). The period
+// is the billing cycle (previous due date through this one), not the
+// calendar month — see the report route for how periodStart/periodEnd are
+// resolved.
 export async function getStudentMonthlyReportData(
   studentId: string,
-  monthStart: Date,
-  monthEnd: Date
+  periodStart: Date,
+  periodEnd: Date
 ) {
   return prisma.studentProfile.findUnique({
     where: { id: studentId },
@@ -64,7 +78,7 @@ export async function getStudentMonthlyReportData(
       user: true,
       teacher: { include: { user: true } },
       lessons: {
-        where: { scheduledAt: { gte: monthStart, lte: monthEnd } },
+        where: { scheduledAt: { gte: periodStart, lte: periodEnd } },
         orderBy: { scheduledAt: "asc" },
         include: {
           // For the Observações column: a canceled lesson shows when its

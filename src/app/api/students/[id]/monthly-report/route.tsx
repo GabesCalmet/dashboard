@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { getCurrentUser } from "@/lib/auth";
-import { getStudentMonthlyReportData } from "@/server/queries/students";
+import { getStudentDueDayInfo, getStudentMonthlyReportData } from "@/server/queries/students";
 import { lessonStatusDisplayLabel } from "@/lib/labels";
 import { toBrazilDateString, toBrazilTimeString } from "@/lib/timezone";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
-import { resolveHistoricalAmount } from "@/server/billing";
+import { resolveHistoricalAmount, dueDateFor } from "@/server/billing";
 import {
   MonthlyReportDocument,
   type MonthlyReportRow,
@@ -23,6 +23,16 @@ function statusTone(status: LessonStatus, isMakeup: boolean): StatusTone {
 function brDate(date: Date): string {
   const [y, m, d] = toBrazilDateString(date).split("-");
   return `${d}/${m}/${y}`;
+}
+
+// For plain calendar-day markers (like dueDateFor's return value) rather
+// than real Brazil-instant timestamps — read directly instead of through
+// toBrazilDateString, which shifts by the Brazil UTC offset and expects an
+// instant already encoding a Brazil wall-clock time.
+function shortDate(date: Date): string {
+  const d = String(date.getDate()).padStart(2, "0");
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  return `${d}/${m}`;
 }
 
 // What the Observações column says about a reagendamento, for one lesson:
@@ -68,30 +78,52 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     return NextResponse.json({ error: "Mês inválido" }, { status: 400 });
   }
 
-  const monthStart = new Date(year, month, 1);
-  const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
+  const dueDayInfo = await getStudentDueDayInfo(studentId);
+  if (!dueDayInfo) {
+    return NextResponse.json({ error: "Aluno não encontrado" }, { status: 404 });
+  }
 
-  const student = await getStudentMonthlyReportData(studentId, monthStart, monthEnd);
+  const monthStart = new Date(year, month, 1);
+  const prevMonthStart = new Date(year, month - 1, 1);
+
+  // The report counts by billing cycle, not calendar month — per explicit
+  // request, since a student's classes don't reset on the 1st, they reset
+  // whenever their boleto is due. "This month"'s cycle runs from the
+  // previous due date (inclusive) through this one (exclusive, so the two
+  // adjacent cycles never double-count the due date itself) — dueDay is
+  // resolved separately for each boundary since it can have its own
+  // vigência change between the two months.
+  const dueDayPrevCycle = resolveHistoricalAmount(
+    dueDayInfo.dueDay,
+    dueDayInfo.dueDayHistory,
+    prevMonthStart
+  );
+  const dueDayThisCycle = resolveHistoricalAmount(dueDayInfo.dueDay, dueDayInfo.dueDayHistory, monthStart);
+  const periodStart = dueDateFor(prevMonthStart, dueDayPrevCycle);
+  const nextDueDate = dueDateFor(monthStart, dueDayThisCycle);
+  const periodEnd = new Date(nextDueDate.getTime() - 1);
+
+  const student = await getStudentMonthlyReportData(studentId, periodStart, periodEnd);
   if (!student) {
     return NextResponse.json({ error: "Aluno não encontrado" }, { status: 404 });
   }
 
   // Aulas contratadas is the number the student paid for that specific
-  // month (e.g. "2x por semana" = 8/mês), independent of how many weekdays
-  // the month actually has — resolved from lessonsPerMonthHistory instead
+  // cycle (e.g. "2x por semana" = 8/mês), independent of how many weekdays
+  // the cycle actually spans — resolved from lessonsPerMonthHistory instead
   // of just reading the student's current flat value, since that count can
   // change over time (e.g. 8/mês split across two days a week, later
   // consolidated into 4/mês on one day) and a report can be generated for
-  // any past month. Aulas extras is the surplus beyond that contracted
-  // number when a month's calendar happens to fit one more regular class
-  // than usual (e.g. 5 Mondays instead of 4) — makeup lessons are counted
-  // separately (Aulas reagendadas) and never inflate this.
+  // any past cycle. Aulas extras is the surplus beyond that contracted
+  // number when a cycle happens to fit one more regular class than usual —
+  // makeup lessons are counted separately (Aulas reagendadas) and never
+  // inflate this.
   const regularLessons = student.lessons.filter((l) => !l.isMakeup);
   const makeupLessons = student.lessons.filter((l) => l.isMakeup);
   const aulasContratadas = resolveHistoricalAmount(
     student.lessonsPerMonth,
     student.lessonsPerMonthHistory,
-    monthStart
+    periodStart
   );
   const aulasExtras = Math.max(0, regularLessons.length - aulasContratadas);
   const aulasReagendadas = makeupLessons.length;
@@ -108,13 +140,15 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     };
   });
 
-  const periodRaw = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(
-    monthStart
-  );
-  // Only the leading letter is capitalized ("Outubro de 2026") — CSS
-  // text-transform:capitalize would also capitalize "de", which looks wrong
-  // in Portuguese.
-  const period = periodRaw.charAt(0).toUpperCase() + periodRaw.slice(1);
+  // A plain month name ("Outubro de 2026") would misrepresent a cycle that
+  // no longer lines up with the calendar month — shown as the actual date
+  // range instead, in the same "DD/MM" format already used in the
+  // Detalhamento table rows below (no year: the cycle never spans more
+  // than ~31 days, so it's never ambiguous). periodStart/periodEnd are
+  // plain calendar-day markers (like dueDateFor's own return value), not
+  // Brazil-instant timestamps like a lesson's scheduledAt — read directly
+  // instead of through toBrazilDateString, which expects the latter.
+  const period = `${shortDate(periodStart)} a ${shortDate(periodEnd)}`;
   const studentName = student.groupName ?? student.user.name;
 
   const pdfBuffer = await renderToBuffer(
