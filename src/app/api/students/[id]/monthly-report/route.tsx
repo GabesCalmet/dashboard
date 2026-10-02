@@ -5,6 +5,7 @@ import { getStudentMonthlyReportData } from "@/server/queries/students";
 import { lessonStatusDisplayLabel } from "@/lib/labels";
 import { toBrazilDateString, toBrazilTimeString } from "@/lib/timezone";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
+import { resolveHistoricalAmount } from "@/server/billing";
 import {
   MonthlyReportDocument,
   type MonthlyReportRow,
@@ -75,16 +76,24 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     return NextResponse.json({ error: "Aluno não encontrado" }, { status: 404 });
   }
 
-  // Aulas contratadas is the flat number the student pays for (e.g. "2x por
-  // semana" = 8/mês), independent of how many weekdays this particular
-  // month actually has. Aulas extras is the surplus beyond that flat
+  // Aulas contratadas is the number the student paid for that specific
+  // month (e.g. "2x por semana" = 8/mês), independent of how many weekdays
+  // the month actually has — resolved from lessonsPerMonthHistory instead
+  // of just reading the student's current flat value, since that count can
+  // change over time (e.g. 8/mês split across two days a week, later
+  // consolidated into 4/mês on one day) and a report can be generated for
+  // any past month. Aulas extras is the surplus beyond that contracted
   // number when a month's calendar happens to fit one more regular class
   // than usual (e.g. 5 Mondays instead of 4) — makeup lessons are counted
   // separately (Aulas reagendadas) and never inflate this.
   const regularLessons = student.lessons.filter((l) => !l.isMakeup);
   const makeupLessons = student.lessons.filter((l) => l.isMakeup);
-  const aulasContratadas = student.lessonsPerMonth;
-  const aulasExtras = Math.max(0, regularLessons.length - student.lessonsPerMonth);
+  const aulasContratadas = resolveHistoricalAmount(
+    student.lessonsPerMonth,
+    student.lessonsPerMonthHistory,
+    monthStart
+  );
+  const aulasExtras = Math.max(0, regularLessons.length - aulasContratadas);
   const aulasReagendadas = makeupLessons.length;
   const aulasRealizadas = student.lessons.filter((l) => l.status === "COMPLETED").length;
 

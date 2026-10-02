@@ -225,10 +225,17 @@ export const studentFormSchema = z.object({
   monthlyValueHistory: numericHistoryField,
   // Flat number of classes this student is actually contracted for per
   // month (e.g. 8 for "2x por semana") — admin-entered, independent of how
-  // many weekdays a given calendar month happens to have. Used for
-  // "Aulas restantes no mês" on the student's own dashboard, the teacher's
-  // "Esperadas" load, and "Aulas contratadas" on the monthly PDF report.
+  // many weekdays a given calendar month happens to have. Mirrors whichever
+  // lessonsPerMonthHistory entry is in effect today, same convention as
+  // monthlyValue/monthlyValueHistory. Used for "Aulas restantes no mês" on
+  // the student's own dashboard and the teacher's "Esperadas" load (both
+  // always about the current month, so the flat mirror is enough); the
+  // monthly PDF report instead resolves the historically-correct entry for
+  // whatever month it's generating, since a student's contracted count can
+  // change over time (e.g. 8/mês split across two days a week, later
+  // consolidated into 4/mês on one day).
   lessonsPerMonth: z.coerce.number().int().min(0, "Valor inválido").default(0),
+  lessonsPerMonthHistory: numericHistoryField,
   bankAccount: z.enum(["GABES", "JOE", "ASAAS"]).default("JOE"),
   bankAccountHistory: selectHistoryField,
   dueDay: z.coerce.number().int().min(1).max(31).default(10),

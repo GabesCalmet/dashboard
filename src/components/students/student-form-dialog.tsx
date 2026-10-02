@@ -83,6 +83,7 @@ type StudentDefaults = {
   monthlyValue: number;
   monthlyValueHistory?: ValueHistoryEntry[];
   lessonsPerMonth?: number;
+  lessonsPerMonthHistory?: ValueHistoryEntry[];
   bankAccount?: BankAccount;
   bankAccountHistory?: SelectHistoryEntry[];
   dueDay?: number;
@@ -245,13 +246,26 @@ export function StudentFormDialog({
               historyFieldName="monthlyValueHistory"
               defaultAmount={student?.monthlyValue ?? 0}
               defaultHistory={student?.monthlyValueHistory ?? []}
-              extraFieldLabel="Aulas/mês"
-              extraFieldName="lessonsPerMonth"
-              defaultExtraValue={student?.lessonsPerMonth ?? 4}
-              onChange={(amount, _history, extraValue) => {
-                setMonthlyValue(amount);
-                setLessonsPerMonth(extraValue);
-              }}
+              onChange={(amount) => setMonthlyValue(amount)}
+            />
+
+            {/* Separate from Valor mensal on purpose — this tracks its own
+                vigência independently (e.g. 8 aulas/mês split across two
+                days a week, later consolidated into 4/mês on one day), and
+                only the monthly PDF report resolves it historically; the
+                rest of the app (dashboard remaining count, teacher load)
+                only ever cares about today's value, read from the same
+                lessonsPerMonth mirror either way. */}
+            <MonthlyValueHistoryEditor
+              label="Aulas contratadas por mês"
+              amountLabel="Aulas/mês"
+              amountFieldName="lessonsPerMonth"
+              historyFieldName="lessonsPerMonthHistory"
+              defaultAmount={student?.lessonsPerMonth ?? 4}
+              defaultHistory={student?.lessonsPerMonthHistory ?? []}
+              step="1"
+              min={0}
+              onChange={(amount) => setLessonsPerMonth(amount)}
             />
 
             <SelectHistoryEditor
