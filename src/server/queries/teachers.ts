@@ -148,6 +148,49 @@ function isFlatAssignment(mode: TeacherPayMode): boolean {
   return mode === "MONTHLY" || mode === "PERCENTAGE";
 }
 
+// Average class length from the student's weekly lessonSchedule, in
+// hours — just enough to turn a flat monthly/percentage figure into an
+// equivalent hourly rate below; the full schedule shape (weekday/from/
+// until) isn't needed here. Falls back to 50min (the Lesson model's own
+// default) when there's no usable schedule to read a length from.
+function avgClassDurationHours(lessonSchedule: unknown): number {
+  const DEFAULT_MIN = 50;
+  if (!Array.isArray(lessonSchedule) || lessonSchedule.length === 0) return DEFAULT_MIN / 60;
+  const minutes = lessonSchedule.map((e) => {
+    const start = typeof e === "object" && e !== null && typeof (e as { start?: unknown }).start === "string"
+      ? (e as { start: string }).start
+      : "";
+    const end = typeof e === "object" && e !== null && typeof (e as { end?: unknown }).end === "string"
+      ? (e as { end: string }).end
+      : "";
+    if (!start || !end) return DEFAULT_MIN;
+    const [sh, sm] = start.split(":").map(Number);
+    const [eh, em] = end.split(":").map(Number);
+    const diff = eh * 60 + em - (sh * 60 + sm);
+    return diff > 0 ? diff : DEFAULT_MIN;
+  });
+  return minutes.reduce((a, b) => a + b, 0) / minutes.length / 60;
+}
+
+// For a MONTHLY/PERCENTAGE assignment — which has no hourly rate of its
+// own, since it's priced as a flat monthly figure instead — what that
+// figure works out to per hour, so "Valor/hora" shows something
+// meaningful instead of R$ 0,00. Hours/month is the student's average
+// scheduled class length × how many classes they're contracted for
+// (lessonsPerMonth), both resolved for the same reference month as the
+// flat amount itself.
+function equivalentHourlyRate(
+  monthlyAmount: number,
+  lessonsPerMonth: unknown,
+  lessonsPerMonthHistory: unknown,
+  lessonSchedule: unknown,
+  referenceMonth: Date
+): number {
+  const contractedLessons = resolveHistoricalAmount(lessonsPerMonth, lessonsPerMonthHistory, referenceMonth);
+  const hoursPerMonth = avgClassDurationHours(lessonSchedule) * contractedLessons;
+  return hoursPerMonth > 0 ? monthlyAmount / hoursPerMonth : 0;
+}
+
 // A class "happened" in some recorded sense if it's OK (dada), NC (não
 // compareceu), CT (cancelamento tarde), CASR (cancelamento aluno sem
 // reposição), F (feriado) or R (reposição) — as opposed to still SCHEDULED
@@ -504,7 +547,13 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
         count: 0,
         realizedCount: 0,
         realizedHours: 0,
-        rate: 0,
+        rate: equivalentHourlyRate(
+          assignment.monthlyAmount,
+          student.lessonsPerMonth,
+          student.lessonsPerMonthHistory,
+          student.lessonSchedule,
+          monthStart
+        ),
         mode: assignment.mode,
         percentage: assignment.percentage,
       });
@@ -532,7 +581,16 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
         count: 0,
         realizedCount: 0,
         realizedHours: 0,
-        rate: 0,
+        // student is guaranteed defined here — isFlatAssignment only ever
+        // true above when the ternary at this block's top resolved a real
+        // assignment, which requires a real student.
+        rate: equivalentHourlyRate(
+          assignment.monthlyAmount,
+          student!.lessonsPerMonth,
+          student!.lessonsPerMonthHistory,
+          student!.lessonSchedule,
+          monthStart
+        ),
         mode: assignment.mode,
         percentage: assignment.percentage,
       };
