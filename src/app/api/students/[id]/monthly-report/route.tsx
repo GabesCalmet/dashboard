@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getStudentMonthlyReportData } from "@/server/queries/students";
 import { lessonStatusDisplayLabel } from "@/lib/labels";
 import { toBrazilDateString, toBrazilTimeString } from "@/lib/timezone";
+import { reschedulableStatuses } from "@/lib/validation/lesson";
 import {
   MonthlyReportDocument,
   type MonthlyReportRow,
@@ -16,6 +17,38 @@ function statusTone(status: LessonStatus, isMakeup: boolean): StatusTone {
   if (status === "COMPLETED") return "completed";
   if (status === "SCHEDULED") return "neutral";
   return "canceled"; // every CANCELED_*/NO_SHOW variant
+}
+
+function brDate(date: Date): string {
+  const [y, m, d] = toBrazilDateString(date).split("-");
+  return `${d}/${m}/${y}`;
+}
+
+// What the Observações column says about a reagendamento, for one lesson:
+// - A cancellation eligible for a reposição (CA/CP/CF) says whether one's
+//   been scheduled yet, and for when.
+// - A reposição lesson itself says which original canceled class it's
+//   replacing.
+// A lesson can be both (a reposição that was itself later canceled and
+// rescheduled again) — rare, but both pieces are shown rather than one
+// silently winning.
+function observacoesFor(l: {
+  status: LessonStatus;
+  rescheduledTo: { scheduledAt: Date }[];
+  rescheduledFrom: { scheduledAt: Date } | null;
+}): string {
+  const parts: string[] = [];
+  if (l.rescheduledFrom) {
+    parts.push(`Aula cancelada em ${brDate(l.rescheduledFrom.scheduledAt)}`);
+  }
+  if ((reschedulableStatuses as readonly string[]).includes(l.status)) {
+    parts.push(
+      l.rescheduledTo.length > 0
+        ? `Reagendado para ${l.rescheduledTo.map((r) => brDate(r.scheduledAt)).join(", ")}`
+        : "Ainda Não Reagendado"
+    );
+  }
+  return parts.join(" · ");
 }
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -62,8 +95,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       horario: toBrazilTimeString(l.scheduledAt),
       status: lessonStatusDisplayLabel(l.status, l.isMakeup),
       statusTone: statusTone(l.status, l.isMakeup),
-      // Resumo (contentTaught) left out of Observações for now, per request.
-      observacoes: "",
+      observacoes: observacoesFor(l),
     };
   });
 

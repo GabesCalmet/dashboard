@@ -75,16 +75,32 @@ const styles = StyleSheet.create({
 
   tableHeaderImage: { width: "100%" },
 
+  // Code-drawn to share the exact same column widths as the data rows
+  // below (see colData/colHorario/colStatus/colObs) — baked into a static
+  // image, these labels would drift out of alignment the moment a column's
+  // width changes.
+  tableHeaderRow: { flexDirection: "row", backgroundColor: "#cee9fb" },
+  th: {
+    padding: 6,
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+    color: NAVY,
+    textAlign: "center",
+  },
+
   table: { paddingHorizontal: 0 },
   tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
   tableRowAlt: { backgroundColor: "#f7fafd" },
   td: { padding: 6, fontSize: 8, color: "#1f2937", textAlign: "center" },
   tdCompact: { padding: 3, fontSize: 7.5 },
-  colData: { width: "13%" },
-  colHorario: { width: "13%" },
-  colStatus: { width: "24%", padding: 4, alignItems: "center", justifyContent: "center" },
+  // Data/Horário kept just wide enough for their fixed-format values;
+  // Status gets the room instead, since labels like "Cancelamento Aluno
+  // (Sem Rep)" need it far more than a "DD/MM" or "HH:MM" ever will.
+  colData: { width: "10%" },
+  colHorario: { width: "11%" },
+  colStatus: { width: "33%", padding: 4, alignItems: "center", justifyContent: "center" },
   colStatusCompact: { padding: 2 },
-  colObs: { width: "50%", textAlign: "left" },
+  colObs: { width: "46%", textAlign: "left" },
   statusBadge: {
     fontSize: 7.5,
     fontFamily: "Helvetica-Bold",
@@ -169,6 +185,12 @@ export function MonthlyReportDocument({
         </View>
 
         <Image src={REPORT_TABLE_HEADER_BASE64} style={styles.tableHeaderImage} />
+        <View style={styles.tableHeaderRow}>
+          <Text style={[styles.th, styles.colData]}>Data</Text>
+          <Text style={[styles.th, styles.colHorario]}>Horário</Text>
+          <Text style={[styles.th, styles.colStatus]}>Status</Text>
+          <Text style={[styles.th, styles.colObs]}>Observações</Text>
+        </View>
         <View style={styles.table}>
           {rows.map((r, i) => (
             <View key={i} style={[styles.tableRow, ...(i % 2 === 1 ? [styles.tableRowAlt] : [])]} wrap={false}>

@@ -66,6 +66,13 @@ export async function getStudentMonthlyReportData(
       lessons: {
         where: { scheduledAt: { gte: monthStart, lte: monthEnd } },
         orderBy: { scheduledAt: "asc" },
+        include: {
+          // For the Observações column: a canceled lesson shows when its
+          // reposição was (re)scheduled for, and a reposição lesson shows
+          // which original canceled class it's replacing.
+          rescheduledTo: { select: { scheduledAt: true } },
+          rescheduledFrom: { select: { scheduledAt: true } },
+        },
       },
     },
   });
