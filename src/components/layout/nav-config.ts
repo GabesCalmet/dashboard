@@ -23,10 +23,10 @@ export type NavItem = {
 export const navByRole: Record<Role, NavItem[]> = {
   ADMIN: [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { label: "Agenda", href: "/admin/agenda", icon: CalendarDays },
+    { label: "Financeiro", href: "/admin/financial", icon: Wallet },
     { label: "Alunos", href: "/admin/students", icon: GraduationCap },
     { label: "Professores", href: "/admin/teachers", icon: Users },
-    { label: "Financeiro", href: "/admin/financial", icon: Wallet },
+    { label: "Agenda", href: "/admin/agenda", icon: CalendarDays },
     { label: "Cursos & Planos", href: "/admin/catalog", icon: Library },
     { label: "Usuários & Permissões", href: "/admin/users", icon: ShieldCheck },
     { label: "Configurações", href: "/admin/settings", icon: Settings },
