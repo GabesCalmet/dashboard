@@ -76,3 +76,28 @@ export const blockedSlotsSchema = z.object({
       }
     }),
 });
+
+// How strict a blocked window is — purely informational (see
+// blockedSlotDetailSchema below), set per-block from the calendar rather
+// than in the weekday-grid editor above.
+export const BLOCK_TYPES = [
+  "PERMANENTE",
+  "TEMPORARIO",
+  "PERMANENTE_FLEXIVEL",
+  "PERMANENTE_INFLEXIVEL",
+  "TEMPORARIO_FLEXIVEL",
+  "TEMPORARIO_INFLEXIVEL",
+] as const;
+export type BlockType = (typeof BLOCK_TYPES)[number];
+
+// Submitted by BlockedSlotDetailDialog for ONE existing blocked window,
+// clicked from the teacher's own calendar — weekday isn't editable here
+// (fixed by which occurrence was clicked), so it's not part of this form.
+export const blockedSlotDetailSchema = z.object({
+  start: z.string().min(1, "Informe o horário"),
+  end: z.string().optional(),
+  from: z.string().optional(),
+  until: z.string().optional(),
+  tipo: z.enum(BLOCK_TYPES).optional().or(z.literal("")),
+  observacoes: z.string().optional(),
+});

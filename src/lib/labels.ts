@@ -8,6 +8,15 @@ import type {
   ExpenseCategory,
 } from "@prisma/client";
 
+export const blockTypeLabel: Record<string, string> = {
+  PERMANENTE: "Permanente",
+  TEMPORARIO: "Temporário",
+  PERMANENTE_FLEXIVEL: "Permanente flexível",
+  PERMANENTE_INFLEXIVEL: "Permanente inflexível",
+  TEMPORARIO_FLEXIVEL: "Temporário flexível",
+  TEMPORARIO_INFLEXIVEL: "Temporário inflexível",
+};
+
 export const levelLabel: Record<CourseLevel, string> = {
   A1: "A1 — Iniciante",
   A2: "A2 — Básico",

@@ -10,7 +10,13 @@ import { DeleteTeacherButton } from "@/components/teachers/delete-teacher-button
 import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
 import { SetPasswordButton } from "@/components/shared/set-password-button";
 import { TeacherActiveSwitch } from "@/components/teachers/teacher-active-switch";
-import { studentStatusLabel, studentStatusVariant, formatCurrency, formatDate } from "@/lib/labels";
+import {
+  studentStatusLabel,
+  studentStatusVariant,
+  formatCurrency,
+  formatDate,
+  blockTypeLabel,
+} from "@/lib/labels";
 import type { getTeacherDetail } from "@/server/queries/teachers";
 
 type Teacher = NonNullable<Awaited<ReturnType<typeof getTeacherDetail>>>;
@@ -170,13 +176,22 @@ export function TeacherDetailView({
             {parseBlockedSlots(teacher.blockedSlots).length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhum horário bloqueado.</p>
             ) : (
-              <ul className="space-y-1.5 text-sm">
+              <ul className="space-y-2 text-sm">
                 {parseBlockedSlots(teacher.blockedSlots).map((b, i) => (
-                  <li key={i} className="flex items-center gap-2">
-                    <Badge variant="outline">{WEEKDAY_ABBR[b.weekday]}</Badge>
-                    <span>
-                      {b.start}–{b.end}
-                    </span>
+                  <li key={i} className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline">{WEEKDAY_ABBR[b.weekday]}</Badge>
+                      <span>
+                        {b.start}
+                        {b.end ? `–${b.end}` : ""}
+                      </span>
+                      {b.tipo && (
+                        <Badge variant="secondary">{blockTypeLabel[b.tipo] ?? b.tipo}</Badge>
+                      )}
+                    </div>
+                    {b.observacoes && (
+                      <p className="pl-1 text-xs text-muted-foreground">{b.observacoes}</p>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -199,17 +214,21 @@ function Row({ label, value }: { label: string; value: string }) {
 
 const WEEKDAY_ABBR = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-function parseBlockedSlots(value: unknown): { weekday: number; start: string; end: string }[] {
+function parseBlockedSlots(
+  value: unknown
+): { weekday: number; start: string; end: string; tipo?: string; observacoes?: string }[] {
   if (!Array.isArray(value)) return [];
   return value
     .filter(
-      (e): e is { weekday: number; start: string; end: string } =>
+      (e): e is { weekday: number; start: string; end: string; tipo?: string; observacoes?: string } =>
         typeof e === "object" && e !== null && typeof (e as Record<string, unknown>).weekday === "number"
     )
     .map((e) => ({
       weekday: e.weekday,
       start: typeof e.start === "string" ? e.start : "",
       end: typeof e.end === "string" ? e.end : "",
+      tipo: typeof e.tipo === "string" && e.tipo ? e.tipo : undefined,
+      observacoes: typeof e.observacoes === "string" && e.observacoes ? e.observacoes : undefined,
     }))
     .sort((a, b) => a.weekday - b.weekday);
 }

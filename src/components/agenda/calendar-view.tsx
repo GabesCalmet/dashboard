@@ -9,6 +9,10 @@ import interactionPlugin from "@fullcalendar/interaction";
 import type { EventClickArg } from "@fullcalendar/core";
 import ptBrLocale from "@fullcalendar/core/locales/pt-br";
 import { LessonDetailDialog } from "@/components/agenda/lesson-detail-dialog";
+import {
+  BlockedSlotDetailDialog,
+  type BlockedSlotDetail,
+} from "@/components/agenda/blocked-slot-detail-dialog";
 import "@/components/agenda/calendar-view.css";
 
 export type CalendarLessonEvent = {
@@ -39,10 +43,32 @@ export function CalendarView({
   isTeacherView: boolean;
 }) {
   const [selected, setSelected] = useState<CalendarLessonEvent | null>(null);
+  const [selectedBlock, setSelectedBlock] = useState<BlockedSlotDetail | null>(null);
   const calendarRef = useRef<FullCalendar>(null);
+
+  function refetchCalendar() {
+    calendarRef.current?.getApi().refetchEvents();
+  }
 
   function handleEventClick(arg: EventClickArg) {
     const props = arg.event.extendedProps;
+
+    // A blocked-time background block, not a real lesson — opens its own
+    // dedicated editor instead of the lesson report form.
+    if (props.blocked) {
+      setSelectedBlock({
+        blockIndex: props.blockIndex,
+        weekday: props.weekday,
+        start: props.start,
+        end: props.end,
+        from: props.from,
+        until: props.until,
+        tipo: props.tipo,
+        observacoes: props.observacoes,
+      });
+      return;
+    }
+
     setSelected({
       id: arg.event.id,
       studentId: props.studentId,
@@ -94,6 +120,18 @@ export function CalendarView({
           onOpenChange={(open) => !open && setSelected(null)}
           canManage={canManageLessons}
           isTeacherView={isTeacherView}
+        />
+      )}
+
+      {selectedBlock && (
+        <BlockedSlotDetailDialog
+          block={selectedBlock}
+          open={Boolean(selectedBlock)}
+          onOpenChange={(open) => !open && setSelectedBlock(null)}
+          onSaved={() => {
+            setSelectedBlock(null);
+            refetchCalendar();
+          }}
         />
       )}
     </div>

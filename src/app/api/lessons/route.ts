@@ -4,19 +4,31 @@ import { getCurrentUser } from "@/lib/auth";
 import { lessonStatusCalendarStyle, lessonStatusDisplayLabel } from "@/lib/labels";
 import type { Prisma } from "@prisma/client";
 
-function parseBlockedSlots(value: unknown): { weekday: number; start: string; end: string; from?: string; until?: string }[] {
+type BlockedSlot = {
+  weekday: number;
+  start: string;
+  end?: string;
+  from?: string;
+  until?: string;
+  tipo?: string;
+  observacoes?: string;
+};
+
+function parseBlockedSlots(value: unknown): BlockedSlot[] {
   if (!Array.isArray(value)) return [];
   return value
     .filter(
-      (e): e is { weekday: number; start: string; end: string; from?: string; until?: string } =>
+      (e): e is BlockedSlot =>
         typeof e === "object" && e !== null && typeof (e as Record<string, unknown>).weekday === "number"
     )
     .map((e) => ({
       weekday: e.weekday,
       start: typeof e.start === "string" ? e.start : "",
-      end: typeof e.end === "string" ? e.end : "",
+      end: typeof e.end === "string" && e.end ? e.end : undefined,
       from: typeof e.from === "string" && e.from ? e.from : undefined,
       until: typeof e.until === "string" && e.until ? e.until : undefined,
+      tipo: typeof e.tipo === "string" && e.tipo ? e.tipo : undefined,
+      observacoes: typeof e.observacoes === "string" && e.observacoes ? e.observacoes : undefined,
     }));
 }
 
@@ -48,12 +60,25 @@ export async function GET(request: NextRequest) {
           id: `blocked-${i}`,
           daysOfWeek: [b.weekday],
           startTime: b.start,
-          endTime: b.end,
+          // No end time yet means "open-ended for the rest of the day" —
+          // a block only has a start until someone opens it from the
+          // calendar and sets an end.
+          endTime: b.end ?? "23:59",
           startRecur: b.from,
           endRecur: b.until,
           display: "background",
           backgroundColor: "#d64545",
-          extendedProps: { blocked: true },
+          extendedProps: {
+            blocked: true,
+            blockIndex: i,
+            weekday: b.weekday,
+            start: b.start,
+            end: b.end ?? null,
+            from: b.from ?? null,
+            until: b.until ?? null,
+            tipo: b.tipo ?? null,
+            observacoes: b.observacoes ?? null,
+          },
         }))
       : [];
 
