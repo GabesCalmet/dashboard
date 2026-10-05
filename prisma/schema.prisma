@@ -385,6 +385,12 @@ model StudentAlertDismissal {
   studentId   String
   student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
   note        String?
+  // Snapshot of the alert as it was at resolution time, so the "Histórico
+  // de alertas" screen can show what each past alert actually was, not
+  // just the free-text note — older rows predating this field are null.
+  severity    String?
+  reason      String?
+  lessons     Json?
   dismissedBy String // actor name snapshot
   dismissedAt DateTime       @default(now())
 

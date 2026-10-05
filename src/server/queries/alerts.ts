@@ -132,3 +132,65 @@ export async function getAttendanceAlerts(): Promise<AttendanceAlert[]> {
 
   return alerts.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "RED" ? -1 : 1));
 }
+
+export type AlertHistoryEntry = {
+  id: string;
+  note: string | null;
+  severity: "YELLOW" | "RED" | null;
+  reason: string | null;
+  lessons: { id: string; scheduledAt: string; status: LessonStatus }[];
+  dismissedBy: string;
+  dismissedAt: string;
+};
+
+export type StudentAlertHistory = {
+  studentId: string;
+  studentName: string;
+  entries: AlertHistoryEntry[];
+};
+
+function parseSnapshotLessons(value: unknown): AlertHistoryEntry["lessons"] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((e): e is Record<string, unknown> => typeof e === "object" && e !== null)
+    .map((e) => ({
+      id: typeof e.id === "string" ? e.id : "",
+      scheduledAt: typeof e.scheduledAt === "string" ? e.scheduledAt : "",
+      status: e.status as LessonStatus,
+    }));
+}
+
+// Every past resolved alert, grouped by student, most recent first — backs
+// the "Histórico de alertas" screen so a coordinator/admin can compare a
+// student's current alert against what happened before.
+export async function getAlertHistory(): Promise<StudentAlertHistory[]> {
+  const dismissals = await prisma.studentAlertDismissal.findMany({
+    orderBy: { dismissedAt: "desc" },
+    include: { student: { include: { user: true } } },
+  });
+
+  const byStudent = new Map<string, StudentAlertHistory>();
+  for (const d of dismissals) {
+    const entry: AlertHistoryEntry = {
+      id: d.id,
+      note: d.note,
+      severity: d.severity === "RED" || d.severity === "YELLOW" ? d.severity : null,
+      reason: d.reason,
+      lessons: parseSnapshotLessons(d.lessons),
+      dismissedBy: d.dismissedBy,
+      dismissedAt: d.dismissedAt.toISOString(),
+    };
+    const existing = byStudent.get(d.studentId);
+    if (existing) {
+      existing.entries.push(entry);
+    } else {
+      byStudent.set(d.studentId, {
+        studentId: d.studentId,
+        studentName: d.student.user.name,
+        entries: [entry],
+      });
+    }
+  }
+
+  return [...byStudent.values()].sort((a, b) => a.studentName.localeCompare(b.studentName, "pt-BR"));
+}

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { History, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,9 +16,11 @@ import type { AttendanceAlert } from "@/server/queries/alerts";
 export function AttendanceAlertRow({
   alert,
   studentHref,
+  historyHref,
 }: {
   alert: AttendanceAlert;
   studentHref: string;
+  historyHref: string;
 }) {
   const [note, setNote] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -27,7 +29,11 @@ export function AttendanceAlertRow({
   function resolve() {
     startTransition(async () => {
       try {
-        await resolveStudentAlert(alert.studentId, note);
+        await resolveStudentAlert(alert.studentId, note, {
+          severity: alert.severity,
+          reason: alert.reason,
+          lessons: alert.lessons,
+        });
         toast.success("Alerta resolvido.");
         router.refresh();
       } catch (err) {
@@ -70,10 +76,18 @@ export function AttendanceAlertRow({
           rows={2}
         />
 
-        <Button size="sm" variant="outline" onClick={resolve} disabled={isPending}>
-          {isPending && <Loader2 className="animate-spin" />}
-          Resolver alerta
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={resolve} disabled={isPending}>
+            {isPending && <Loader2 className="animate-spin" />}
+            Resolver alerta
+          </Button>
+          <Button size="sm" variant="ghost" asChild>
+            <Link href={historyHref}>
+              <History />
+              Histórico de alertas
+            </Link>
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
