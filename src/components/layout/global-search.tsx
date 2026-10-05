@@ -22,6 +22,14 @@ export function GlobalSearch() {
   const router = useRouter();
   const pathname = usePathname();
   const inFinancialSection = pathname.startsWith("/admin/financial");
+  // While already on an Agenda page, a Professor result jumps straight to
+  // that teacher's filtered calendar instead of their profile page — the
+  // profile is still one click away from there if needed.
+  const agendaBasePath = pathname.startsWith("/admin/agenda")
+    ? "/admin/agenda"
+    : pathname.startsWith("/coordinator/agenda")
+      ? "/coordinator/agenda"
+      : null;
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   useEffect(() => {
@@ -92,7 +100,11 @@ export function GlobalSearch() {
                   setOpen(false);
                   setQuery("");
                   const href =
-                    r.type === "Aluno" && inFinancialSection ? `${r.href}?tab=financial` : r.href;
+                    r.type === "Aluno" && inFinancialSection
+                      ? `${r.href}?tab=financial`
+                      : r.type === "Professor" && agendaBasePath
+                        ? `${agendaBasePath}?teacherId=${r.href.split("/").pop()}`
+                        : r.href;
                   router.push(href);
                 }}
                 className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-secondary"

@@ -38,9 +38,14 @@ export type CalendarLessonEvent = {
 export function CalendarView({
   canManageLessons,
   isTeacherView,
+  teacherId,
 }: {
   canManageLessons: boolean;
   isTeacherView: boolean;
+  // Admin/coordinator only — scopes the calendar to one teacher's lessons
+  // instead of the whole school's, e.g. arriving from a Professor search
+  // result.
+  teacherId?: string;
 }) {
   const [selected, setSelected] = useState<CalendarLessonEvent | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<BlockedSlotDetail | null>(null);
@@ -104,7 +109,8 @@ export function CalendarView({
         }}
         height="auto"
         events={(info, success, failure) => {
-          fetch(`/api/lessons?start=${info.startStr}&end=${info.endStr}`)
+          const teacherParam = teacherId ? `&teacherId=${teacherId}` : "";
+          fetch(`/api/lessons?start=${info.startStr}&end=${info.endStr}${teacherParam}`)
             .then((r) => r.json())
             .then((data) => success(data.events))
             .catch(failure);

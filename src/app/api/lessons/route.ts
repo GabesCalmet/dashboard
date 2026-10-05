@@ -48,6 +48,12 @@ export async function GET(request: NextRequest) {
     where.teacherId = user.teacherProfile.id;
   } else if (user.role === "STUDENT" && user.studentProfile) {
     where.studentId = user.studentProfile.id;
+  } else if (user.role === "ADMIN" || user.role === "COORDINATOR") {
+    // Optional — lets the admin/coordinator Agenda scope down to one
+    // teacher (e.g. arriving from a Professor search result), instead of
+    // always showing every teacher's lessons at once.
+    const teacherId = request.nextUrl.searchParams.get("teacherId");
+    if (teacherId) where.teacherId = teacherId;
   }
 
   // A teacher's own recurring "blocked" windows, rendered as a shaded
