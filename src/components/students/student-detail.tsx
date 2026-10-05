@@ -38,7 +38,6 @@ import {
   studentStatusVariant,
   formatDate,
   bankAccountLabel,
-  formatCurrency,
 } from "@/lib/labels";
 import type { getStudentDetail } from "@/server/queries/students";
 
@@ -345,17 +344,10 @@ export function StudentDetailView({
                   <CardTitle>Dados cadastrais</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-                  {student.groupMembers.length > 0 && (
-                    <InfoRow label="Nome do grupo" value={student.groupName ?? "—"} />
-                  )}
-                  <InfoRow label="CPF" value={student.cpf ?? "—"} />
-                  <InfoRow label="Telefone" value={student.user.phone ?? "—"} />
                   <InfoRow
-                    label="Nascimento"
-                    value={student.birthDate ? formatDate(student.birthDate) : "—"}
+                    label="Dias e horários das aulas"
+                    value={formatLessonSchedule(parseLessonSchedule(student.lessonSchedule))}
                   />
-                  <InfoRow label="Endereço" value={student.address ?? "—"} />
-                  <InfoRow label="Link do Meet" value={student.meetLink ?? "—"} />
                   <InfoRow label="Início do curso" value={formatDate(student.startDate)} />
                   <InfoRow
                     label="Início da cobrança"
@@ -365,33 +357,11 @@ export function StudentDetailView({
                         : formatDate(student.startDate)
                     }
                   />
-                  <InfoRow
-                    label="Término previsto"
-                    value={student.endDate ? formatDate(student.endDate) : "—"}
-                  />
-                  <InfoRow label="Plano" value={student.plan?.name ?? "—"} />
-                  <InfoRow
-                    label="Dia(s)/horário da aula"
-                    value={formatLessonSchedule(parseLessonSchedule(student.lessonSchedule))}
-                  />
                   <InfoRow label="Vencimento do boleto" value={`Dia ${student.dueDay}`} />
                   <InfoRow label="Conta bancária" value={bankAccountLabel[student.bankAccount]} />
-                  {student.thirdPartyAmount && (
-                    <>
-                      <InfoRow
-                        label="Pago por terceiro"
-                        value={`${student.thirdPartyPayerName} — ${formatCurrency(student.thirdPartyAmount.toString())}`}
-                      />
-                      <InfoRow
-                        label="Vencimento (terceiro)"
-                        value={`Dia ${student.thirdPartyDueDay}`}
-                      />
-                      <InfoRow
-                        label="Conta bancária (terceiro)"
-                        value={bankAccountLabel[student.thirdPartyBankAccount ?? student.bankAccount]}
-                      />
-                    </>
-                  )}
+                  <InfoRow label="Telefone" value={student.user.phone ?? "—"} />
+                  <InfoRow label="Email" value={student.user.email ?? "—"} />
+                  <InfoRow label="Link do Meet" value={student.meetLink ?? "—"} />
                 </CardContent>
               </Card>
 
@@ -574,17 +544,16 @@ function parseLessonSchedule(value: unknown): ScheduleEntry[] {
     .sort((a, b) => a.weekday - b.weekday);
 }
 
+// Vigência (from/until) is deliberately left out of this display — it's
+// only ever meaningful while editing (the cadastro's own schedule editor
+// already shows it there), and reads as clutter on the read-only overview.
 function formatLessonSchedule(schedule: ScheduleEntry[]) {
   if (schedule.length === 0) return "—";
   return schedule
     .map((e) => {
       const day = WEEKDAY_ABBR[e.weekday];
       const time = e.start ? (e.end ? `${e.start}–${e.end}` : e.start) : "";
-      let label = time ? `${day} ${time}` : day;
-      if (e.from && e.until) label += ` (${formatDate(e.from)}–${formatDate(e.until)})`;
-      else if (e.until) label += ` (até ${formatDate(e.until)})`;
-      else if (e.from) label += ` (desde ${formatDate(e.from)})`;
-      return label;
+      return time ? `${day} ${time}` : day;
     })
     .join(", ");
 }
