@@ -54,8 +54,15 @@ export async function getAvailableTeachers({
   const endMin = timeToMinutes(end);
   if (startMin === null || endMin === null || startMin >= endMin) return [];
 
+  const now = new Date();
   const teachers = await prisma.teacherProfile.findMany({
-    where: { user: { active: true } },
+    // endDate is checked on top of user.active (not just relied on instead
+    // of it) since the two can drift apart in practice — a teacher who
+    // left is supposed to also get their login deactivated, but nothing
+    // enforces that happening at the same time, so a stale endDate in the
+    // past with active still true (an already-seen real case) would
+    // otherwise still show up here as available.
+    where: { user: { active: true }, OR: [{ endDate: null }, { endDate: { gte: now } }] },
     include: {
       user: true,
       students: { where: { status: "ACTIVE" }, select: { lessonSchedule: true } },
