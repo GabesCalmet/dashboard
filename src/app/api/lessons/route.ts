@@ -4,6 +4,22 @@ import { getCurrentUser } from "@/lib/auth";
 import { lessonStatusCalendarStyle, lessonStatusDisplayLabel } from "@/lib/labels";
 import type { Prisma } from "@prisma/client";
 
+function parseBlockedSlots(value: unknown): { weekday: number; start: string; end: string; from?: string; until?: string }[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (e): e is { weekday: number; start: string; end: string; from?: string; until?: string } =>
+        typeof e === "object" && e !== null && typeof (e as Record<string, unknown>).weekday === "number"
+    )
+    .map((e) => ({
+      weekday: e.weekday,
+      start: typeof e.start === "string" ? e.start : "",
+      end: typeof e.end === "string" ? e.end : "",
+      from: typeof e.from === "string" && e.from ? e.from : undefined,
+      until: typeof e.until === "string" && e.until ? e.until : undefined,
+    }));
+}
+
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ events: [] }, { status: 401 });
@@ -21,6 +37,25 @@ export async function GET(request: NextRequest) {
   } else if (user.role === "STUDENT" && user.studentProfile) {
     where.studentId = user.studentProfile.id;
   }
+
+  // A teacher's own recurring "blocked" windows, rendered as a shaded
+  // background on their own Agenda only — visual-only for now, so this is
+  // just a FullCalendar recurring background event per block, not a real
+  // Lesson row.
+  const blockedEvents =
+    user.role === "TEACHER" && user.teacherProfile
+      ? parseBlockedSlots(user.teacherProfile.blockedSlots).map((b, i) => ({
+          id: `blocked-${i}`,
+          daysOfWeek: [b.weekday],
+          startTime: b.start,
+          endTime: b.end,
+          startRecur: b.from,
+          endRecur: b.until,
+          display: "background",
+          backgroundColor: "#d64545",
+          extendedProps: { blocked: true },
+        }))
+      : [];
 
   const lessons = await prisma.lesson.findMany({
     where,
@@ -71,5 +106,5 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  return NextResponse.json({ events });
+  return NextResponse.json({ events: [...events, ...blockedEvents] });
 }

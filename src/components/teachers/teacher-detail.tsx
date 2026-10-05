@@ -159,6 +159,30 @@ export function TeacherDetailView({
             <Row label="Observações" value={teacher.notes || "—"} />
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Horários bloqueados</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Set by the teacher themselves on their own Agenda — read-only
+                here. Visual-only (not enforced against scheduling). */}
+            {parseBlockedSlots(teacher.blockedSlots).length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum horário bloqueado.</p>
+            ) : (
+              <ul className="space-y-1.5 text-sm">
+                {parseBlockedSlots(teacher.blockedSlots).map((b, i) => (
+                  <li key={i} className="flex items-center gap-2">
+                    <Badge variant="outline">{WEEKDAY_ABBR[b.weekday]}</Badge>
+                    <span>
+                      {b.start}–{b.end}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
@@ -171,6 +195,23 @@ function Row({ label, value }: { label: string; value: string }) {
       <p className="font-medium">{value}</p>
     </div>
   );
+}
+
+const WEEKDAY_ABBR = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+function parseBlockedSlots(value: unknown): { weekday: number; start: string; end: string }[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (e): e is { weekday: number; start: string; end: string } =>
+        typeof e === "object" && e !== null && typeof (e as Record<string, unknown>).weekday === "number"
+    )
+    .map((e) => ({
+      weekday: e.weekday,
+      start: typeof e.start === "string" ? e.start : "",
+      end: typeof e.end === "string" ? e.end : "",
+    }))
+    .sort((a, b) => a.weekday - b.weekday);
 }
 
 function parseValueHistory(value: unknown): ValueHistoryEntry[] {

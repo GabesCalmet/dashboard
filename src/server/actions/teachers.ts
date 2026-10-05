@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { provisionUsernameAccount, hardDeleteUserAccount } from "@/server/accounts";
 import { recordAudit } from "@/server/audit";
-import { teacherFormSchema } from "@/lib/validation/teacher";
+import { teacherFormSchema, blockedSlotsSchema } from "@/lib/validation/teacher";
 import type { ActionState } from "@/server/actions/students";
 
 export async function createTeacher(
@@ -104,6 +104,32 @@ export async function updateTeacher(
   revalidatePath("/admin/teachers");
   revalidatePath(`/admin/teachers/${teacherId}`);
   return { success: "Professor atualizado." };
+}
+
+// A teacher editing their own blocked-time windows — visual-only for now
+// (shown on their Agenda and on their admin profile), never enforced
+// against scheduling. Scoped to the caller's own profile; there's no
+// teacherId param because a teacher can only ever edit their own.
+export async function updateTeacherBlockedSlots(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await requireRole("TEACHER");
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = blockedSlotsSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  await prisma.teacherProfile.update({
+    where: { id: actor.teacherProfile!.id },
+    data: { blockedSlots: parsed.data.blockedSlots },
+  });
+
+  revalidatePath("/teacher/agenda");
+  revalidatePath(`/admin/teachers/${actor.teacherProfile!.id}`);
+  revalidatePath(`/coordinator/teachers/${actor.teacherProfile!.id}`);
+  return { success: "Horários bloqueados atualizados." };
 }
 
 export async function deleteTeacher(teacherId: string) {

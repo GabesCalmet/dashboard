@@ -176,7 +176,11 @@ model TeacherProfile {
   userId        String   @unique
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   specialties   String[]
-  availability  Json? // { mon: ["09:00-12:00"], tue: [...] }
+  // Weekly recurring windows this teacher is NOT available — admin-visible
+  // only (shown on their own Agenda and on this profile), not enforced
+  // against scheduling. Same shape as StudentProfile.lessonSchedule:
+  // [{ "weekday": 1, "start": "09:00", "end": "12:00" }, ...].
+  blockedSlots  Json     @default("[]")
   hourlyRate    Decimal  @db.Decimal(10, 2)
   // History of hourlyRate changes over time, same shape/sync rule as
   // StudentProfile.monthlyValueHistory — hourlyRate always mirrors

@@ -46,3 +46,33 @@ export const teacherFormSchema = z.object({
 });
 
 export type TeacherFormValues = z.infer<typeof teacherFormSchema>;
+
+// Submitted by LessonScheduleEditor (reused as-is for a teacher's own
+// blocked-time editor) as a JSON string, same shape as
+// StudentProfile.lessonSchedule, e.g.
+// '[{"weekday":1,"start":"09:00","end":"12:00"}]'.
+export const blockedSlotsSchema = z.object({
+  blockedSlots: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val) return [];
+      try {
+        const parsed = JSON.parse(val);
+        if (!Array.isArray(parsed)) return [];
+        return parsed
+          .filter(
+            (e) => e && typeof e.weekday === "number" && e.weekday >= 0 && e.weekday <= 6
+          )
+          .map((e) => ({
+            weekday: e.weekday,
+            start: typeof e.start === "string" ? e.start : "",
+            end: typeof e.end === "string" ? e.end : "",
+            from: typeof e.from === "string" && e.from ? e.from : undefined,
+            until: typeof e.until === "string" && e.until ? e.until : undefined,
+          }));
+      } catch {
+        return [];
+      }
+    }),
+});
