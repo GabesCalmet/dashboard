@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Search, GraduationCap, User, Loader2 } from "lucide-react";
+import { Search, GraduationCap, User, Clock, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,53 @@ type SearchResult = {
   sublabel?: string;
   href: string;
 };
+
+const WEEKDAY_TOKENS: Record<string, number> = {
+  dom: 0,
+  domingo: 0,
+  seg: 1,
+  segunda: 1,
+  ter: 2,
+  terca: 2,
+  qua: 3,
+  quarta: 3,
+  qui: 4,
+  quinta: 4,
+  sex: 5,
+  sexta: 5,
+  sab: 6,
+  sabado: 6,
+};
+
+function normalizeTimeToken(tok: string): string | null {
+  const m = tok.match(/^(\d{1,2})(?:[h:](\d{2}))?h?$/i);
+  if (!m) return null;
+  const h = Number(m[1]);
+  const mm = m[2] ? Number(m[2]) : 0;
+  if (h > 23 || mm > 59) return null;
+  return `${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
+
+// Recognizes "seg 17-18", "17h-18h", "segunda 17:00-18:00", etc. — a
+// weekday word (Portuguese, optional) followed by a start-end time range.
+// Anything that doesn't match this shape is a plain name search instead.
+function parseAvailabilityQuery(raw: string): { weekday?: number; start: string; end: string } | null {
+  const trimmed = raw.trim().toLowerCase();
+  const rangeMatch = trimmed.match(/^(?:([a-zà-ÿ]+)\s+)?(\S+)\s*(?:-|a|às|as|ate|até)\s*(\S+)$/i);
+  if (!rangeMatch) return null;
+  const [, dayToken, startTok, endTok] = rangeMatch;
+  const start = normalizeTimeToken(startTok);
+  const end = normalizeTimeToken(endTok);
+  if (!start || !end) return null;
+
+  let weekday: number | undefined;
+  if (dayToken) {
+    const key = dayToken.normalize("NFD").replace(/[̀-ͯ]/g, "");
+    weekday = WEEKDAY_TOKENS[key];
+    if (weekday === undefined) return null;
+  }
+  return { weekday, start, end };
+}
 
 export function GlobalSearch() {
   const [open, setOpen] = useState(false);
@@ -29,6 +76,14 @@ export function GlobalSearch() {
     ? "/admin/agenda"
     : pathname.startsWith("/coordinator/agenda")
       ? "/coordinator/agenda"
+      : null;
+  // Broader than agendaBasePath above — any admin/coordinator page, not
+  // just Agenda itself, since an availability search can be triggered from
+  // anywhere and always jumps straight to the matching teacher's calendar.
+  const roleBase = pathname.startsWith("/admin")
+    ? "/admin"
+    : pathname.startsWith("/coordinator")
+      ? "/coordinator"
       : null;
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
@@ -52,7 +107,13 @@ export function GlobalSearch() {
     }
     setLoading(true);
     debounceRef.current = setTimeout(async () => {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      const availability = parseAvailabilityQuery(query);
+      const url = availability
+        ? `/api/teacher-availability?start=${availability.start}&end=${availability.end}${
+            availability.weekday !== undefined ? `&weekday=${availability.weekday}` : ""
+          }`
+        : `/api/search?q=${encodeURIComponent(query)}`;
+      const res = await fetch(url);
       const data = await res.json();
       setResults(data.results ?? []);
       setLoading(false);
@@ -80,7 +141,7 @@ export function GlobalSearch() {
             <Search className="size-4 text-muted-foreground" />
             <Input
               autoFocus
-              placeholder="Buscar alunos, professores..."
+              placeholder="Buscar alunos, professores, ou 'seg 17-18' por disponibilidade..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="border-0 shadow-none focus-visible:ring-0"
@@ -90,7 +151,9 @@ export function GlobalSearch() {
           <div className="max-h-80 overflow-y-auto scrollbar-thin p-2">
             {results.length === 0 && query.trim().length >= 2 && !loading && (
               <p className="p-4 text-center text-sm text-muted-foreground">
-                Nenhum resultado encontrado.
+                {parseAvailabilityQuery(query)
+                  ? "Nenhum professor disponível nesse horário."
+                  : "Nenhum resultado encontrado."}
               </p>
             )}
             {results.map((r) => (
@@ -104,13 +167,17 @@ export function GlobalSearch() {
                       ? `${r.href}?tab=financial`
                       : r.type === "Professor" && agendaBasePath
                         ? `${agendaBasePath}?teacherId=${r.href.split("/").pop()}`
-                        : r.href;
+                        : r.type === "Disponível"
+                          ? `${roleBase ?? "/admin"}/agenda?teacherId=${r.href.split("/").pop()}`
+                          : r.href;
                   router.push(href);
                 }}
                 className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-secondary"
               >
                 {r.type === "Aluno" ? (
                   <GraduationCap className="size-4 text-accent" />
+                ) : r.type === "Disponível" ? (
+                  <Clock className="size-4 text-accent" />
                 ) : (
                   <User className="size-4 text-accent" />
                 )}
