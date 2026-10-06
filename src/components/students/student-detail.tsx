@@ -383,6 +383,9 @@ export function StudentDetailView({
                 lessons={student.lessons}
                 editable={permissions.canEditLessons}
                 canDelete={permissions.canDelete}
+                startDate={student.startDate}
+                lessonsPerMonth={student.lessonsPerMonth}
+                lessonsPerMonthHistory={parseValueHistory(student.lessonsPerMonthHistory)}
               />
             </TabsContent>
 
