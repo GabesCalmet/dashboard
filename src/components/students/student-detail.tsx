@@ -328,7 +328,7 @@ export function StudentDetailView({
         </div>
       )}
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard
           label="Aulas contratadas/mês"
           value={String(contractedLessonsThisMonth)}
@@ -339,11 +339,6 @@ export function StudentDetailView({
           value={String(realizedLessonsThisMonth)}
           icon={GraduationCap}
           accent
-        />
-        <StatCard
-          label="Total de aulas contratadas"
-          value={String(totalContractedLessons)}
-          icon={Layers}
         />
       </div>
 
@@ -358,14 +353,25 @@ export function StudentDetailView({
                   : "overview"
             }
           >
-            <TabsList>
-              {permissions.showOverview !== false && (
-                <TabsTrigger value="overview">Visão geral</TabsTrigger>
-              )}
-              <TabsTrigger value="lessons">Histórico de aulas</TabsTrigger>
-              {permissions.showFinancial && <TabsTrigger value="financial">Financeiro</TabsTrigger>}
-              {permissions.showAudit && <TabsTrigger value="audit">Auditoria</TabsTrigger>}
-            </TabsList>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <TabsList>
+                {permissions.showOverview !== false && (
+                  <TabsTrigger value="overview">Visão geral</TabsTrigger>
+                )}
+                <TabsTrigger value="lessons">Histórico de aulas</TabsTrigger>
+                {permissions.showFinancial && <TabsTrigger value="financial">Financeiro</TabsTrigger>}
+                {permissions.showAudit && <TabsTrigger value="audit">Auditoria</TabsTrigger>}
+              </TabsList>
+
+              {/* Not tied to any one tab — stays visible across all of them. */}
+              <div className="w-52">
+                <StatCard
+                  label="Total de aulas contratadas"
+                  value={String(totalContractedLessons)}
+                  icon={Layers}
+                />
+              </div>
+            </div>
 
             {permissions.showOverview !== false && (
             <TabsContent value="overview" className="mt-4 space-y-4">
