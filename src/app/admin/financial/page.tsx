@@ -4,7 +4,6 @@ import {
   TrendingUp,
   TrendingDown,
   PiggyBank,
-  Users,
   ArrowRight,
   ReceiptText,
   Landmark,
@@ -159,10 +158,6 @@ export default async function AdminFinancialPage() {
           <YearlyGrowthChart data={data.yearlyChart} />
         </CardContent>
       </Card>
-
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Total de contribuintes ativos" value={String(data.totalContributors)} icon={Users} />
-      </div>
     </div>
   );
 }
