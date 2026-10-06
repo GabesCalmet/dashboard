@@ -14,7 +14,7 @@ import {
   UserX,
   XCircle,
 } from "lucide-react";
-import { resolveHistoricalAmount } from "@/server/billing";
+import { resolveHistoricalAmount, dueDateFor } from "@/server/billing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -112,27 +112,32 @@ export function StudentDetailView({
     "CANCELED_BY_STUDENT_NO_MAKEUP",
   ];
 
-  // Running total of contracted classes since enrollment — e.g. 8/mês
-  // starting in January reads 8 in January, 16 in February, 24 in March,
-  // and so on through whichever month the page-level MonthNav is browsing
-  // (defaulting to the current month). Honors lessonsPerMonthHistory if the
-  // contracted amount ever changed mid-course. Shown in the top stat row,
-  // outside the tabs, so it's visible no matter which tab is selected.
-  const contractStartYear = student.startDate.getFullYear();
-  const contractStartMonth = student.startDate.getMonth();
-  const monthsSinceStart =
-    (refMonthDate.getFullYear() - contractStartYear) * 12 +
-    (refMonthDate.getMonth() - contractStartMonth) +
-    1;
+  // Running total of contracted classes since billing started — governed by
+  // the due date (vencimento), same billing-cycle convention as the
+  // monthly report's own "aulas contratadas" (see dueDateFor/
+  // resolveHistoricalAmount in the report route): a cycle runs from one due
+  // date to the next (e.g. billing starting the 20th means cycle 1 runs
+  // 20th-to-20th), not calendar-month boundaries. Each complete-or-current
+  // cycle through whichever month the page-level MonthNav is browsing
+  // (defaulting to the current month) contributes one lessonsPerMonth.
+  // Honors lessonsPerMonthHistory/dueDayHistory if either ever changed
+  // mid-course. Shown next to the tabs, outside any single TabsContent, so
+  // it's visible no matter which tab is selected.
+  const billingStart = student.billingStartDate ?? student.startDate;
+  const cycleCutoff = endOfMonth(refMonthDate);
   let totalContractedLessons = 0;
-  for (let i = 0; i < monthsSinceStart; i++) {
-    const y = contractStartYear + Math.floor((contractStartMonth + i) / 12);
-    const m = (contractStartMonth + i) % 12;
+  let cycleStart = billingStart;
+  let cycleMonthCursor = new Date(billingStart.getFullYear(), billingStart.getMonth(), 1);
+  while (cycleStart <= cycleCutoff) {
+    const nextMonthCursor = new Date(cycleMonthCursor.getFullYear(), cycleMonthCursor.getMonth() + 1, 1);
+    const nextDueDay = resolveHistoricalAmount(student.dueDay, student.dueDayHistory, nextMonthCursor);
     totalContractedLessons += resolveHistoricalAmount(
       student.lessonsPerMonth,
       student.lessonsPerMonthHistory,
-      new Date(y, m, 1)
+      cycleMonthCursor
     );
+    cycleStart = dueDateFor(nextMonthCursor, nextDueDay);
+    cycleMonthCursor = nextMonthCursor;
   }
 
   // Top row: "Aulas contratadas/mês" and "Aulas realizadas (do mês)" track
