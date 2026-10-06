@@ -200,16 +200,22 @@ function expenseTotalToDate(e: Expense, now: Date) {
   return Math.max(0, months) * Number(e.amount);
 }
 
-// Running balance per bank account: everything ever received into it
-// (paid cobranças) minus everything ever spent from it — gastos accrued
-// to date, plus every teacher/partner payout, each deducted from
-// whichever account it names (Payout.bankAccount) — "how much is
-// actually in the account right now".
-export async function getBankBalances() {
-  const now = new Date();
+// Running balance per bank account: everything received into it (paid
+// cobranças) minus everything spent from it — gastos accrued, plus every
+// teacher/partner payout, each deducted from whichever account it names
+// (Payout.bankAccount) — up to `asOf` (defaults to right now), so this can
+// also show "how much was in the account as of the end of month X".
+export async function getBankBalances(asOf?: Date) {
+  const nowReal = new Date();
+  // A cutoff is only honored if it's actually in the past — otherwise
+  // (the current, still-ongoing month) the balance is as of right now.
+  const now = asOf && asOf < nowReal ? asOf : nowReal;
 
   const [paidPayments, expenses, payouts] = await Promise.all([
-    prisma.payment.findMany({ where: { status: "PAID" }, include: { student: true } }),
+    prisma.payment.findMany({
+      where: { status: "PAID", paidAt: { lte: now } },
+      include: { student: true },
+    }),
     prisma.expense.findMany(),
     prisma.payout.findMany({ where: { paidAt: { lte: now } } }),
   ]);
@@ -246,8 +252,8 @@ export async function getBankBalances() {
 // model) — 0 until then, and locked to whatever amount was recorded once
 // it is. realizado.school stays a live "if the pie were split right now"
 // figure since the school's own third is never "paid out" via a button.
-// Shared by getFinancialSummary (always the current month) and the Gastos
-// page / Parceiros breakdown page (whichever month is being browsed).
+// Shared by getFinancialSummary and the Gastos page / Parceiros breakdown
+// page — each passes whichever month is being browsed.
 export async function getPartnerSplitForMonth(year: number, month: number) {
   const monthStart = new Date(year, month, 1);
 
@@ -297,13 +303,15 @@ export async function getPartnerSplitForMonth(year: number, month: number) {
 }
 
 // Overview for the main /admin/financial dashboard: realized vs. previsto
-// for the current month (receita/gasto/caixa), the teacher férias
-// provision, year-to-date totals, a monthly chart for the year, and the
-// active student count.
-export async function getFinancialSummary() {
+// for the viewed month (receita/gasto/caixa), the teacher férias
+// provision, year-to-date totals (Jan through the viewed month, of the
+// viewed month's year), a monthly chart for that same span, and the bank
+// balances as of that point in time. Defaults to the current month.
+export async function getFinancialSummary(year?: number, month?: number) {
   const now = new Date();
-  const monthStart = startOfMonth(now);
-  const monthEnd = endOfMonth(now);
+  const viewedMonth = year !== undefined && month !== undefined ? new Date(year, month, 1) : now;
+  const monthStart = startOfMonth(viewedMonth);
+  const monthEnd = endOfMonth(viewedMonth);
 
   const [
     receivedAgg,
@@ -326,13 +334,13 @@ export async function getFinancialSummary() {
     prisma.expense.findMany(),
     // Previsto still assumes every scheduled class happens — unaffected by
     // the payout tracking below, same as before.
-    getTeacherPayrollForMonth(now.getFullYear(), now.getMonth()),
+    getTeacherPayrollForMonth(viewedMonth.getFullYear(), viewedMonth.getMonth()),
     // What's actually been paid out to teachers this month — see the
     // Payout model. Only this counts as a "gasto"; classes given but not
     // yet paid don't (that's still tracked live, just not here — see
     // Férias and the teacher's own payroll view, both unaffected).
-    getPaidTeacherPayrollTotal(now.getFullYear(), now.getMonth()),
-    getPartnerSplitForMonth(now.getFullYear(), now.getMonth()),
+    getPaidTeacherPayrollTotal(viewedMonth.getFullYear(), viewedMonth.getMonth()),
+    getPartnerSplitForMonth(viewedMonth.getFullYear(), viewedMonth.getMonth()),
   ]);
 
   const revenueRealized = Number(receivedAgg._sum.amount ?? 0);
@@ -363,13 +371,13 @@ export async function getFinancialSummary() {
 
   // Provisão de férias dos professores: 8,3% do que cada um ganhou —
   // previsto (mês inteiro, supondo que toda aula marcada aconteça) e
-  // realizado (só o que já foi dado) — mensal (só o mês atual) e anual
-  // (soma mês a mês desde janeiro, com o payroll real de cada mês, não
-  // uma projeção do mês atual). Ver getTeacherFeriasForYear.
-  const ferias = await getTeacherFeriasForYear(now.getFullYear(), now.getMonth());
+  // realizado (só o que já foi dado) — mensal (só o mês visualizado) e
+  // anual (soma mês a mês desde janeiro até o mês visualizado, com o
+  // payroll real de cada mês). Ver getTeacherFeriasForYear.
+  const ferias = await getTeacherFeriasForYear(viewedMonth.getFullYear(), viewedMonth.getMonth());
 
-  const monthsInYear = Array.from({ length: now.getMonth() + 1 }, (_, m) => {
-    const mStart = new Date(now.getFullYear(), m, 1);
+  const monthsInYear = Array.from({ length: viewedMonth.getMonth() + 1 }, (_, m) => {
+    const mStart = new Date(viewedMonth.getFullYear(), m, 1);
     return { start: mStart, end: endOfMonth(mStart) };
   });
 

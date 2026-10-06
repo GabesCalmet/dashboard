@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { endOfMonth } from "date-fns";
 import {
   Wallet,
   TrendingUp,
@@ -12,25 +13,57 @@ import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { MonthNav } from "@/components/financial/month-nav";
 import { YearlyGrowthChart } from "@/components/financial/yearly-growth-chart";
 import { getFinancialSummary, getBankBalances } from "@/server/queries/financial";
+import { parseMonthParam } from "@/lib/month-param";
 import { formatCurrency } from "@/lib/labels";
 
-export default async function AdminFinancialPage() {
-  const [data, bankBalances] = await Promise.all([getFinancialSummary(), getBankBalances()]);
+export default async function AdminFinancialPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
+  const { month: monthParamValue } = await searchParams;
+  const { year, month } = parseMonthParam(monthParamValue);
+  const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(
+    new Date(year, month, 1)
+  );
+  const now = new Date();
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
+
+  const [data, bankBalances] = await Promise.all([
+    getFinancialSummary(year, month),
+    getBankBalances(endOfMonth(new Date(year, month, 1))),
+  ]);
 
   return (
     <div>
       <PageHeader title="Financeiro" description="Visão geral de receita, gastos e caixa da escola." />
 
+      <div className="mb-4">
+        <MonthNav basePath="/admin/financial" year={year} month={month} />
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Receita bruta (ano)" value={formatCurrency(data.ytdGrossRevenue)} icon={Wallet} />
-        <StatCard label="Gastos (ano)" value={formatCurrency(data.ytdExpenses)} icon={TrendingDown} />
+        <StatCard
+          label="Receita bruta (ano)"
+          value={formatCurrency(data.ytdGrossRevenue)}
+          icon={Wallet}
+          trend={{ value: String(year) }}
+        />
+        <StatCard
+          label="Gastos (ano)"
+          value={formatCurrency(data.ytdExpenses)}
+          icon={TrendingDown}
+          trend={{ value: String(year) }}
+        />
         <StatCard
           label="Lucro (ano)"
           value={formatCurrency(data.ytdProfit)}
           icon={Landmark}
           accent
+          trend={{ value: String(year) }}
         />
       </div>
 
@@ -69,8 +102,10 @@ export default async function AdminFinancialPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Resumo do mês atual</CardTitle>
-          <CardDescription>Realizado até hoje e previsto para o mês inteiro.</CardDescription>
+          <CardTitle className="capitalize">Resumo de {monthLabel}</CardTitle>
+          <CardDescription>
+            {isCurrentMonth ? "Realizado até hoje" : "Realizado no mês"} e previsto para o mês inteiro.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -132,7 +167,7 @@ export default async function AdminFinancialPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Saldo por conta bancária</CardTitle>
+          <CardTitle className="capitalize">Saldo por conta bancária — até {monthLabel}</CardTitle>
           <CardDescription>Total recebido menos total gasto em cada conta, desde o início.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -152,7 +187,7 @@ export default async function AdminFinancialPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Receita x gasto x lucro — ao longo do ano</CardTitle>
+          <CardTitle>Receita x gasto x lucro — {year}</CardTitle>
         </CardHeader>
         <CardContent>
           <YearlyGrowthChart data={data.yearlyChart} />
