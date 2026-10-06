@@ -41,33 +41,9 @@ export default async function AdminFinancialPage({
     <div>
       <PageHeader title="Financeiro" description="Visão geral de receita, gastos e caixa da escola." />
 
-      <div className="mb-4">
-        <MonthNav basePath="/admin/financial" year={year} month={month} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard
-          label="Receita bruta (ano)"
-          value={formatCurrency(data.ytdGrossRevenue)}
-          icon={Wallet}
-          trend={{ value: String(year) }}
-        />
-        <StatCard
-          label="Gastos (ano)"
-          value={formatCurrency(data.ytdExpenses)}
-          icon={TrendingDown}
-          trend={{ value: String(year) }}
-        />
-        <StatCard
-          label="Lucro (ano)"
-          value={formatCurrency(data.ytdProfit)}
-          icon={Landmark}
-          accent
-          trend={{ value: String(year) }}
-        />
-      </div>
-
-      <div className="mt-6 mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {/* Not affected by the month switcher below — just links to the
+          Receita/Gastos pages, which browse their own months independently. */}
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -98,6 +74,32 @@ export default async function AdminFinancialPage({
             </Button>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="mb-4">
+        <MonthNav basePath="/admin/financial" year={year} month={month} />
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard
+          label="Receita bruta (ano)"
+          value={formatCurrency(data.ytdGrossRevenue)}
+          icon={Wallet}
+          trend={{ value: String(year) }}
+        />
+        <StatCard
+          label="Gastos (ano)"
+          value={formatCurrency(data.ytdExpenses)}
+          icon={TrendingDown}
+          trend={{ value: String(year) }}
+        />
+        <StatCard
+          label="Lucro (ano)"
+          value={formatCurrency(data.ytdProfit)}
+          icon={Landmark}
+          accent
+          trend={{ value: String(year) }}
+        />
       </div>
 
       <Card>
