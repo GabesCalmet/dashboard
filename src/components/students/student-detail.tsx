@@ -7,12 +7,14 @@ import {
   CheckCircle2,
   Clock3,
   GraduationCap,
+  Layers,
   Palmtree,
   PartyPopper,
   Repeat,
   UserX,
   XCircle,
 } from "lucide-react";
+import { resolveHistoricalAmount } from "@/server/billing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -109,6 +111,29 @@ export function StudentDetailView({
     "CANCELED_LATE",
     "CANCELED_BY_STUDENT_NO_MAKEUP",
   ];
+
+  // Running total of contracted classes since enrollment — e.g. 8/mês
+  // starting in January reads 8 in January, 16 in February, 24 in March,
+  // and so on through whichever month the page-level MonthNav is browsing
+  // (defaulting to the current month). Honors lessonsPerMonthHistory if the
+  // contracted amount ever changed mid-course. Shown in the top stat row,
+  // outside the tabs, so it's visible no matter which tab is selected.
+  const contractStartYear = student.startDate.getFullYear();
+  const contractStartMonth = student.startDate.getMonth();
+  const monthsSinceStart =
+    (refMonthDate.getFullYear() - contractStartYear) * 12 +
+    (refMonthDate.getMonth() - contractStartMonth) +
+    1;
+  let totalContractedLessons = 0;
+  for (let i = 0; i < monthsSinceStart; i++) {
+    const y = contractStartYear + Math.floor((contractStartMonth + i) / 12);
+    const m = (contractStartMonth + i) % 12;
+    totalContractedLessons += resolveHistoricalAmount(
+      student.lessonsPerMonth,
+      student.lessonsPerMonthHistory,
+      new Date(y, m, 1)
+    );
+  }
 
   // Top row: "Aulas contratadas/mês" and "Aulas realizadas (do mês)" track
   // whichever month the MonthNav above is browsing; "Aulas realizadas"
@@ -303,7 +328,7 @@ export function StudentDetailView({
         </div>
       )}
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           label="Aulas contratadas/mês"
           value={String(contractedLessonsThisMonth)}
@@ -314,6 +339,11 @@ export function StudentDetailView({
           value={String(realizedLessonsThisMonth)}
           icon={GraduationCap}
           accent
+        />
+        <StatCard
+          label="Total de aulas contratadas"
+          value={String(totalContractedLessons)}
+          icon={Layers}
         />
       </div>
 
@@ -383,9 +413,6 @@ export function StudentDetailView({
                 lessons={student.lessons}
                 editable={permissions.canEditLessons}
                 canDelete={permissions.canDelete}
-                startDate={student.startDate}
-                lessonsPerMonth={student.lessonsPerMonth}
-                lessonsPerMonthHistory={parseValueHistory(student.lessonsPerMonthHistory)}
               />
             </TabsContent>
 
