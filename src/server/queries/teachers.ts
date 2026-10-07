@@ -67,14 +67,25 @@ function resolveTeacherAssignment(
     teacherPercentage: unknown;
     monthlyValue: unknown;
     monthlyValueHistory: unknown;
+    startDate: Date;
   },
   teacherId: string,
   referenceMonth: Date,
   fallbackHourlyRate: number
 ): TeacherAssignment {
-  const entries = parseTeacherHistory(student.teacherHistory);
   const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
   const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
+  // A student can't have had a teacher assignment before they even
+  // enrolled. Without this, the "currently assigned" fallback below
+  // (used whenever no teacherHistory entry explicitly covers this month)
+  // would otherwise credit a currently-active student's live pay terms
+  // to any month at all, including ones years before they existed.
+  const startOfEnrollmentMonth = new Date(student.startDate.getFullYear(), student.startDate.getMonth(), 1);
+  if (monthEnd < startOfEnrollmentMonth) {
+    return { assigned: false, mode: "HOURLY", rate: fallbackHourlyRate, monthlyAmount: 0, percentage: 0 };
+  }
+
+  const entries = parseTeacherHistory(student.teacherHistory);
   const match = entries.find((e) => {
     if (e.id !== teacherId) return false;
     const from = e.from ? new Date(e.from) : null;
@@ -217,6 +228,7 @@ const teacherAssignmentSelect = {
   teacherPercentage: true,
   monthlyValue: true,
   monthlyValueHistory: true,
+  startDate: true,
 } as const;
 
 // A canceled lesson (CA/CP/CF) whose own reposição was booked into the SAME

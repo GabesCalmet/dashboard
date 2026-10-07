@@ -256,6 +256,7 @@ export async function getBankBalances(asOf?: Date) {
 // page — each passes whichever month is being browsed.
 export async function getPartnerSplitForMonth(year: number, month: number) {
   const monthStart = new Date(year, month, 1);
+  const monthEnd = new Date(year, month + 1, 0);
 
   const [receivedAgg, activeStudentsForRevenue, teacherPayroll, paidTeacherTotal, paidJoe, paidGabriel] =
     await Promise.all([
@@ -265,7 +266,13 @@ export async function getPartnerSplitForMonth(year: number, month: number) {
       }),
       prisma.studentProfile.findMany({
         where: { status: "ACTIVE" },
-        select: { monthlyValue: true, thirdPartyAmount: true, groupMembers: { select: { monthlyValue: true } } },
+        select: {
+          monthlyValue: true,
+          thirdPartyAmount: true,
+          startDate: true,
+          billingStartDate: true,
+          groupMembers: { select: { monthlyValue: true } },
+        },
       }),
       getTeacherPayrollForMonth(year, month),
       getPaidTeacherPayrollTotal(year, month),
@@ -274,14 +281,19 @@ export async function getPartnerSplitForMonth(year: number, month: number) {
     ]);
 
   const revenueRealized = Number(receivedAgg._sum.amount ?? 0);
-  const revenuePrevisto = activeStudentsForRevenue.reduce(
-    (sum, s) =>
-      sum +
-      Number(s.monthlyValue) +
-      Number(s.thirdPartyAmount ?? 0) +
-      s.groupMembers.reduce((memberSum, m) => memberSum + Number(m.monthlyValue), 0),
-    0
-  );
+  // Same billing-start guard as getFinancialSummary's revenuePrevisto —
+  // otherwise a currently-active student would inflate the Parceiros
+  // split's previsto for a month before they'd even enrolled.
+  const revenuePrevisto = activeStudentsForRevenue
+    .filter((s) => (s.billingStartDate ?? s.startDate) <= monthEnd)
+    .reduce(
+      (sum, s) =>
+        sum +
+        Number(s.monthlyValue) +
+        Number(s.thirdPartyAmount ?? 0) +
+        s.groupMembers.reduce((memberSum, m) => memberSum + Number(m.monthlyValue), 0),
+      0
+    );
 
   const schoolSharePrevisto = (revenuePrevisto - teacherPayroll.totals.previsto) / 3;
   const schoolShareRealizado = (revenueRealized - paidTeacherTotal) / 3;
@@ -328,7 +340,13 @@ export async function getFinancialSummary(year?: number, month?: number) {
     }),
     prisma.studentProfile.findMany({
       where: { status: "ACTIVE" },
-      select: { monthlyValue: true, thirdPartyAmount: true, groupMembers: { select: { monthlyValue: true } } },
+      select: {
+        monthlyValue: true,
+        thirdPartyAmount: true,
+        startDate: true,
+        billingStartDate: true,
+        groupMembers: { select: { monthlyValue: true } },
+      },
     }),
     prisma.studentProfile.count({ where: { status: "ACTIVE" } }),
     prisma.expense.findMany(),
@@ -346,15 +364,20 @@ export async function getFinancialSummary(year?: number, month?: number) {
   const revenueRealized = Number(receivedAgg._sum.amount ?? 0);
   // The course's real monthly total is the student's own portion plus
   // whatever a third party covers on top of it, plus every group
-  // participant's own separate share (see getBillingSlots).
-  const revenuePrevisto = activeStudentsForRevenue.reduce(
-    (sum, s) =>
-      sum +
-      Number(s.monthlyValue) +
-      Number(s.thirdPartyAmount ?? 0) +
-      s.groupMembers.reduce((memberSum, m) => memberSum + Number(m.monthlyValue), 0),
-    0
-  );
+  // participant's own separate share (see getBillingSlots). Only counts a
+  // student once they'd actually become billable by the viewed month —
+  // otherwise a currently-active student's current monthlyValue would
+  // wrongly inflate "previsto" for a month before they even enrolled.
+  const revenuePrevisto = activeStudentsForRevenue
+    .filter((s) => (s.billingStartDate ?? s.startDate) <= monthEnd)
+    .reduce(
+      (sum, s) =>
+        sum +
+        Number(s.monthlyValue) +
+        Number(s.thirdPartyAmount ?? 0) +
+        s.groupMembers.reduce((memberSum, m) => memberSum + Number(m.monthlyValue), 0),
+      0
+    );
   const manualExpenseRealized = expenseTotalForMonth(expenses, monthStart, monthEnd, now);
   const manualExpensePrevisto = expenseTotalForMonth(expenses, monthStart, monthEnd);
 
