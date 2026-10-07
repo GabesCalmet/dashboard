@@ -10,7 +10,11 @@ export async function listStudents() {
       plan: true,
       groupMembers: { include: { user: true } },
     },
-    orderBy: { createdAt: "desc" },
+    // Active students first, then paused, then canceled — StudentStatus is
+    // declared in exactly that order (see schema.prisma), which Postgres
+    // enums sort by natively. Most recently enrolled first within each
+    // status group, same ordering as before this was added.
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
   });
 }
 
