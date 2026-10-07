@@ -63,7 +63,7 @@ export function StudentDetailView({
   // Full billing picture (real + placeholder) for the Financeiro tab —
   // only fetched/passed by pages that set permissions.showFinancial.
   paymentHistory?: PaymentHistoryRow[];
-  // Lets "Aulas contratadas/mês" be checked for a past month instead of
+  // Lets "Aulas a dar esse mês" be checked for a past month instead of
   // only the real current one. selfPath is this same page's URL (no query),
   // used to build the ?month=YYYY-MM prev/next links.
   monthNav?: { year: number; month: number; selfPath: string };
@@ -140,7 +140,7 @@ export function StudentDetailView({
     cycleMonthCursor = nextMonthCursor;
   }
 
-  // Top row: "Aulas contratadas/mês" and "Aulas realizadas (do mês)" track
+  // Top row: "Aulas a dar esse mês" and "Aulas realizadas (do mês)" track
   // whichever month the MonthNav above is browsing; "Aulas realizadas"
   // (no month qualifier) is the student's all-time total instead.
   const contractedLessonsThisMonth = lessonsThisMonth.filter((l) => !l.isMakeup).length;
@@ -335,7 +335,7 @@ export function StudentDetailView({
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard
-          label="Aulas contratadas/mês"
+          label="Aulas a dar esse mês"
           value={String(contractedLessonsThisMonth)}
           icon={BookOpen}
         />
