@@ -406,6 +406,10 @@ export async function getFinancialSummary(year?: number, month?: number) {
     expensePrevisto,
     caixaRealized: revenueRealized - expenseRealized,
     caixaPrevisto: revenuePrevisto - expensePrevisto,
+    // Exposed separately (not just folded into expenseRealized/Previsto
+    // above) so the Resumo card can show the Professores line on its own.
+    teacherPayrollRealizado: paidTeacherTotal,
+    teacherPayrollPrevisto: teacherPayroll.totals.previsto,
     feriasMonthlyPrevisto: ferias.totals.monthlyPrevisto,
     feriasMonthlyRealizado: ferias.totals.monthlyRealizado,
     feriasAnnualPrevisto: ferias.totals.annualPrevisto,

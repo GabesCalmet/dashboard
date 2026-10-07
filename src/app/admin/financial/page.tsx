@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { MonthNav } from "@/components/financial/month-nav";
 import { YearlyGrowthChart } from "@/components/financial/yearly-growth-chart";
 import { getFinancialSummary, getBankBalances } from "@/server/queries/financial";
+import { getExpenseCategoryTotals } from "@/server/queries/expenses";
 import { parseMonthParam } from "@/lib/month-param";
 import { formatCurrency } from "@/lib/labels";
 
@@ -32,10 +33,17 @@ export default async function AdminFinancialPage({
   const now = new Date();
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
 
-  const [data, bankBalances] = await Promise.all([
+  const [data, bankBalances, categoryTotals] = await Promise.all([
     getFinancialSummary(year, month),
     getBankBalances(endOfMonth(new Date(year, month, 1))),
+    getExpenseCategoryTotals(year, month),
   ]);
+  // Professores/Parceiros are derived elsewhere (teacher payroll, partner
+  // split) rather than manually-typed Expense rows — only these three
+  // categories belong in the Resumo breakdown below.
+  const manualCategories = categoryTotals.filter(
+    (c) => c.category === "MARKETING" || c.category === "RD" || c.category === "OUTROS"
+  );
 
   return (
     <div>
@@ -117,8 +125,16 @@ export default async function AdminFinancialPage({
               </p>
               <div className="space-y-3">
                 <SummaryRow label="Receita recebida" value={data.revenueRealized} tone="accent" />
-                <SummaryRow label="Gasto efetuado" value={data.expenseRealized} tone="destructive" />
-                <SummaryRow label="Em caixa" value={data.caixaRealized} tone="strong" />
+                <SummaryRow label="Professores" value={data.teacherPayrollRealizado} tone="destructive" />
+                {manualCategories.map((c) => (
+                  <SummaryRow key={c.category} label={c.label} value={c.realizado} tone="destructive" />
+                ))}
+                <SummaryRow label="Parceiros — Joe" value={data.partnerSplit.realizado.joe} tone="strong" />
+                <SummaryRow
+                  label="Parceiros — Gabriel"
+                  value={data.partnerSplit.realizado.gabriel}
+                  tone="strong"
+                />
                 <SummaryRow label="Para a escola" value={data.partnerSplit.realizado.school} tone="strong" />
               </div>
             </div>
@@ -128,8 +144,16 @@ export default async function AdminFinancialPage({
               </p>
               <div className="space-y-3">
                 <SummaryRow label="Receita prevista" value={data.revenuePrevisto} tone="accent" />
-                <SummaryRow label="Gasto previsto" value={data.expensePrevisto} tone="destructive" />
-                <SummaryRow label="Caixa previsto" value={data.caixaPrevisto} tone="strong" />
+                <SummaryRow label="Professores" value={data.teacherPayrollPrevisto} tone="destructive" />
+                {manualCategories.map((c) => (
+                  <SummaryRow key={c.category} label={c.label} value={c.previsto} tone="destructive" />
+                ))}
+                <SummaryRow label="Parceiros — Joe" value={data.partnerSplit.previsto.joe} tone="strong" />
+                <SummaryRow
+                  label="Parceiros — Gabriel"
+                  value={data.partnerSplit.previsto.gabriel}
+                  tone="strong"
+                />
                 <SummaryRow label="Para a escola" value={data.partnerSplit.previsto.school} tone="strong" />
               </div>
             </div>
