@@ -585,12 +585,21 @@ function parseLessonSchedule(value: unknown): ScheduleEntry[] {
     .sort((a, b) => a.weekday - b.weekday);
 }
 
+function isScheduleEntryCurrentlyActive(e: { from?: string; until?: string }, today: string): boolean {
+  return (!e.from || e.from <= today) && (!e.until || e.until >= today);
+}
+
 // Vigência (from/until) is deliberately left out of this display — it's
 // only ever meaningful while editing (the cadastro's own schedule editor
 // already shows it there), and reads as clutter on the read-only overview.
+// Only the entry(ies) in effect today are shown — a student's past
+// schedules (already-ended vigência windows) shouldn't still appear
+// alongside their current one here.
 function formatLessonSchedule(schedule: ScheduleEntry[]) {
-  if (schedule.length === 0) return "—";
-  return schedule
+  const today = new Date().toISOString().slice(0, 10);
+  const current = schedule.filter((e) => isScheduleEntryCurrentlyActive(e, today));
+  if (current.length === 0) return "—";
+  return current
     .map((e) => {
       const day = WEEKDAY_ABBR[e.weekday];
       const time = e.start ? (e.end ? `${e.start}–${e.end}` : e.start) : "";
