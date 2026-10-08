@@ -44,8 +44,15 @@ export async function GET(request: NextRequest) {
     where.scheduledAt = { gte: new Date(start), lte: new Date(end) };
   }
 
+  // The teacher whose blockedSlots should be shown as background events —
+  // a teacher always sees their own; admin/coordinator only see one when
+  // they've filtered the Agenda down to a single teacher (showing every
+  // teacher's blocks at once, unfiltered, would be an unreadable overlay).
+  let blockedSlotsTeacherId: string | null = null;
+
   if (user.role === "TEACHER" && user.teacherProfile) {
     where.teacherId = user.teacherProfile.id;
+    blockedSlotsTeacherId = user.teacherProfile.id;
   } else if (user.role === "STUDENT" && user.studentProfile) {
     where.studentId = user.studentProfile.id;
   } else if (user.role === "ADMIN" || user.role === "COORDINATOR") {
@@ -53,16 +60,30 @@ export async function GET(request: NextRequest) {
     // teacher (e.g. arriving from a Professor search result), instead of
     // always showing every teacher's lessons at once.
     const teacherId = request.nextUrl.searchParams.get("teacherId");
-    if (teacherId) where.teacherId = teacherId;
+    if (teacherId) {
+      where.teacherId = teacherId;
+      blockedSlotsTeacherId = teacherId;
+    }
   }
 
-  // A teacher's own recurring "blocked" windows, rendered as a shaded
-  // background on their own Agenda only — visual-only for now, so this is
-  // just a FullCalendar recurring background event per block, not a real
-  // Lesson row.
-  const blockedEvents =
+  const blockedSlotsSource =
     user.role === "TEACHER" && user.teacherProfile
-      ? parseBlockedSlots(user.teacherProfile.blockedSlots).map((b, i) => ({
+      ? user.teacherProfile.blockedSlots
+      : blockedSlotsTeacherId
+        ? (
+            await prisma.teacherProfile.findUnique({
+              where: { id: blockedSlotsTeacherId },
+              select: { blockedSlots: true },
+            })
+          )?.blockedSlots
+        : null;
+
+  // A teacher's own recurring "blocked" windows, rendered as a shaded
+  // background — visual-only for now, so this is just a FullCalendar
+  // recurring background event per block, not a real Lesson row.
+  const blockedEvents =
+    blockedSlotsSource != null
+      ? parseBlockedSlots(blockedSlotsSource).map((b, i) => ({
           id: `blocked-${i}`,
           daysOfWeek: [b.weekday],
           startTime: b.start,
