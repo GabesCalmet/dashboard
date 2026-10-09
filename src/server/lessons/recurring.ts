@@ -180,17 +180,18 @@ export async function syncRecurringLessons(studentId: string) {
     const [hour, minute] = entry.start.split(":").map(Number);
     if (Number.isNaN(hour) || Number.isNaN(minute)) continue;
 
-    // An entry's own from/until only ever narrows the overall
-    // [anchor, horizonEnd] window — e.g. an old entry kept on record after
-    // a schedule change gets an "until" so it stops generating past the
-    // date it was replaced, while the new entry's "from" picks up after it.
+    // An entry's own explicit "from" is always honored as-is, even when
+    // it's earlier than the student's enrollment startDate — the cadastro
+    // is the source of truth, so an entry deliberately backdated (e.g. to
+    // record a real earlier period) isn't silently clamped away. anchor
+    // is only the fallback for an entry with no "from" of its own at all.
     const entryFrom = entry.from ? new Date(entry.from) : null;
     // endOfBrazilDay — otherwise a class later that same day in Brazil time
     // (which lands after UTC midnight, post timezone fix) gets excluded by
     // an "until" set to that exact day, as happened for a Saturday 08:00
     // class landing at 11:00 UTC against an "until" of UTC midnight.
     const entryUntil = entry.until ? endOfBrazilDay(new Date(entry.until)) : null;
-    const rangeStart = entryFrom && entryFrom > anchor ? entryFrom : anchor;
+    const rangeStart = entryFrom ?? anchor;
     const rangeEnd = entryUntil && entryUntil < horizonEnd ? entryUntil : horizonEnd;
     if (rangeStart > rangeEnd) continue;
 
