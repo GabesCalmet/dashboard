@@ -529,6 +529,25 @@ model Expense {
   @@map("expenses")
 }
 
+// A manual cash-in record not tied to any student's billing cycle — e.g.
+// backfilling a historical lump sum (money received before this system
+// tracked it) so a bank account's running balance (getBankBalances)
+// reflects reality, without inventing a fake Payment row against a
+// student/month that never actually owed it. Only ever counted in the
+// cumulative bank balance, not in any month's Receita figures.
+model ManualIncome {
+  id          String      @id @default(uuid())
+  description String
+  amount      Decimal     @db.Decimal(10, 2)
+  date        DateTime
+  bankAccount BankAccount
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("manual_incomes")
+}
+
 enum PayoutKind {
   TEACHER
   PARTNER_JOE

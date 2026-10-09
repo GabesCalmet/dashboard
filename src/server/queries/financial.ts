@@ -211,13 +211,14 @@ export async function getBankBalances(asOf?: Date) {
   // (the current, still-ongoing month) the balance is as of right now.
   const now = asOf && asOf < nowReal ? asOf : nowReal;
 
-  const [paidPayments, expenses, payouts] = await Promise.all([
+  const [paidPayments, expenses, payouts, manualIncomes] = await Promise.all([
     prisma.payment.findMany({
       where: { status: "PAID", paidAt: { lte: now } },
       include: { student: true },
     }),
     prisma.expense.findMany(),
     prisma.payout.findMany({ where: { paidAt: { lte: now } } }),
+    prisma.manualIncome.findMany({ where: { date: { lte: now } } }),
   ]);
 
   const received: Record<BankAccount, number> = { GABES: 0, JOE: 0, ASAAS: 0 };
@@ -226,6 +227,9 @@ export async function getBankBalances(asOf?: Date) {
       ? (p.student.thirdPartyBankAccount ?? p.student.bankAccount)
       : p.student.bankAccount;
     received[account] += Number(p.amount);
+  }
+  for (const i of manualIncomes) {
+    received[i.bankAccount] += Number(i.amount);
   }
 
   const spent: Record<BankAccount, number> = { GABES: 0, JOE: 0, ASAAS: 0 };

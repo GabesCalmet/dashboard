@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CashFlowChart } from "@/components/financial/cash-flow-chart";
 import { PaymentsTable } from "@/components/financial/payments-table";
 import { GenerateBillingButton } from "@/components/financial/generate-billing-button";
+import { ManualIncomeDialog } from "@/components/financial/manual-income-dialog";
 import { MonthNav } from "@/components/financial/month-nav";
 import { getFinancialOverview } from "@/server/queries/financial";
 import { parseMonthParam, monthParam } from "@/lib/month-param";
@@ -25,6 +26,7 @@ export default async function AdminFinancialReceitaPage({
   const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(
     new Date(year, month, 1)
   );
+  const defaultDate = new Date(year, month, 1).toISOString().slice(0, 10);
   const statusHref = (status: PaymentStatus) =>
     `/admin/financial/receita?month=${monthParam(year, month)}&status=${status}#cobrancas`;
 
@@ -40,7 +42,12 @@ export default async function AdminFinancialReceitaPage({
       <PageHeader
         title="Receita"
         description="Mensalidades, cobranças e fluxo de caixa recebido."
-        actions={<GenerateBillingButton year={year} month={month} />}
+        actions={
+          <>
+            <ManualIncomeDialog defaultDate={defaultDate} />
+            <GenerateBillingButton year={year} month={month} />
+          </>
+        }
       />
 
       <div className="mb-4">
