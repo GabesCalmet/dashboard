@@ -81,7 +81,30 @@ function parseValueHistory(value: unknown): ValueHistoryEntry[] {
 // one was configured, falling back to the current flat value for any month
 // no history entry covers (which is every month for a student/member who's
 // never had a change recorded).
-export function resolveHistoricalAmount(current: unknown, history: unknown, referenceMonth: Date) {
+//
+// zeroOnGap (default false) controls what an UNCOVERED month falls back to
+// when some entry's own "from" starts later (meaning this month is either
+// before the earliest entry, or sitting in a real gap between two bounded
+// windows): true resolves it to 0, false falls back to the current flat
+// value same as any other uncovered month. Only pass true for an amount
+// that's actually allowed to mean "don't charge this month" — monthlyValue
+// (own/member/teacher-revenue) — where a real price-undefined gap must not
+// silently inherit today's price (see the Moises VIP-172 phantom-charge
+// bug this was built for). Every other field resolved this way — dueDay,
+// lessonsPerMonth, hourlyRate — has no such "doesn't apply" state: a day
+// of the month or a lessons count or a pay rate of 0 is never correct, it's
+// just broken (e.g. dueDay 0 resolves to the last day of the PREVIOUS
+// month, which can push a slot's due date before billingStart and make an
+// otherwise-billable month wrongly skipped entirely — the bug that hit
+// Andréa VIP-155 once a leftover dueDayHistory entry, dated after her real
+// billing start but with the same value as current, acted as if due day
+// itself hadn't been declared yet for that month).
+export function resolveHistoricalAmount(
+  current: unknown,
+  history: unknown,
+  referenceMonth: Date,
+  { zeroOnGap = false }: { zeroOnGap?: boolean } = {}
+) {
   const entries = parseValueHistory(history);
   if (entries.length === 0) return Number(current);
 
@@ -96,6 +119,8 @@ export function resolveHistoricalAmount(current: unknown, history: unknown, refe
   });
   if (match) return match.amount;
 
+  if (!zeroOnGap) return Number(current);
+
   // No entry covers this month. Falling back to today's current value is
   // only right for a month after every recorded entry (nothing newer has
   // been declared yet, so "whatever's current" is the best guess) — NOT
@@ -103,10 +128,10 @@ export function resolveHistoricalAmount(current: unknown, history: unknown, refe
   // between two separate bounded windows (e.g. a student who had a
   // recorded period in Jan–Feb, then nothing until a later Sep entry —
   // the months in between were never covered by anything and must not
-  // silently inherit today's price/due day). Any entry whose own "from"
-  // is still ahead of this month means something explicit resumes later,
-  // which makes this month either pre-history or an internal gap either
-  // way — both resolve to 0, never to "same as today."
+  // silently inherit today's price). Any entry whose own "from" is still
+  // ahead of this month means something explicit resumes later, which
+  // makes this month either pre-history or an internal gap either way —
+  // both resolve to 0, never to "same as today."
   const hasEntryStartingAfter = entries.some((e) => e.from && new Date(e.from) > monthEnd);
   if (hasEntryStartingAfter) return 0;
   return Number(current);
@@ -180,7 +205,9 @@ export function getBillingSlots(
   },
   referenceMonth: Date
 ): BillingSlot[] {
-  const own = resolveHistoricalAmount(student.monthlyValue, student.monthlyValueHistory, referenceMonth);
+  const own = resolveHistoricalAmount(student.monthlyValue, student.monthlyValueHistory, referenceMonth, {
+    zeroOnGap: true,
+  });
   const dueDay = resolveHistoricalAmount(student.dueDay, student.dueDayHistory, referenceMonth);
   const ownBankAccount = resolveHistoricalBankAccount(
     student.bankAccount,
@@ -207,7 +234,8 @@ export function getBillingSlots(
     const memberAmount = resolveHistoricalAmount(
       member.monthlyValue,
       member.monthlyValueHistory,
-      referenceMonth
+      referenceMonth,
+      { zeroOnGap: true }
     );
     if (memberAmount > 0) {
       const memberDueDay = resolveHistoricalAmount(member.dueDay, member.dueDayHistory, referenceMonth);

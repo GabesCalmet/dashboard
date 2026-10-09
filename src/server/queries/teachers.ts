@@ -95,7 +95,9 @@ function resolveTeacherAssignment(
     return true;
   });
   const resolvedMonthlyValue = () =>
-    resolveHistoricalAmount(student.monthlyValue, student.monthlyValueHistory, monthStart);
+    resolveHistoricalAmount(student.monthlyValue, student.monthlyValueHistory, monthStart, {
+      zeroOnGap: true,
+    });
 
   if (match?.mode === "MONTHLY") {
     return {
