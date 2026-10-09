@@ -14,6 +14,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MonthNav } from "@/components/financial/month-nav";
+import { BankAccountCard } from "@/components/financial/bank-account-card";
 import { YearlyGrowthChart } from "@/components/financial/yearly-growth-chart";
 import { getFinancialSummary, getBankBalances } from "@/server/queries/financial";
 import { getExpenseCategoryTotals } from "@/server/queries/expenses";
@@ -199,13 +200,15 @@ export default async function AdminFinancialPage({
         <CardContent>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {bankBalances.map((b) => (
-              <div key={b.account} className="rounded-lg border p-4">
-                <p className="text-sm font-medium">{b.label}</p>
-                <p className="mt-1 text-lg font-semibold">{formatCurrency(b.balance)}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatCurrency(b.received)} recebido − {formatCurrency(b.spent)} gasto
-                </p>
-              </div>
+              <BankAccountCard
+                key={b.account}
+                label={b.label}
+                balance={b.balance}
+                received={b.received}
+                spent={b.spent}
+                receivedItems={b.receivedItems}
+                spentItems={b.spentItems}
+              />
             ))}
           </div>
         </CardContent>

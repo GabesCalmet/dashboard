@@ -200,11 +200,16 @@ function expenseTotalToDate(e: Expense, now: Date) {
   return Math.max(0, months) * Number(e.amount);
 }
 
+export type BankLedgerItem = { id: string; label: string; amount: number; date: string };
+
 // Running balance per bank account: everything received into it (paid
-// cobranças) minus everything spent from it — gastos accrued, plus every
-// teacher/partner payout, each deducted from whichever account it names
-// (Payout.bankAccount) — up to `asOf` (defaults to right now), so this can
-// also show "how much was in the account as of the end of month X".
+// cobranças + manual entradas) minus everything spent from it (gastos
+// accrued, plus every teacher/partner payout), each deducted from
+// whichever account it names (Payout.bankAccount) — up to `asOf`
+// (defaults to right now), so this can also show "how much was in the
+// account as of the end of month X". receivedItems/spentItems carry the
+// same totals broken down line by line, newest first, for the "Saldo por
+// conta bancária" drill-down dialog.
 export async function getBankBalances(asOf?: Date) {
   const nowReal = new Date();
   // A cutoff is only honored if it's actually in the past — otherwise
@@ -214,30 +219,69 @@ export async function getBankBalances(asOf?: Date) {
   const [paidPayments, expenses, payouts, manualIncomes] = await Promise.all([
     prisma.payment.findMany({
       where: { status: "PAID", paidAt: { lte: now } },
-      include: { student: true },
+      include: { student: { include: { user: true, groupMembers: { include: { user: true } } } } },
     }),
     prisma.expense.findMany(),
-    prisma.payout.findMany({ where: { paidAt: { lte: now } } }),
+    prisma.payout.findMany({
+      where: { paidAt: { lte: now } },
+      include: { teacher: { include: { user: true } } },
+    }),
     prisma.manualIncome.findMany({ where: { date: { lte: now } } }),
   ]);
 
   const received: Record<BankAccount, number> = { GABES: 0, JOE: 0, ASAAS: 0 };
+  const receivedItems: Record<BankAccount, BankLedgerItem[]> = { GABES: [], JOE: [], ASAAS: [] };
   for (const p of paidPayments) {
     const account = p.payerName
       ? (p.student.thirdPartyBankAccount ?? p.student.bankAccount)
       : p.student.bankAccount;
-    received[account] += Number(p.amount);
+    const amount = Number(p.amount);
+    received[account] += amount;
+    receivedItems[account].push({
+      id: p.id,
+      label: resolveSlotStudentName(p.payerName, p.student),
+      amount,
+      date: (p.paidAt ?? p.dueDate).toISOString(),
+    });
   }
   for (const i of manualIncomes) {
-    received[i.bankAccount] += Number(i.amount);
+    const amount = Number(i.amount);
+    received[i.bankAccount] += amount;
+    receivedItems[i.bankAccount].push({
+      id: i.id,
+      label: i.description,
+      amount,
+      date: i.date.toISOString(),
+    });
   }
 
   const spent: Record<BankAccount, number> = { GABES: 0, JOE: 0, ASAAS: 0 };
+  const spentItems: Record<BankAccount, BankLedgerItem[]> = { GABES: [], JOE: [], ASAAS: [] };
   for (const e of expenses) {
-    spent[e.bankAccount] += expenseTotalToDate(e, now);
+    const amount = expenseTotalToDate(e, now);
+    if (amount <= 0) continue;
+    spent[e.bankAccount] += amount;
+    spentItems[e.bankAccount].push({
+      id: e.id,
+      label: e.frequency === "RECURRING" ? `${e.description} (recorrente)` : e.description,
+      amount,
+      date: e.date.toISOString(),
+    });
   }
   for (const p of payouts) {
-    spent[p.bankAccount] += Number(p.amount);
+    const amount = Number(p.amount);
+    spent[p.bankAccount] += amount;
+    spentItems[p.bankAccount].push({
+      id: p.id,
+      label:
+        p.kind === "TEACHER"
+          ? `Professor: ${p.teacher?.user.name ?? "—"}`
+          : p.kind === "PARTNER_JOE"
+            ? "Parceiro: Joe"
+            : "Parceiro: Gabriel",
+      amount,
+      date: p.paidAt.toISOString(),
+    });
   }
 
   return (Object.keys(bankAccountLabel) as BankAccount[]).map((account) => ({
@@ -246,6 +290,8 @@ export async function getBankBalances(asOf?: Date) {
     received: received[account],
     spent: spent[account],
     balance: received[account] - spent[account],
+    receivedItems: receivedItems[account].sort((a, b) => b.date.localeCompare(a.date)),
+    spentItems: spentItems[account].sort((a, b) => b.date.localeCompare(a.date)),
   }));
 }
 
