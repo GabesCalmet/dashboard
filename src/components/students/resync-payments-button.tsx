@@ -22,10 +22,15 @@ export function ResyncPaymentsButton({ studentId }: { studentId: string }) {
       onClick={() =>
         startTransition(async () => {
           try {
-            const updated = await resyncStudentPayments(studentId);
-            toast.success(
-              updated > 0 ? `${updated} cobrança(s) atualizada(s).` : "Cobranças já estavam em dia."
-            );
+            const { updated, created } = await resyncStudentPayments(studentId);
+            if (updated === 0 && created === 0) {
+              toast.success("Cobranças já estavam em dia.");
+            } else {
+              const parts = [];
+              if (created > 0) parts.push(`${created} criada(s)`);
+              if (updated > 0) parts.push(`${updated} atualizada(s)`);
+              toast.success(`Cobranças: ${parts.join(", ")}.`);
+            }
           } catch (err) {
             toast.error(err instanceof Error ? err.message : "Erro ao atualizar cobranças.");
           }

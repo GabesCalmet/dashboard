@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
-import { getBillingSlots, withBillingGroupMembers, createMissingPaymentsForMonth } from "@/server/billing";
+import {
+  getBillingSlots,
+  withBillingGroupMembers,
+  createMissingPaymentsForMonth,
+  resolveBillingStart,
+  isSlotBillableForMonth,
+} from "@/server/billing";
 import type { PaymentStatus } from "@prisma/client";
 
 function dueDateFor(monthStart: Date, day: number) {
@@ -118,6 +124,14 @@ export async function runLatePaymentsSweep() {
 // deleted — only the structural "how much, due when" fields follow the
 // cadastro, the same way a lesson's time can be corrected without
 // touching whether it was actually given.
+//
+// Also backfills any month that has NO Payment row at all between the
+// student's (re-resolved) billing start and today — e.g. pulling
+// billingStartDate/a history entry's "from" earlier in the cadastro after
+// some of those months have already passed. createMissingPaymentsForMonth
+// only ever runs for "now" (via cron/the manual sweep), so a past month
+// newly covered by a backdated cadastro edit is otherwise invisible until
+// someone clicks "Gerar cobranças" for it by hand, one month at a time.
 export async function resyncStudentPayments(studentId: string) {
   const actor = await requireRole("ADMIN", "COORDINATOR");
 
@@ -144,13 +158,45 @@ export async function resyncStudentPayments(studentId: string) {
     }
   }
 
-  if (updated > 0) {
+  const existingKeys = new Set(payments.map((p) => `${p.referenceMonth.getTime()}:${p.payerName ?? ""}`));
+  const now = new Date();
+  const billingStart = resolveBillingStart(student);
+  let created = 0;
+  if (billingStart <= now) {
+    const cursor = new Date(billingStart.getFullYear(), billingStart.getMonth(), 1);
+    const lastMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    while (cursor <= lastMonth) {
+      const monthStart = new Date(cursor);
+      for (const slot of getBillingSlots(billingStudent, monthStart)) {
+        if (!isSlotBillableForMonth(billingStart, monthStart, slot.dueDay)) continue;
+        const key = `${monthStart.getTime()}:${slot.payerName ?? ""}`;
+        if (existingKeys.has(key)) continue;
+        const dueDate = dueDateFor(monthStart, slot.dueDay);
+        const status: PaymentStatus = dueDate < now ? "LATE" : "PENDING";
+        await prisma.payment.create({
+          data: {
+            studentId,
+            referenceMonth: monthStart,
+            amount: slot.amount,
+            dueDate,
+            payerName: slot.payerName,
+            status,
+          },
+        });
+        existingKeys.add(key);
+        created++;
+      }
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+  }
+
+  if (updated > 0 || created > 0) {
     await recordAudit({
       entityType: "Payment",
       entityId: studentId,
       action: "UPDATE",
       actor,
-      changes: { resyncedCount: updated },
+      changes: { resyncedCount: updated, createdCount: created },
     });
   }
 
@@ -159,7 +205,7 @@ export async function resyncStudentPayments(studentId: string) {
   revalidatePath(`/admin/students/${studentId}`);
   revalidatePath(`/coordinator/students/${studentId}`);
 
-  return updated;
+  return { updated, created };
 }
 
 export async function generateMonthlyPayments(referenceMonth: Date) {
