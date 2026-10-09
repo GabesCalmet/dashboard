@@ -96,20 +96,19 @@ export function resolveHistoricalAmount(current: unknown, history: unknown, refe
   });
   if (match) return match.amount;
 
-  // No entry covers this month. Every entry actually entered in this app
-  // carries a real "from" (the full history is recorded, not left with an
-  // implicit "since forever" baseline) — so if the reference month is
-  // before every one of them, the value genuinely hadn't started applying
-  // yet (e.g. a "grupo" member who joined mid-year), and falling back to
-  // today's current value would wrongly resurrect a charge for months
-  // before they even joined. Only fall back to current for a month that's
-  // NOT before the earliest entry (e.g. a gap after the last "until", or
-  // an entry left with no "from" at all, meaning "since forever").
-  const boundedFroms = entries.filter((e) => e.from).map((e) => new Date(e.from!).getTime());
-  const hasUnboundedEntry = entries.some((e) => !e.from);
-  if (!hasUnboundedEntry && boundedFroms.length > 0 && monthEnd.getTime() < Math.min(...boundedFroms)) {
-    return 0;
-  }
+  // No entry covers this month. Falling back to today's current value is
+  // only right for a month after every recorded entry (nothing newer has
+  // been declared yet, so "whatever's current" is the best guess) — NOT
+  // for a month before the earliest entry, or for a real gap sitting
+  // between two separate bounded windows (e.g. a student who had a
+  // recorded period in Jan–Feb, then nothing until a later Sep entry —
+  // the months in between were never covered by anything and must not
+  // silently inherit today's price/due day). Any entry whose own "from"
+  // is still ahead of this month means something explicit resumes later,
+  // which makes this month either pre-history or an internal gap either
+  // way — both resolve to 0, never to "same as today."
+  const hasEntryStartingAfter = entries.some((e) => e.from && new Date(e.from) > monthEnd);
+  if (hasEntryStartingAfter) return 0;
   return Number(current);
 }
 
