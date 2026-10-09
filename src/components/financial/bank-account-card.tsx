@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatCurrency, formatDate } from "@/lib/labels";
+import { cn } from "@/lib/utils";
 import type { BankLedgerItem } from "@/server/queries/financial";
 
 // Click-to-expand version of a "Saldo por conta bancária" box — the card
@@ -66,10 +67,15 @@ export function BankAccountCard({
                   {receivedItems.map((item) => (
                     <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
                       <div className="min-w-0">
-                        <p className="truncate">{item.label}</p>
+                        <p className={cn("truncate", item.manual && "text-accent")}>{item.label}</p>
                         <p className="text-xs text-muted-foreground">{formatDate(new Date(item.date))}</p>
                       </div>
-                      <span className="shrink-0 font-medium text-success">
+                      <span
+                        className={cn(
+                          "shrink-0 font-medium",
+                          item.manual ? "text-accent" : "text-success"
+                        )}
+                      >
                         {formatCurrency(item.amount)}
                       </span>
                     </div>

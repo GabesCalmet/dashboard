@@ -200,7 +200,15 @@ function expenseTotalToDate(e: Expense, now: Date) {
   return Math.max(0, months) * Number(e.amount);
 }
 
-export type BankLedgerItem = { id: string; label: string; amount: number; date: string };
+export type BankLedgerItem = {
+  id: string;
+  label: string;
+  amount: number;
+  date: string;
+  // Lets the drill-down dialog visually set manual entradas (not tied to
+  // any student) apart from real student payments.
+  manual?: boolean;
+};
 
 // Running balance per bank account: everything received into it (paid
 // cobranças + manual entradas) minus everything spent from it (gastos
@@ -256,6 +264,7 @@ export async function getBankBalances(asOf?: Date) {
       label: i.description,
       amount,
       date: i.date.toISOString(),
+      manual: true,
     });
   }
 
