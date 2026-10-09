@@ -67,13 +67,20 @@ export function BankAccountCard({
                   {receivedItems.map((item) => (
                     <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
                       <div className="min-w-0">
-                        <p className={cn("truncate", item.manual && "text-accent")}>{item.label}</p>
+                        <p
+                          className={cn(
+                            "truncate",
+                            item.manual && "text-blue-600 dark:text-blue-400"
+                          )}
+                        >
+                          {item.label}
+                        </p>
                         <p className="text-xs text-muted-foreground">{formatDate(new Date(item.date))}</p>
                       </div>
                       <span
                         className={cn(
                           "shrink-0 font-medium",
-                          item.manual ? "text-accent" : "text-success"
+                          item.manual ? "text-blue-600 dark:text-blue-400" : "text-success"
                         )}
                       >
                         {formatCurrency(item.amount)}
