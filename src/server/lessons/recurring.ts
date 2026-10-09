@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { BRAZIL_UTC_OFFSET_MS, endOfBrazilDay } from "@/lib/timezone";
+import { BRAZIL_UTC_OFFSET_MS, endOfBrazilDay, toBrazilDateString } from "@/lib/timezone";
 
 const HORIZON_WEEKS = 12;
 
@@ -75,41 +75,69 @@ function resolveTeacherId(defaultTeacherId: string, history: SelectHistoryEntry[
 // Regenerates a student's recurring lessons (from their enrollment start
 // date through the last class on/before the 15th of the month closing out
 // the next ~HORIZON_WEEKS, or their course end date if that comes sooner)
-// to match their current weekly schedule. Only ever touches lessons this
-// same generator created
-// (isRecurring) that are still SCHEDULED — i.e. still unconfirmed, whether
-// in the past or future. Manual bookings and anything a teacher has
-// already reported/marked a real outcome for (OK/CA/CP/NC/...) are never
-// deleted or altered, so re-running this after enrollment is always safe.
+// to match their current weekly schedule.
+//
+// Matches by CALENDAR DATE, not exact instant: if a schedule entry's time
+// changed but a lesson already exists on the same date (whatever its
+// status — SCHEDULED, COMPLETED, CANCELED_HOLIDAY, ...), that existing row
+// is just retimed in place (scheduledAt/durationMin/teacherId updated),
+// preserving everything else about it (status, resumo, observações). This
+// is what lets "I only changed the time" actually just change the time,
+// even for a class a teacher already reported on, instead of leaving the
+// old one stranded and generating a duplicate placeholder alongside it.
+//
+// A date that no longer matches any current schedule entry only gets
+// deleted while still SCHEDULED (unconfirmed) — once a teacher has really
+// reported an outcome for it, or a date's entry was removed from the
+// schedule entirely, that row is real history and stays untouched. Manual
+// bookings and makeups (isRecurring: false) are never touched either way.
 export async function syncRecurringLessons(studentId: string) {
   const student = await prisma.studentProfile.findUnique({ where: { id: studentId } });
   if (!student || !student.teacherId) return;
 
-  await prisma.lesson.deleteMany({
-    where: {
-      studentId,
-      isRecurring: true,
-      status: "SCHEDULED",
-    },
-  });
-
-  // Paused/cancelled students keep their history but stop generating new
-  // lessons until they're active again (their next edit will regenerate).
-  if (student.status !== "ACTIVE") return;
+  if (student.status !== "ACTIVE") {
+    // Paused/cancelled: no schedule is currently generating anything, so
+    // just drop any leftover not-yet-happened placeholder — real reported
+    // history stays either way. Becoming ACTIVE again regenerates fresh.
+    await prisma.lesson.deleteMany({
+      where: { studentId, isRecurring: true, status: "SCHEDULED" },
+    });
+    return;
+  }
 
   const schedule = parseSchedule(student.lessonSchedule);
-  if (schedule.length === 0) return;
 
-  // Anything still on the books after the delete above — a real reported
-  // outcome (OK/NC/CA/...) or a manually booked lesson — must never be
-  // duplicated by the generator below, even if the weekly schedule would
-  // otherwise also land on that exact date/time (e.g. when backfilling a
-  // gap that spans dates already reported on).
-  const existingLessons = await prisma.lesson.findMany({
-    where: { studentId },
-    select: { scheduledAt: true },
-  });
-  const existingTimes = new Set(existingLessons.map((l) => l.scheduledAt.getTime()));
+  const [existingRecurring, otherLessons] = await Promise.all([
+    prisma.lesson.findMany({
+      where: { studentId, isRecurring: true },
+      select: { id: true, scheduledAt: true, status: true },
+    }),
+    // Manual bookings/makeups — never touched, only used below to avoid
+    // double-booking a brand new generated lesson onto the exact same
+    // instant one of these already occupies.
+    prisma.lesson.findMany({
+      where: { studentId, isRecurring: false },
+      select: { scheduledAt: true },
+    }),
+  ]);
+
+  if (schedule.length === 0) {
+    const toDelete = existingRecurring.filter((l) => l.status === "SCHEDULED").map((l) => l.id);
+    if (toDelete.length > 0) {
+      await prisma.lesson.deleteMany({ where: { id: { in: toDelete } } });
+    }
+    return;
+  }
+
+  const blockedTimes = new Set(otherLessons.map((l) => l.scheduledAt.getTime()));
+  const existingByDate = new Map<string, typeof existingRecurring>();
+  for (const l of existingRecurring) {
+    const key = toBrazilDateString(l.scheduledAt);
+    const bucket = existingByDate.get(key);
+    if (bucket) bucket.push(l);
+    else existingByDate.set(key, [l]);
+  }
+
   const teacherHistory = parseSelectHistory(student.teacherHistory);
 
   const now = new Date();
@@ -136,6 +164,8 @@ export async function syncRecurringLessons(studentId: string) {
   // endOfBrazilDay so a class later that same day in Brazil time (which,
   // after the timezone fix, lands after UTC midnight) isn't excluded.
   const horizonEnd = student.endDate ? endOfBrazilDay(student.endDate) : snappedHorizonEnd;
+
+  const claimed = new Set<string>();
   const toCreate: {
     studentId: string;
     teacherId: string;
@@ -143,6 +173,7 @@ export async function syncRecurringLessons(studentId: string) {
     durationMin: number;
     isRecurring: true;
   }[] = [];
+  const toRetime: { id: string; scheduledAt: Date; durationMin: number; teacherId: string }[] = [];
 
   for (const entry of schedule) {
     if (!entry.start) continue;
@@ -176,7 +207,19 @@ export async function syncRecurringLessons(studentId: string) {
     if (cursor < rangeStart) cursor.setDate(cursor.getDate() + 7);
 
     while (cursor <= rangeEnd) {
-      if (!existingTimes.has(cursor.getTime())) {
+      const dateKey = toBrazilDateString(cursor);
+      const candidate = (existingByDate.get(dateKey) ?? []).find((l) => !claimed.has(l.id));
+      if (candidate) {
+        claimed.add(candidate.id);
+        if (candidate.scheduledAt.getTime() !== cursor.getTime()) {
+          toRetime.push({
+            id: candidate.id,
+            scheduledAt: new Date(cursor),
+            durationMin: durationFromTimes(entry.start, entry.end),
+            teacherId: resolveTeacherId(student.teacherId, teacherHistory, cursor),
+          });
+        }
+      } else if (!blockedTimes.has(cursor.getTime())) {
         toCreate.push({
           studentId,
           teacherId: resolveTeacherId(student.teacherId, teacherHistory, cursor),
@@ -189,6 +232,23 @@ export async function syncRecurringLessons(studentId: string) {
     }
   }
 
+  // Anything isRecurring that no current entry claimed is orphaned — a
+  // date/weekday the schedule no longer produces. Only safe to remove
+  // while still SCHEDULED; anything a teacher already reported on stays
+  // as real history even for a schedule that's since changed.
+  const toDelete = existingRecurring
+    .filter((l) => !claimed.has(l.id) && l.status === "SCHEDULED")
+    .map((l) => l.id);
+
+  await Promise.all([
+    toDelete.length > 0 ? prisma.lesson.deleteMany({ where: { id: { in: toDelete } } }) : null,
+    ...toRetime.map((u) =>
+      prisma.lesson.update({
+        where: { id: u.id },
+        data: { scheduledAt: u.scheduledAt, durationMin: u.durationMin, teacherId: u.teacherId },
+      })
+    ),
+  ]);
   if (toCreate.length > 0) {
     await prisma.lesson.createMany({ data: toCreate });
   }

@@ -108,6 +108,60 @@ export async function runLatePaymentsSweep() {
   return { generated, markedLate };
 }
 
+// Re-derives amount/dueDate for every existing Payment row (any status,
+// including already-PAID ones) from the student's CURRENT billing config
+// (monthlyValue/dueDay, each resolved historically for that row's own
+// referenceMonth via its own *History) — the same values a freshly
+// generated cobrança for that month would get. Never touches
+// status/paidAt, so marking something paid is never undone and a row
+// whose payer slot no longer exists at all is left alone rather than
+// deleted — only the structural "how much, due when" fields follow the
+// cadastro, the same way a lesson's time can be corrected without
+// touching whether it was actually given.
+export async function resyncStudentPayments(studentId: string) {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+
+  const student = await prisma.studentProfile.findUniqueOrThrow({
+    where: { id: studentId },
+    include: { groupMembers: { include: { user: true } } },
+  });
+  const billingStudent = withBillingGroupMembers(student);
+  const payments = await prisma.payment.findMany({ where: { studentId } });
+
+  let updated = 0;
+  for (const payment of payments) {
+    const slots = getBillingSlots(billingStudent, payment.referenceMonth);
+    const slot = slots.find((s) => s.payerName === payment.payerName);
+    if (!slot) continue;
+    const newAmount = slot.amount;
+    const newDueDate = dueDateFor(payment.referenceMonth, slot.dueDay);
+    if (Number(payment.amount) !== newAmount || payment.dueDate.getTime() !== newDueDate.getTime()) {
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: { amount: newAmount, dueDate: newDueDate },
+      });
+      updated++;
+    }
+  }
+
+  if (updated > 0) {
+    await recordAudit({
+      entityType: "Payment",
+      entityId: studentId,
+      action: "UPDATE",
+      actor,
+      changes: { resyncedCount: updated },
+    });
+  }
+
+  revalidatePath("/admin/financial");
+  revalidatePath("/admin/financial/receita");
+  revalidatePath(`/admin/students/${studentId}`);
+  revalidatePath(`/coordinator/students/${studentId}`);
+
+  return updated;
+}
+
 export async function generateMonthlyPayments(referenceMonth: Date) {
   const actor = await requireRole("ADMIN");
   const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
