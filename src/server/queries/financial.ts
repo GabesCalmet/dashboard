@@ -232,7 +232,7 @@ export async function getBankBalances(asOf?: Date) {
     // whenever someone happened to click the status dropdown.
     prisma.payment.findMany({
       where: { status: "PAID", dueDate: { lte: now } },
-      include: { student: { include: { user: true, groupMembers: { include: { user: true } } } } },
+      include: { student: { include: { user: true } } },
     }),
     prisma.expense.findMany(),
     prisma.payout.findMany({
@@ -251,8 +251,15 @@ export async function getBankBalances(asOf?: Date) {
     const amount = Number(p.amount);
     received[account] += amount;
     receivedItems[account].push({
+      // payerName itself is always the right label here — a group
+      // member's own share names them directly, and a third-party payer
+      // (e.g. "IRCE") isn't a group member and must show as themselves,
+      // not fall back to the student's name (resolveSlotStudentName is
+      // for a different context: an admin-wide student/aluno listing,
+      // where a bare payerName needs to be mapped back to the actual
+      // person it belongs to).
       id: p.id,
-      label: resolveSlotStudentName(p.payerName, p.student),
+      label: p.payerName ?? p.student.user.name,
       amount,
       date: p.dueDate.toISOString(),
     });
