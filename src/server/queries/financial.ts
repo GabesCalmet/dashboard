@@ -6,6 +6,7 @@ import {
   withBillingGroupMembers,
   resolveSlotStudentName,
   isSlotBillableForMonth,
+  resolveBillingStart,
 } from "@/server/billing";
 import { getTeacherPayrollForMonth, getTeacherFeriasForYear } from "@/server/queries/teachers";
 import { getPaidTeacherPayrollTotal, getPartnerPayoutAmount } from "@/server/queries/payouts";
@@ -53,9 +54,9 @@ export async function getFinancialOverview(year?: number, month?: number) {
   // dueDay within that month. A real Payment row (if one somehow exists)
   // is never hidden, only the synthesized placeholder is skipped.
   const rows = activeStudents
-    .filter((s) => (s.billingStartDate ?? s.startDate) <= monthEnd || studentIdsWithPayment.has(s.id))
+    .filter((s) => resolveBillingStart(s) <= monthEnd || studentIdsWithPayment.has(s.id))
     .flatMap((s) => {
-      const billingStart = s.billingStartDate ?? s.startDate;
+      const billingStart = resolveBillingStart(s);
       return getBillingSlots(withBillingGroupMembers(s), monthStart)
         .filter(
           (slot) =>
@@ -331,9 +332,11 @@ export async function getPartnerSplitForMonth(year: number, month: number) {
         where: { status: "ACTIVE" },
         select: {
           monthlyValue: true,
+          monthlyValueHistory: true,
           thirdPartyAmount: true,
           startDate: true,
           billingStartDate: true,
+          dueDayHistory: true,
           groupMembers: { select: { monthlyValue: true } },
         },
       }),
@@ -348,7 +351,7 @@ export async function getPartnerSplitForMonth(year: number, month: number) {
   // otherwise a currently-active student would inflate the Parceiros
   // split's previsto for a month before they'd even enrolled.
   const revenuePrevisto = activeStudentsForRevenue
-    .filter((s) => (s.billingStartDate ?? s.startDate) <= monthEnd)
+    .filter((s) => resolveBillingStart(s) <= monthEnd)
     .reduce(
       (sum, s) =>
         sum +
@@ -405,9 +408,11 @@ export async function getFinancialSummary(year?: number, month?: number) {
       where: { status: "ACTIVE" },
       select: {
         monthlyValue: true,
+        monthlyValueHistory: true,
         thirdPartyAmount: true,
         startDate: true,
         billingStartDate: true,
+        dueDayHistory: true,
         groupMembers: { select: { monthlyValue: true } },
       },
     }),
@@ -432,7 +437,7 @@ export async function getFinancialSummary(year?: number, month?: number) {
   // otherwise a currently-active student's current monthlyValue would
   // wrongly inflate "previsto" for a month before they even enrolled.
   const revenuePrevisto = activeStudentsForRevenue
-    .filter((s) => (s.billingStartDate ?? s.startDate) <= monthEnd)
+    .filter((s) => resolveBillingStart(s) <= monthEnd)
     .reduce(
       (sum, s) =>
         sum +
@@ -530,7 +535,7 @@ export async function getStudentPaymentHistory(studentId: string) {
   );
 
   const now = new Date();
-  const billingStart = student.billingStartDate ?? student.startDate;
+  const billingStart = resolveBillingStart(student);
   const cursor = new Date(billingStart.getFullYear(), billingStart.getMonth(), 1);
   const end = new Date(now.getFullYear() + 1, 11, 1);
 

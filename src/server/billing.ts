@@ -229,6 +229,36 @@ export function dueDateFor(monthStart: Date, day: number) {
   return new Date(monthStart.getFullYear(), monthStart.getMonth(), Math.min(day, daysInMonth));
 }
 
+// billingStartDate/startDate is only the FALLBACK floor — the same
+// convention as a lessonSchedule entry's own "from" overriding the lesson
+// generator's anchor. If monthlyValueHistory or dueDayHistory carries an
+// entry explicitly dated earlier (a deliberately backdated price/due-day
+// record), that earlier date is honored instead, so billing actually
+// follows whatever's recorded in the cadastro rather than silently
+// clamping it to whichever date happens to be in billingStartDate.
+export function earliestHistoryFrom(...histories: unknown[]): Date | null {
+  let earliest: Date | null = null;
+  for (const history of histories) {
+    for (const e of parseValueHistory(history)) {
+      if (!e.from) continue;
+      const from = new Date(e.from);
+      if (!earliest || from < earliest) earliest = from;
+    }
+  }
+  return earliest;
+}
+
+export function resolveBillingStart(student: {
+  billingStartDate: Date | null;
+  startDate: Date;
+  monthlyValueHistory: unknown;
+  dueDayHistory: unknown;
+}): Date {
+  const floor = student.billingStartDate ?? student.startDate;
+  const earliestFrom = earliestHistoryFrom(student.monthlyValueHistory, student.dueDayHistory);
+  return earliestFrom && earliestFrom < floor ? earliestFrom : floor;
+}
+
 // A slot's charge for a given month is only real once its actual due date
 // falls on/after the student became billable — checking billingStart
 // against the whole MONTH (as every caller here used to) treats the entire
@@ -266,8 +296,8 @@ export async function createMissingPaymentsForMonth(referenceMonth: Date) {
 
   let created = 0;
   for (const student of students) {
-    const billingStart = student.billingStartDate ?? student.startDate;
-    // Fast skip — the whole month is still ahead of billingStartDate, so no
+    const billingStart = resolveBillingStart(student);
+    // Fast skip — the whole month is still ahead of billingStart, so no
     // slot in it could possibly be billable yet.
     if (billingStart > monthEnd) continue;
     for (const slot of getBillingSlots(withBillingGroupMembers(student), monthStart)) {

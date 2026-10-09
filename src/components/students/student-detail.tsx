@@ -14,7 +14,7 @@ import {
   UserX,
   XCircle,
 } from "lucide-react";
-import { resolveHistoricalAmount, dueDateFor } from "@/server/billing";
+import { resolveHistoricalAmount, dueDateFor, earliestHistoryFrom } from "@/server/billing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -124,7 +124,18 @@ export function StudentDetailView({
   // Honors lessonsPerMonthHistory/dueDayHistory if either ever changed
   // mid-course. Shown next to the tabs, outside any single TabsContent, so
   // it's visible no matter which tab is selected.
-  const billingStart = student.billingStartDate ?? student.startDate;
+  // billingStartDate/startDate is only the fallback floor — an explicit
+  // earlier "from" on lessonsPerMonthHistory/dueDayHistory (a deliberately
+  // backdated record) is honored instead, same convention as billing.
+  const billingStartFloor = student.billingStartDate ?? student.startDate;
+  const billingStartEarliestFrom = earliestHistoryFrom(
+    student.lessonsPerMonthHistory,
+    student.dueDayHistory
+  );
+  const billingStart =
+    billingStartEarliestFrom && billingStartEarliestFrom < billingStartFloor
+      ? billingStartEarliestFrom
+      : billingStartFloor;
   const cycleCutoff = endOfMonth(refMonthDate);
   let totalContractedLessons = 0;
   let cycleStart = billingStart;
