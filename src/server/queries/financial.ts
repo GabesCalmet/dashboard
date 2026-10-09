@@ -217,8 +217,12 @@ export async function getBankBalances(asOf?: Date) {
   const now = asOf && asOf < nowReal ? asOf : nowReal;
 
   const [paidPayments, expenses, payouts, manualIncomes] = await Promise.all([
+    // Counted as of its dueDate, not paidAt — a payment that was really
+    // for (say) January but only got marked PAID in the system months
+    // later should still show up as January's money, not get pushed to
+    // whenever someone happened to click the status dropdown.
     prisma.payment.findMany({
-      where: { status: "PAID", paidAt: { lte: now } },
+      where: { status: "PAID", dueDate: { lte: now } },
       include: { student: { include: { user: true, groupMembers: { include: { user: true } } } } },
     }),
     prisma.expense.findMany(),
@@ -241,7 +245,7 @@ export async function getBankBalances(asOf?: Date) {
       id: p.id,
       label: resolveSlotStudentName(p.payerName, p.student),
       amount,
-      date: (p.paidAt ?? p.dueDate).toISOString(),
+      date: p.dueDate.toISOString(),
     });
   }
   for (const i of manualIncomes) {
