@@ -162,21 +162,23 @@ export async function resyncStudentPayments(studentId: string) {
   const now = new Date();
   const billingStart = resolveBillingStart(student);
   let created = 0;
-  // Only an ACTIVE student gets new rows auto-created — same gate
-  // createMissingPaymentsForMonth already applies for the cron/monthly
-  // generation. A paused/canceled student's cadastro still carries
-  // whatever dueDay/bankAccount/monthlyValue was last set, which — with
-  // nothing after it marking an end — would otherwise look like "still
-  // billable today" and resurrect months well past when they actually
-  // stopped, instead of just leaving existing rows alone to be fixed (or a
-  // specific past month backfilled by hand via the Cobranças table).
-  if (student.status === "ACTIVE" && billingStart <= now) {
+  // A canceled/paused student only gets new rows auto-created when their
+  // endDate is set — the authoritative "billing stopped here" signal,
+  // independent of status, which also caps isSlotBillableForMonth below.
+  // Without one there's no safe upper bound: a paused/canceled student's
+  // cadastro still carries whatever dueDay/bankAccount/monthlyValue was
+  // last set, which — with nothing after it marking an end — would
+  // otherwise look like "still billable today" and resurrect months well
+  // past when they actually stopped (see the Luciana GRU-97 fix this
+  // guards). An ACTIVE student is always eligible regardless.
+  const canBackfill = student.status === "ACTIVE" || student.endDate !== null;
+  if (canBackfill && billingStart <= now) {
     const cursor = new Date(billingStart.getFullYear(), billingStart.getMonth(), 1);
     const lastMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     while (cursor <= lastMonth) {
       const monthStart = new Date(cursor);
       for (const slot of getBillingSlots(billingStudent, monthStart)) {
-        if (!isSlotBillableForMonth(billingStart, monthStart, slot.dueDay)) continue;
+        if (!isSlotBillableForMonth(billingStart, monthStart, slot.dueDay, student.endDate)) continue;
         const key = `${monthStart.getTime()}:${slot.payerName ?? ""}`;
         if (existingKeys.has(key)) continue;
         const dueDate = dueDateFor(monthStart, slot.dueDay);

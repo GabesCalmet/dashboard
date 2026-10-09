@@ -61,7 +61,7 @@ export async function getFinancialOverview(year?: number, month?: number) {
         .filter(
           (slot) =>
             paymentBySlot.has(`${s.id}::${slot.payerName ?? ""}`) ||
-            isSlotBillableForMonth(billingStart, monthStart, slot.dueDay)
+            isSlotBillableForMonth(billingStart, monthStart, slot.dueDay, s.endDate)
         )
         .map((slot) => {
           const payment = paymentBySlot.get(`${s.id}::${slot.payerName ?? ""}`);
@@ -527,9 +527,17 @@ export async function getFinancialSummary(year?: number, month?: number) {
 // generated yet, so the tab doesn't only show whichever months an admin
 // happened to click "Gerar cobranças" for. Billing starts from
 // billingStartDate when set — independent of startDate, since classes and
-// billing don't have to start the same month. Placeholders stop once the
-// student isn't ACTIVE (nothing new is expected), but real past rows for a
-// since-paused/canceled student are always included regardless.
+// billing don't have to start the same month. Placeholders are capped at
+// the student's endDate when one's set — that's the authoritative "this is
+// when billing stopped" signal, independent of status, so a since-
+// paused/canceled student with a real endDate still gets a correct
+// placeholder for any month still inside it (e.g. a backdated cadastro
+// edit adding an earlier month that was missed, same as an ACTIVE
+// student). Only without any endDate at all does a non-ACTIVE student fall
+// back to showing real rows only — there's no safe signal for how far to
+// generate without one, same reasoning as resyncStudentPayments' backfill.
+// Real past rows for a since-paused/canceled student are always included
+// regardless.
 export async function getStudentPaymentHistory(studentId: string) {
   const student = await prisma.studentProfile.findUniqueOrThrow({
     where: { id: studentId },
@@ -574,7 +582,10 @@ export async function getStudentPaymentHistory(studentId: string) {
           status: real.status,
           bankAccount: slot.bankAccount,
         });
-      } else if (student.status === "ACTIVE" && isSlotBillableForMonth(billingStart, cursor, slot.dueDay)) {
+      } else if (
+        (student.status === "ACTIVE" || student.endDate) &&
+        isSlotBillableForMonth(billingStart, cursor, slot.dueDay, student.endDate)
+      ) {
         const dueDate = new Date(cursor.getFullYear(), cursor.getMonth(), Math.min(slot.dueDay, daysInMonth));
         rows.push({
           id: null,

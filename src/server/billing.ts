@@ -296,8 +296,21 @@ export function resolveBillingStart(student: {
 // resolved due date instead means a student who starts partway through a
 // month with an early dueDay correctly gets billed starting the following
 // month, not a nonsensical charge due before they existed.
-export function isSlotBillableForMonth(billingStart: Date, monthStart: Date, dueDay: number): boolean {
-  return dueDateFor(monthStart, dueDay) >= billingStart;
+// billableThrough (typically a student's endDate) caps the other end —
+// once enrollment had a real, known end, nothing due after it should ever
+// be auto-generated (a placeholder, a resync backfill, the monthly cron),
+// no matter what dueDay/bankAccount/monthlyValue still read as once their
+// own vigência history runs out and falls back to "whatever's current."
+export function isSlotBillableForMonth(
+  billingStart: Date,
+  monthStart: Date,
+  dueDay: number,
+  billableThrough: Date | null = null
+): boolean {
+  const dueDate = dueDateFor(monthStart, dueDay);
+  if (dueDate < billingStart) return false;
+  if (billableThrough && dueDate > billableThrough) return false;
+  return true;
 }
 
 // Creates any still-missing Payment row for the given month across every
@@ -331,7 +344,7 @@ export async function createMissingPaymentsForMonth(referenceMonth: Date) {
       // The real check — this slot's own resolved due date must actually
       // fall on/after billingStartDate, not just somewhere in the same
       // month (see isSlotBillableForMonth).
-      if (!isSlotBillableForMonth(billingStart, monthStart, slot.dueDay)) continue;
+      if (!isSlotBillableForMonth(billingStart, monthStart, slot.dueDay, student.endDate)) continue;
       const existing = await prisma.payment.findFirst({
         where: { studentId: student.id, referenceMonth: monthStart, payerName: slot.payerName },
       });
