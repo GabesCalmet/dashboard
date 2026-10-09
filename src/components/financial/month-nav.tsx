@@ -1,6 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { monthParam } from "@/lib/month-param";
 
 export function MonthNav({
@@ -12,6 +16,7 @@ export function MonthNav({
   year: number;
   month: number;
 }) {
+  const router = useRouter();
   const prev = new Date(year, month - 1, 1);
   const next = new Date(year, month + 1, 1);
   const label = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(
@@ -19,7 +24,7 @@ export function MonthNav({
   );
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <Button variant="outline" size="icon" asChild>
         <Link href={`${basePath}?month=${monthParam(prev.getFullYear(), prev.getMonth())}`}>
           <ChevronLeft className="size-4" />
@@ -31,6 +36,16 @@ export function MonthNav({
           <ChevronRight className="size-4" />
         </Link>
       </Button>
+      {/* Jumps straight to any month instead of clicking through one at a
+          time — same "pick a month" convenience the Histórico de aulas
+          table already has. */}
+      <Input
+        type="month"
+        value={monthParam(year, month)}
+        onChange={(e) => e.target.value && router.push(`${basePath}?month=${e.target.value}`)}
+        className="w-40"
+        aria-label="Ir para o mês"
+      />
     </div>
   );
 }
