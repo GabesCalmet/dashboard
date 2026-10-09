@@ -162,7 +162,15 @@ export async function resyncStudentPayments(studentId: string) {
   const now = new Date();
   const billingStart = resolveBillingStart(student);
   let created = 0;
-  if (billingStart <= now) {
+  // Only an ACTIVE student gets new rows auto-created — same gate
+  // createMissingPaymentsForMonth already applies for the cron/monthly
+  // generation. A paused/canceled student's cadastro still carries
+  // whatever dueDay/bankAccount/monthlyValue was last set, which — with
+  // nothing after it marking an end — would otherwise look like "still
+  // billable today" and resurrect months well past when they actually
+  // stopped, instead of just leaving existing rows alone to be fixed (or a
+  // specific past month backfilled by hand via the Cobranças table).
+  if (student.status === "ACTIVE" && billingStart <= now) {
     const cursor = new Date(billingStart.getFullYear(), billingStart.getMonth(), 1);
     const lastMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     while (cursor <= lastMonth) {
