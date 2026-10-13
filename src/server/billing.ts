@@ -17,6 +17,35 @@ export type BillingSlot = {
 
 export type ValueHistoryEntry = { amount: number; from?: string; until?: string };
 
+// Picks the best entry among those whose own [from, until] window overlaps
+// a given period — "best" meaning whichever has the latest "from", not
+// just the first one found in array order. Two vigência windows can
+// genuinely overlap each other (e.g. an older open-ended entry whose
+// "until" still falls inside the month a newer, more specific entry also
+// covers) — picking "first in the array" then depends on insertion order
+// rather than which entry was actually meant to be in effect, which is
+// always whichever was declared more recently (the later "from"). Used by
+// every history resolver below (amount, bank account, teacher) so a
+// deliberately overlapping correction (e.g. "just this one week, a
+// different price") reliably wins over the entry it's overlapping instead
+// of silently losing to it — see the Flavia VIP-233 bug this was built for.
+export function pickLatestOverlap<T extends { from?: string; until?: string }>(
+  entries: T[],
+  overlaps: (entry: T) => boolean
+): T | undefined {
+  let best: T | undefined;
+  let bestFromMs = -Infinity;
+  for (const entry of entries) {
+    if (!overlaps(entry)) continue;
+    const fromMs = entry.from ? new Date(entry.from).getTime() : -Infinity;
+    if (!best || fromMs > bestFromMs) {
+      best = entry;
+      bestFromMs = fromMs;
+    }
+  }
+  return best;
+}
+
 // Adapts a fetched StudentProfile (with its groupMembers relation included,
 // via `groupMembers: { include: { user: true } }`) into the shape
 // getBillingSlots expects — every call site needs this same reshape, so
@@ -114,7 +143,7 @@ export function resolveHistoricalAmount(
 
   const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
   const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
-  const match = entries.find((e) => {
+  const match = pickLatestOverlap(entries, (e) => {
     const from = e.from ? new Date(e.from) : null;
     const until = e.until ? new Date(e.until) : null;
     if (from && from > monthEnd) return false;
@@ -174,7 +203,7 @@ export function resolveHistoricalBankAccount(
 
   const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
   const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
-  const match = entries.find((e) => {
+  const match = pickLatestOverlap(entries, (e) => {
     const from = e.from ? new Date(e.from) : null;
     const until = e.until ? new Date(e.until) : null;
     if (from && from > monthEnd) return false;

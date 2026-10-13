@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { BRAZIL_UTC_OFFSET_MS, endOfBrazilDay, toBrazilDateString } from "@/lib/timezone";
+import { pickLatestOverlap } from "@/server/billing";
 
 const HORIZON_WEEKS = 12;
 
@@ -62,7 +63,7 @@ function parseSelectHistory(value: unknown): SelectHistoryEntry[] {
 // no history entry covers.
 function resolveTeacherId(defaultTeacherId: string, history: SelectHistoryEntry[], date: Date) {
   if (history.length === 0) return defaultTeacherId;
-  const match = history.find((e) => {
+  const match = pickLatestOverlap(history, (e) => {
     const from = e.from ? new Date(e.from) : null;
     const until = e.until ? endOfBrazilDay(new Date(e.until)) : null;
     if (from && date < from) return false;

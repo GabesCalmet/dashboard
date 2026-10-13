@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
-import { resolveHistoricalAmount } from "@/server/billing";
+import { resolveHistoricalAmount, pickLatestOverlap } from "@/server/billing";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
 import type { TeacherPayMode, LessonStatus } from "@prisma/client";
 
@@ -86,7 +86,7 @@ function resolveTeacherAssignment(
   }
 
   const entries = parseTeacherHistory(student.teacherHistory);
-  const match = entries.find((e) => {
+  const match = pickLatestOverlap(entries, (e) => {
     if (e.id !== teacherId) return false;
     const from = e.from ? new Date(e.from) : null;
     const until = e.until ? new Date(e.until) : null;
