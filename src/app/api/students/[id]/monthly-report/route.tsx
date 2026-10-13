@@ -123,7 +123,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   const aulasContratadas = resolveHistoricalAmount(
     student.lessonsPerMonth,
     student.lessonsPerMonthHistory,
-    periodStart
+    periodStart,
+    { zeroOnGap: true }
   );
   const aulasExtras = Math.max(0, regularLessons.length - aulasContratadas);
   const aulasReagendadas = makeupLessons.length;

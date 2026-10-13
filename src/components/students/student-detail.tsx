@@ -146,7 +146,8 @@ export function StudentDetailView({
     totalContractedLessons += resolveHistoricalAmount(
       student.lessonsPerMonth,
       student.lessonsPerMonthHistory,
-      cycleMonthCursor
+      cycleMonthCursor,
+      { zeroOnGap: true }
     );
     cycleStart = dueDateFor(nextMonthCursor, nextDueDay);
     cycleMonthCursor = nextMonthCursor;

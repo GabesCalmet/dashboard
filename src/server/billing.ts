@@ -86,19 +86,23 @@ function parseValueHistory(value: unknown): ValueHistoryEntry[] {
 // when some entry's own "from" starts later (meaning this month is either
 // before the earliest entry, or sitting in a real gap between two bounded
 // windows): true resolves it to 0, false falls back to the current flat
-// value same as any other uncovered month. Only pass true for an amount
-// that's actually allowed to mean "don't charge this month" — monthlyValue
-// (own/member/teacher-revenue) — where a real price-undefined gap must not
+// value same as any other uncovered month. Only pass true for a field that
+// can genuinely mean "doesn't apply this month" — monthlyValue
+// (own/member/teacher-revenue), where a real price-undefined gap must not
 // silently inherit today's price (see the Moises VIP-172 phantom-charge
-// bug this was built for). Every other field resolved this way — dueDay,
-// lessonsPerMonth, hourlyRate — has no such "doesn't apply" state: a day
-// of the month or a lessons count or a pay rate of 0 is never correct, it's
-// just broken (e.g. dueDay 0 resolves to the last day of the PREVIOUS
-// month, which can push a slot's due date before billingStart and make an
-// otherwise-billable month wrongly skipped entirely — the bug that hit
-// Andréa VIP-155 once a leftover dueDayHistory entry, dated after her real
-// billing start but with the same value as current, acted as if due day
-// itself hadn't been declared yet for that month).
+// bug this was built for), and lessonsPerMonth, where a real contract-
+// undefined gap (e.g. a paused student with a declared Jan–Feb window and
+// a separate declared Oct-onward window, nothing in between) must not
+// silently inherit today's class count either (see the Matheus VIP-162
+// "Total de aulas contratadas" bug this covers). dueDay and hourlyRate
+// have no such "doesn't apply" state — a day of the month or a pay rate of
+// 0 is never correct, it's just broken (e.g. dueDay 0 resolves to the last
+// day of the PREVIOUS month, which can push a slot's due date before
+// billingStart and make an otherwise-billable month wrongly skipped
+// entirely — the bug that hit Andréa VIP-155 once a leftover dueDayHistory
+// entry, dated after her real billing start but with the same value as
+// current, acted as if due day itself hadn't been declared yet for that
+// month).
 export function resolveHistoricalAmount(
   current: unknown,
   history: unknown,

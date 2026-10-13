@@ -199,7 +199,9 @@ function equivalentHourlyRate(
   lessonSchedule: unknown,
   referenceMonth: Date
 ): number {
-  const contractedLessons = resolveHistoricalAmount(lessonsPerMonth, lessonsPerMonthHistory, referenceMonth);
+  const contractedLessons = resolveHistoricalAmount(lessonsPerMonth, lessonsPerMonthHistory, referenceMonth, {
+    zeroOnGap: true,
+  });
   const hoursPerMonth = avgClassDurationHours(lessonSchedule) * contractedLessons;
   return hoursPerMonth > 0 ? monthlyAmount / hoursPerMonth : 0;
 }
