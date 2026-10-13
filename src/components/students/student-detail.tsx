@@ -415,7 +415,15 @@ export function StudentDetailView({
                   />
                   <InfoRow label="Vencimento do boleto" value={`Dia ${student.dueDay}`} />
                   <InfoRow label="Conta bancária" value={bankAccountLabel[student.bankAccount]} />
-                  <InfoRow label="Professor atual" value={student.teacher?.user.name ?? "—"} />
+                  <InfoRow
+                    label="Professor atual"
+                    value={formatCurrentTeacher(
+                      student.teacher?.user.name ?? null,
+                      parseTeacherHistory(student.teacherHistory),
+                      student.teacherId,
+                      student.startDate
+                    )}
+                  />
                   <InfoRow
                     label="Professor(es) no passado"
                     value={formatPastTeachers(
@@ -607,6 +615,24 @@ function parseLessonSchedule(value: unknown): ScheduleEntry[] {
       until: typeof e.until === "string" && e.until ? e.until : undefined,
     }))
     .sort((a, b) => a.weekday - b.weekday);
+}
+
+// The current teacher's own "desde" date: whichever teacherHistory entry
+// is both this teacher's id and still open-ended (no until — a past stint
+// with this same teacher, before a later swap and swap-back, shouldn't be
+// mistaken for the current one) wins; with no such entry at all (the
+// teacher's never changed, so nothing's ever been logged), falls back to
+// the student's own startDate — they've had this teacher since day one.
+function formatCurrentTeacher(
+  name: string | null,
+  history: TeacherHistoryEntry[],
+  currentTeacherId: string | null,
+  startDate: Date
+) {
+  if (!name) return "—";
+  const current = history.find((e) => e.id === currentTeacherId && !e.until);
+  const since = current?.from ? formatDate(current.from) : formatDate(startDate);
+  return `${name} (desde ${since})`;
 }
 
 // Every teacherHistory entry whose id isn't the student's current teacher —
