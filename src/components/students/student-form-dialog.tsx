@@ -200,8 +200,18 @@ export function StudentFormDialog({
 
             {isEdit ? (
               <div className="space-y-1.5 sm:col-span-2">
-                <Label>Nome de usuário (login)</Label>
-                <Input value={student?.username ?? ""} disabled readOnly />
+                <Label htmlFor="username">Nome de usuário (login)</Label>
+                <Input
+                  id="username"
+                  name="username"
+                  defaultValue={student?.username ?? ""}
+                  placeholder="ex: joao.silva"
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  O aluno passa a entrar com o novo nome de usuário a partir de agora — a senha não
+                  muda.
+                </p>
               </div>
             ) : (
               <>

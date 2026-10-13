@@ -5,7 +5,11 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole, requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { provisionUsernameAccount, hardDeleteUserAccount } from "@/server/accounts";
+import {
+  provisionUsernameAccount,
+  hardDeleteUserAccount,
+  setUsernameAccountUsername,
+} from "@/server/accounts";
 import { recordAudit } from "@/server/audit";
 import {
   studentFormSchema,
@@ -136,7 +140,7 @@ export async function updateStudent(
 ): Promise<ActionState> {
   const actor = await requireRole("ADMIN", "COORDINATOR");
   const raw = Object.fromEntries(formData.entries());
-  const parsed = studentFormSchema.omit({ username: true, password: true }).safeParse(raw);
+  const parsed = studentFormSchema.omit({ password: true }).safeParse(raw);
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
@@ -147,6 +151,17 @@ export async function updateStudent(
     where: { id: studentId },
     include: { user: true, groupMembers: true },
   });
+
+  // Renaming the login moves the Supabase Auth identity too (see
+  // setUsernameAccountUsername) — done up front, before anything else
+  // changes, so a taken username fails clean with nothing else touched yet.
+  if (data.username !== before.user.username) {
+    try {
+      await setUsernameAccountUsername(before.userId, data.username);
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Erro ao alterar nome de usuário." };
+    }
+  }
 
   // Only ever touch a member's own login if they actually belong to this
   // student's group — data.groupMemberUpdates carries userIds from the
@@ -257,7 +272,10 @@ export async function updateStudent(
     entityId: studentId,
     action: "UPDATE",
     actor,
-    changes: { before: { status: before.status, level: before.level }, after: { status: data.status, level: data.level } },
+    changes: {
+      before: { status: before.status, level: before.level, username: before.user.username },
+      after: { status: data.status, level: data.level, username: data.username },
+    },
   });
 
   await syncRecurringLessons(studentId);

@@ -109,6 +109,27 @@ export async function provisionUsernameAccount(params: {
   }
 }
 
+// Renames an existing username-login account. The Supabase Auth identity's
+// synthetic email (what it actually signs in against — see
+// usernameToSyntheticEmail) and the mirrored Prisma User row must move
+// together: the login form always re-derives the synthetic email from
+// whatever's currently in Postgres (see loginAction), so a Postgres-only
+// rename would leave the admin typing the new username while Supabase Auth
+// still only recognizes the old one, locking the student out.
+export async function setUsernameAccountUsername(userId: string, newUsername: string) {
+  const existing = await prisma.user.findUnique({ where: { username: newUsername } });
+  if (existing && existing.id !== userId) {
+    throw new Error("Este nome de usuário já está em uso. Escolha outro.");
+  }
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    email: usernameToSyntheticEmail(newUsername),
+    email_confirm: true,
+  });
+  if (error) throw new Error(error.message);
+  await prisma.user.update({ where: { id: userId }, data: { username: newUsername } });
+}
+
 // Sets a new admin-chosen password for an existing username-login account.
 export async function setUsernameAccountPassword(userId: string, newPassword: string) {
   const admin = createAdminClient();

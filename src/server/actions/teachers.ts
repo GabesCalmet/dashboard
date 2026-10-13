@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { provisionUsernameAccount, hardDeleteUserAccount } from "@/server/accounts";
+import {
+  provisionUsernameAccount,
+  hardDeleteUserAccount,
+  setUsernameAccountUsername,
+} from "@/server/accounts";
 import { recordAudit } from "@/server/audit";
 import { teacherFormSchema, blockedSlotsSchema, blockedSlotDetailSchema } from "@/lib/validation/teacher";
 import type { ActionState } from "@/server/actions/students";
@@ -80,13 +84,27 @@ export async function updateTeacher(
 ): Promise<ActionState> {
   const actor = await requireRole("ADMIN");
   const raw = Object.fromEntries(formData.entries());
-  const parsed = teacherFormSchema.omit({ username: true, password: true }).safeParse(raw);
+  const parsed = teacherFormSchema.omit({ password: true }).safeParse(raw);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
   const data = parsed.data;
 
-  const teacher = await prisma.teacherProfile.findUniqueOrThrow({ where: { id: teacherId } });
+  const teacher = await prisma.teacherProfile.findUniqueOrThrow({
+    where: { id: teacherId },
+    include: { user: true },
+  });
+
+  // Renaming the login moves the Supabase Auth identity too (see
+  // setUsernameAccountUsername) — done up front, before anything else
+  // changes, so a taken username fails clean with nothing else touched yet.
+  if (data.username !== teacher.user.username) {
+    try {
+      await setUsernameAccountUsername(teacher.userId, data.username);
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Erro ao alterar nome de usuário." };
+    }
+  }
 
   await prisma.$transaction([
     prisma.user.update({
