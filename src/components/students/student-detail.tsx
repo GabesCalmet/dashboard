@@ -415,6 +415,15 @@ export function StudentDetailView({
                   />
                   <InfoRow label="Vencimento do boleto" value={`Dia ${student.dueDay}`} />
                   <InfoRow label="Conta bancária" value={bankAccountLabel[student.bankAccount]} />
+                  <InfoRow label="Professor atual" value={student.teacher?.user.name ?? "—"} />
+                  <InfoRow
+                    label="Professor(es) no passado"
+                    value={formatPastTeachers(
+                      parseTeacherHistory(student.teacherHistory),
+                      editOptions?.teachers ?? [],
+                      student.teacherId
+                    )}
+                  />
                   <InfoRow label="Telefone" value={student.user.phone ?? "—"} />
                   <InfoRow label="Email" value={student.user.email ?? "—"} />
                   <InfoRow label="Link do Meet" value={student.meetLink ?? "—"} />
@@ -598,6 +607,35 @@ function parseLessonSchedule(value: unknown): ScheduleEntry[] {
       until: typeof e.until === "string" && e.until ? e.until : undefined,
     }))
     .sort((a, b) => a.weekday - b.weekday);
+}
+
+// Every teacherHistory entry whose id isn't the student's current teacher —
+// each past assignment is real history (e.g. who taught before the current
+// teacher took over), shown with whatever vigência it ran, name resolved
+// against the full teachers list (editOptions, already fetched for the
+// cadastro edit dialog) since a history entry only stores the teacherId.
+function formatPastTeachers(
+  history: TeacherHistoryEntry[],
+  teachers: { id: string; label: string }[],
+  currentTeacherId: string | null
+) {
+  const nameById = new Map(teachers.map((t) => [t.id, t.label]));
+  const past = history.filter((e) => e.id !== currentTeacherId);
+  if (past.length === 0) return "—";
+  return past
+    .map((e) => {
+      const name = nameById.get(e.id) ?? "Professor removido";
+      const range =
+        e.from && e.until
+          ? `${formatDate(e.from)} – ${formatDate(e.until)}`
+          : e.until
+            ? `até ${formatDate(e.until)}`
+            : e.from
+              ? `desde ${formatDate(e.from)}`
+              : null;
+      return range ? `${name} (${range})` : name;
+    })
+    .join(", ");
 }
 
 function isScheduleEntryCurrentlyActive(e: { from?: string; until?: string }, today: string): boolean {
