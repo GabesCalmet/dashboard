@@ -25,8 +25,8 @@ function toIsoDate(date: Date) {
 // A small pencil button that opens a dialog for directly setting this one
 // month's valor/vencimento — a one-time exception (see setPaymentOverride)
 // that never touches the cadastro and never affects any other month. The
-// note is required so a number that no longer matches the cadastro stays
-// explained. Rendered twice (once by the Valor cell, once by Vencimento)
+// note is optional, left blank when there's nothing worth writing down.
+// Rendered twice (once by the Valor cell, once by Vencimento)
 // so both are reachable inline, but both open the exact same dialog.
 export function PaymentOverrideButton({
   studentId,
@@ -93,13 +93,12 @@ export function PaymentOverrideButton({
           </div>
 
           <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="note">Motivo do ajuste</Label>
+            <Label htmlFor="note">Motivo do ajuste (opcional)</Label>
             <Textarea
               id="note"
               name="note"
               placeholder="ex.: desconto combinado só este mês, vencimento adiado por feriado..."
               defaultValue={manualOverride ? (manualOverrideNote ?? "") : ""}
-              required
             />
           </div>
 

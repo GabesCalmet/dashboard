@@ -99,9 +99,8 @@ export async function setCobrancaStatus(
 // month's row, since each month is already its own independent Payment
 // row. Marks the row manualOverride so resyncStudentPayments leaves it
 // alone from here on instead of silently recomputing it back to whatever
-// the cadastro would normally produce. The note is required — a number
-// that no longer matches the cadastro is otherwise unexplained the next
-// time anyone looks at it.
+// the cadastro would normally produce. The note is optional — left blank
+// when there's nothing worth writing down.
 export async function setPaymentOverride(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await requireRole("ADMIN", "COORDINATOR");
 
@@ -114,9 +113,6 @@ export async function setPaymentOverride(_prev: ActionState, formData: FormData)
 
   if (!studentId || !referenceMonthRaw || !amountRaw || !dueDateRaw) {
     return { error: "Preencha todos os campos." };
-  }
-  if (!note) {
-    return { error: "Descreva o motivo do ajuste." };
   }
   const amount = Number(amountRaw);
   if (!Number.isFinite(amount) || amount < 0) {
@@ -137,7 +133,7 @@ export async function setPaymentOverride(_prev: ActionState, formData: FormData)
   if (existing) {
     payment = await prisma.payment.update({
       where: { id: existing.id },
-      data: { amount, dueDate, manualOverride: true, manualOverrideNote: note },
+      data: { amount, dueDate, manualOverride: true, manualOverrideNote: note || null },
     });
   } else {
     payment = await prisma.payment.create({
@@ -149,7 +145,7 @@ export async function setPaymentOverride(_prev: ActionState, formData: FormData)
         payerName,
         status: dueDate < new Date() ? "LATE" : "PENDING",
         manualOverride: true,
-        manualOverrideNote: note,
+        manualOverrideNote: note || null,
       },
     });
   }
@@ -159,7 +155,7 @@ export async function setPaymentOverride(_prev: ActionState, formData: FormData)
     entityId: payment.id,
     action: "UPDATE",
     actor,
-    changes: { manualOverride: true, amount, dueDate: dueDate.toISOString(), note, payerName },
+    changes: { manualOverride: true, amount, dueDate: dueDate.toISOString(), note: note || null, payerName },
   });
 
   revalidatePath("/admin/financial");
