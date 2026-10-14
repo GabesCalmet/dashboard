@@ -215,17 +215,51 @@ export function expenseRealizedForMonth(
   }, 0);
 }
 
-// How much of a recurring/one-time expense has actually accrued by `now`
-// since it started — used for all-time balances, not just one month.
-function expenseTotalToDate(e: Expense, now: Date) {
+// Every confirmed-Pago occurrence of an expense up through `now`, one item
+// per month actually paid — replaces the old "the date already passed, so
+// assume it's accrued" approximation, which not only double-counted an
+// expense still sitting unconfirmed but also completely ignored any
+// per-month amount/bankAccount override (see setExpenseAmountOverride/
+// setExpenseBankAccountOverride): a bank balance must only reflect what's
+// actually left the account, the same way "Gastos reais" already does
+// (expenseRealizedForMonth) — this is that same rule, just itemized
+// across every month instead of summed for one.
+function expensePaidItemsToDate(
+  e: Expense,
+  paidOccurrencesByExpenseId: Map<
+    string,
+    { referenceMonth: Date; amountOverride: unknown; bankAccountOverride: BankAccount | null }[]
+  >,
+  now: Date
+): { amount: number; bankAccount: BankAccount; date: Date }[] {
+  const occurrences = paidOccurrencesByExpenseId.get(e.id) ?? [];
+  const items: { amount: number; bankAccount: BankAccount; date: Date }[] = [];
+
   if (e.frequency === "ONE_TIME") {
-    return e.date <= now ? Number(e.amount) : 0;
+    const monthStart = new Date(e.date.getFullYear(), e.date.getMonth(), 1);
+    const occ = occurrences.find((o) => o.referenceMonth.getTime() === monthStart.getTime());
+    if (occ && e.date <= now) {
+      items.push({
+        amount: occ.amountOverride != null ? Number(occ.amountOverride) : Number(e.amount),
+        bankAccount: occ.bankAccountOverride ?? e.bankAccount,
+        date: e.date,
+      });
+    }
+    return items;
   }
-  if (e.date > now) return 0;
-  const end = e.endDate && e.endDate < now ? e.endDate : now;
-  const months =
-    (end.getFullYear() - e.date.getFullYear()) * 12 + (end.getMonth() - e.date.getMonth()) + 1;
-  return Math.max(0, months) * Number(e.amount);
+
+  for (const occ of occurrences) {
+    const daysInMo = new Date(occ.referenceMonth.getFullYear(), occ.referenceMonth.getMonth() + 1, 0).getDate();
+    const day = Math.min(e.dayOfMonth ?? 1, daysInMo);
+    const effectiveDate = new Date(occ.referenceMonth.getFullYear(), occ.referenceMonth.getMonth(), day);
+    if (effectiveDate > now) continue;
+    items.push({
+      amount: occ.amountOverride != null ? Number(occ.amountOverride) : Number(e.amount),
+      bankAccount: occ.bankAccountOverride ?? e.bankAccount,
+      date: effectiveDate,
+    });
+  }
+  return items;
 }
 
 export type BankLedgerItem = {
@@ -252,7 +286,7 @@ export async function getBankBalances(asOf?: Date) {
   // (the current, still-ongoing month) the balance is as of right now.
   const now = asOf && asOf < nowReal ? asOf : nowReal;
 
-  const [paidPayments, expenses, payouts, manualIncomes] = await Promise.all([
+  const [paidPayments, expenses, paidExpenseOccurrences, payouts, manualIncomes] = await Promise.all([
     // Counted as of its dueDate, not paidAt — a payment that was really
     // for (say) January but only got marked PAID in the system months
     // later should still show up as January's money, not get pushed to
@@ -262,12 +296,23 @@ export async function getBankBalances(asOf?: Date) {
       include: { student: { include: { user: true } } },
     }),
     prisma.expense.findMany(),
+    prisma.expenseOccurrence.findMany({
+      where: { status: "PAID" },
+      select: { expenseId: true, referenceMonth: true, amountOverride: true, bankAccountOverride: true },
+    }),
     prisma.payout.findMany({
       where: { paidAt: { lte: now } },
       include: { teacher: { include: { user: true } } },
     }),
     prisma.manualIncome.findMany({ where: { date: { lte: now } } }),
   ]);
+
+  const paidOccurrencesByExpenseId = new Map<string, typeof paidExpenseOccurrences>();
+  for (const o of paidExpenseOccurrences) {
+    const bucket = paidOccurrencesByExpenseId.get(o.expenseId);
+    if (bucket) bucket.push(o);
+    else paidOccurrencesByExpenseId.set(o.expenseId, [o]);
+  }
 
   const received: Record<BankAccount, number> = { GABES: 0, JOE: 0, ASAAS: 0 };
   const receivedItems: Record<BankAccount, BankLedgerItem[]> = { GABES: [], JOE: [], ASAAS: [] };
@@ -306,15 +351,15 @@ export async function getBankBalances(asOf?: Date) {
   const spent: Record<BankAccount, number> = { GABES: 0, JOE: 0, ASAAS: 0 };
   const spentItems: Record<BankAccount, BankLedgerItem[]> = { GABES: [], JOE: [], ASAAS: [] };
   for (const e of expenses) {
-    const amount = expenseTotalToDate(e, now);
-    if (amount <= 0) continue;
-    spent[e.bankAccount] += amount;
-    spentItems[e.bankAccount].push({
-      id: e.id,
-      label: e.frequency === "RECURRING" ? `${e.description} (recorrente)` : e.description,
-      amount,
-      date: e.date.toISOString(),
-    });
+    for (const item of expensePaidItemsToDate(e, paidOccurrencesByExpenseId, now)) {
+      spent[item.bankAccount] += item.amount;
+      spentItems[item.bankAccount].push({
+        id: `${e.id}:${item.date.toISOString().slice(0, 7)}`,
+        label: e.frequency === "RECURRING" ? `${e.description} (recorrente)` : e.description,
+        amount: item.amount,
+        date: item.date.toISOString(),
+      });
+    }
   }
   for (const p of payouts) {
     const amount = Number(p.amount);
