@@ -28,6 +28,8 @@ import { ExpenseFormDialog } from "@/components/financial/expense-form-dialog";
 import { ExpenseOccurrenceStatusSelect } from "@/components/financial/expense-occurrence-status-select";
 import { ExpenseAmountOverrideButton } from "@/components/financial/expense-amount-override-dialog";
 import { ExpenseBankAccountSelect } from "@/components/financial/expense-bank-account-select";
+import { PartnerPayoutCell } from "@/components/financial/partner-payout-cell";
+import type { PayoutEntryData } from "@/components/financial/payout-entry";
 import {
   formatCurrency,
   formatCalendarDate,
@@ -68,7 +70,29 @@ type Row = {
   bankAccountOverride: BankAccount | null;
 };
 
-export function ExpensesTable({ expenses }: { expenses: Row[] }) {
+// Joe/Gabriel's own monthly payout — not an Expense row at all (see the
+// Payout model), shown inline as its own row using the exact same
+// Pagamento cell the old dedicated /gastos/parceiros page used, so
+// nothing about tracking split/partial payments is lost by folding it
+// into this table.
+type PartnerRow = {
+  name: string;
+  kind: "PARTNER_JOE" | "PARTNER_GABRIEL";
+  previsto: number;
+  entries: PayoutEntryData[];
+};
+
+export function ExpensesTable({
+  expenses,
+  partners,
+  year,
+  month,
+}: {
+  expenses: Row[];
+  partners?: PartnerRow[];
+  year?: number;
+  month?: number;
+}) {
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -218,7 +242,25 @@ export function ExpensesTable({ expenses }: { expenses: Row[] }) {
               </TableRow>
             );
           })}
-          {expenses.length === 0 && (
+          {partners != null &&
+            year !== undefined &&
+            month !== undefined &&
+            partners.map((p) => (
+              <TableRow key={p.kind}>
+                <TableCell className="font-medium">Parceiros — {p.name}</TableCell>
+                <TableCell>{formatCurrency(p.previsto)}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">Parceiros</TableCell>
+                <TableCell className="text-sm text-muted-foreground">—</TableCell>
+                <TableCell className="text-sm text-muted-foreground">—</TableCell>
+                <TableCell className="text-sm text-muted-foreground">—</TableCell>
+                <TableCell className="text-sm text-muted-foreground">—</TableCell>
+                <TableCell>
+                  <PartnerPayoutCell kind={p.kind} year={year} month={month} entries={p.entries} />
+                </TableCell>
+                <TableCell className="text-right text-sm text-muted-foreground">—</TableCell>
+              </TableRow>
+            ))}
+          {expenses.length === 0 && (!partners || partners.length === 0) && (
             <TableRow>
               <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
                 Nenhum gasto neste mês.

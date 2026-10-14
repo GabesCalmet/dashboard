@@ -9,7 +9,6 @@ import type { BankAccount } from "@prisma/client";
 function revalidatePayoutPaths(teacherId?: string) {
   revalidatePath("/admin/financial");
   revalidatePath("/admin/financial/gastos");
-  revalidatePath("/admin/financial/gastos/parceiros");
   revalidatePath("/admin/financial/gastos/professores");
   if (teacherId) revalidatePath(`/admin/financial/gastos/professores/${teacherId}`);
 }

@@ -8,7 +8,7 @@ import { MonthNav } from "@/components/financial/month-nav";
 import { listExpensesForMonth, getExpenseCategoryTotals } from "@/server/queries/expenses";
 import { getTeacherPayrollForMonth } from "@/server/queries/teachers";
 import { getPartnerSplitForMonth } from "@/server/queries/financial";
-import { getPaidTeacherPayrollTotal } from "@/server/queries/payouts";
+import { getPaidTeacherPayrollTotal, getPartnerPayoutEntries } from "@/server/queries/payouts";
 import { parseMonthParam, monthParam } from "@/lib/month-param";
 import { formatCurrency } from "@/lib/labels";
 
@@ -28,30 +28,33 @@ export default async function AdminFinancialGastosPage({
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
 
-  const [expenses, categoryTotals, payroll, paidTeacherTotal, partnerSplit] = await Promise.all([
-    listExpensesForMonth(year, month),
-    getExpenseCategoryTotals(year, month),
-    getTeacherPayrollForMonth(year, month),
-    // Realizado for Professores is what's actually been marked paid this
-    // month (see the Payout model) — not the live accrual figure, which
-    // stays available as "Previsto" and on the per-teacher breakdown page.
-    getPaidTeacherPayrollTotal(year, month),
-    getPartnerSplitForMonth(year, month),
-  ]);
+  const [expenses, categoryTotals, payroll, paidTeacherTotal, partnerSplit, joeEntries, gabrielEntries] =
+    await Promise.all([
+      listExpensesForMonth(year, month),
+      getExpenseCategoryTotals(year, month),
+      getTeacherPayrollForMonth(year, month),
+      // Realizado for Professores is what's actually been marked paid this
+      // month (see the Payout model) — not the live accrual figure, which
+      // stays available as "Previsto" and on the per-teacher breakdown page.
+      getPaidTeacherPayrollTotal(year, month),
+      getPartnerSplitForMonth(year, month),
+      getPartnerPayoutEntries("PARTNER_JOE", year, month),
+      getPartnerPayoutEntries("PARTNER_GABRIEL", year, month),
+    ]);
 
   const total = expenses.reduce((sum, e) => sum + e.effectiveAmount, 0);
   const defaultDate = new Date(year, month, 1).toISOString().slice(0, 10);
   const payrollHref = `/admin/financial/gastos/professores?month=${monthParam(year, month)}`;
-  const parceirosHref = `/admin/financial/gastos/parceiros?month=${monthParam(year, month)}`;
 
   // "Professores" isn't a manually-typed expense — it's derived from
   // actual lesson hours × hourly rate (see getTeacherPayrollForMonth), so
   // its box overrides the (always-zero) expense-category total and links
   // to the per-teacher breakdown instead. "Parceiros" is likewise derived
   // — Joe and Gabriel's combined 2/3 share of this month's revenue after
-  // teacher pay (see getPartnerSplitForMonth). Both follow whichever month
-  // this page is browsing, and Realizado only counts what's been marked
-  // paid on the breakdown page, not a live accrual figure.
+  // teacher pay (see getPartnerSplitForMonth) — but unlike Professores, its
+  // detail (registering/editing each partner's payout) now lives right in
+  // this table below as its own two rows, not a separate page, so the box
+  // itself is no longer a link.
   const boxes = categoryTotals.map((c) => {
     if (c.category === "PROFESSORES") {
       return { ...c, previsto: payroll.totals.previsto, realizado: paidTeacherTotal, href: payrollHref };
@@ -61,7 +64,7 @@ export default async function AdminFinancialGastosPage({
         ...c,
         previsto: partnerSplit.previsto.partnersTotal,
         realizado: partnerSplit.realizado.partnersTotal,
-        href: parceirosHref,
+        href: undefined,
       };
     }
     return {
@@ -69,6 +72,33 @@ export default async function AdminFinancialGastosPage({
       href: `/admin/financial/gastos/categoria/${c.category.toLowerCase()}?month=${monthParam(year, month)}`,
     };
   });
+
+  const partnerRows = [
+    {
+      name: "Joe",
+      kind: "PARTNER_JOE" as const,
+      previsto: partnerSplit.previsto.joe,
+      entries: joeEntries.map((e) => ({
+        id: e.id,
+        amount: Number(e.amount),
+        paidAt: e.paidAt,
+        bankAccount: e.bankAccount,
+        notes: e.notes,
+      })),
+    },
+    {
+      name: "Gabriel",
+      kind: "PARTNER_GABRIEL" as const,
+      previsto: partnerSplit.previsto.gabriel,
+      entries: gabrielEntries.map((e) => ({
+        id: e.id,
+        amount: Number(e.amount),
+        paidAt: e.paidAt,
+        bankAccount: e.bankAccount,
+        notes: e.notes,
+      })),
+    },
+  ];
 
   return (
     <div>
@@ -140,6 +170,9 @@ export default async function AdminFinancialGastosPage({
           effectiveBankAccount: e.effectiveBankAccount,
           bankAccountOverride: e.bankAccountOverride,
         }))}
+        partners={partnerRows}
+        year={year}
+        month={month}
       />
     </div>
   );
