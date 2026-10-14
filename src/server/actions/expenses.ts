@@ -143,6 +143,84 @@ export async function setExpenseOccurrenceStatus(
   return occurrence;
 }
 
+// Directly sets this one month's charged amount for an expense — a
+// one-time, this-month-only exception (a prorated/partially-refunded
+// recurring bill, ...) that never changes the Expense's own flat `amount`
+// (which every other month of a recurring series still reads) and has no
+// effect on any other month, since each month is already its own
+// independent ExpenseOccurrence row. The note is required — a number that
+// no longer matches the expense's normal amount is otherwise unexplained
+// the next time anyone looks at it. Never touches status/paidAt.
+export async function setExpenseAmountOverride(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+
+  const expenseId = String(formData.get("expenseId") ?? "");
+  const referenceMonthRaw = String(formData.get("referenceMonth") ?? "");
+  const amountRaw = String(formData.get("amount") ?? "");
+  const note = String(formData.get("note") ?? "").trim();
+
+  if (!expenseId || !referenceMonthRaw || !amountRaw) {
+    return { error: "Preencha todos os campos." };
+  }
+  if (!note) {
+    return { error: "Descreva o motivo do ajuste." };
+  }
+  const amount = Number(amountRaw);
+  if (!Number.isFinite(amount) || amount < 0) {
+    return { error: "Valor inválido." };
+  }
+  const referenceMonth = new Date(referenceMonthRaw);
+  if (Number.isNaN(referenceMonth.getTime())) {
+    return { error: "Data inválida." };
+  }
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+
+  const occurrence = await prisma.expenseOccurrence.upsert({
+    where: { expenseId_referenceMonth: { expenseId, referenceMonth: monthStart } },
+    create: { expenseId, referenceMonth: monthStart, amountOverride: amount, amountOverrideNote: note },
+    update: { amountOverride: amount, amountOverrideNote: note },
+  });
+
+  await recordAudit({
+    entityType: "ExpenseOccurrence",
+    entityId: occurrence.id,
+    action: "UPDATE",
+    actor,
+    changes: { expenseId, amountOverride: amount, note, referenceMonth: monthStart.toISOString() },
+  });
+
+  revalidateFinancialPaths();
+  return { success: "Valor ajustado manualmente." };
+}
+
+// Reverts a manually-overridden amount back to the expense's normal flat
+// value for this one month — clears the override so the next time it's
+// resolved it falls back to `amount` again. Doesn't touch status/paidAt.
+export async function clearExpenseAmountOverride(expenseId: string, referenceMonth: Date) {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+
+  const existing = await prisma.expenseOccurrence.findUnique({
+    where: { expenseId_referenceMonth: { expenseId, referenceMonth: monthStart } },
+  });
+  if (!existing) return;
+
+  await prisma.expenseOccurrence.update({
+    where: { id: existing.id },
+    data: { amountOverride: null, amountOverrideNote: null },
+  });
+
+  await recordAudit({
+    entityType: "ExpenseOccurrence",
+    entityId: existing.id,
+    action: "UPDATE",
+    actor,
+    changes: { expenseId, amountOverride: null },
+  });
+
+  revalidateFinancialPaths();
+}
+
 export async function deleteExpense(expenseId: string) {
   const actor = await requireRole("ADMIN");
   await recordAudit({

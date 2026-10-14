@@ -39,7 +39,7 @@ export default async function AdminFinancialGastosPage({
     getPartnerSplitForMonth(year, month),
   ]);
 
-  const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  const total = expenses.reduce((sum, e) => sum + e.effectiveAmount, 0);
   const defaultDate = new Date(year, month, 1).toISOString().slice(0, 10);
   const payrollHref = `/admin/financial/gastos/professores?month=${monthParam(year, month)}`;
   const parceirosHref = `/admin/financial/gastos/parceiros?month=${monthParam(year, month)}`;
@@ -134,6 +134,9 @@ export default async function AdminFinancialGastosPage({
           notes: e.notes,
           occurrenceStatus: e.occurrenceStatus,
           occurrencePaidAt: e.occurrencePaidAt,
+          effectiveAmount: e.effectiveAmount,
+          amountOverride: e.amountOverride,
+          amountOverrideNote: e.amountOverrideNote,
         }))}
       />
     </div>

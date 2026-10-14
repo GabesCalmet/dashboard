@@ -15,22 +15,31 @@ export async function getExpenseCategoryTotals(year: number, month: number) {
   const monthStart = new Date(year, month, 1);
   const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
-  const [expenses, paidOccurrences] = await Promise.all([
+  const [expenses, occurrences] = await Promise.all([
     prisma.expense.findMany(),
     prisma.expenseOccurrence.findMany({
-      where: { referenceMonth: monthStart, status: "PAID" },
-      select: { expenseId: true },
+      where: { referenceMonth: monthStart },
+      select: { expenseId: true, status: true, amountOverride: true },
     }),
   ]);
-  const paidExpenseIds = new Set(paidOccurrences.map((o) => o.expenseId));
+  const paidExpenseIds = new Set(occurrences.filter((o) => o.status === "PAID").map((o) => o.expenseId));
+  const amountOverrides = new Map(
+    occurrences.filter((o) => o.amountOverride != null).map((o) => [o.expenseId, Number(o.amountOverride)])
+  );
 
   return (Object.keys(expenseCategoryLabel) as ExpenseCategory[]).map((category) => {
     const categoryExpenses = expenses.filter((e) => e.category === category);
     return {
       category,
       label: expenseCategoryLabel[category],
-      previsto: expenseTotalForMonth(categoryExpenses, monthStart, monthEnd),
-      realizado: expenseRealizedForMonth(categoryExpenses, paidExpenseIds, monthStart, monthEnd),
+      previsto: expenseTotalForMonth(categoryExpenses, monthStart, monthEnd, amountOverrides),
+      realizado: expenseRealizedForMonth(
+        categoryExpenses,
+        paidExpenseIds,
+        monthStart,
+        monthEnd,
+        amountOverrides
+      ),
     };
   });
 }
@@ -74,11 +83,19 @@ export async function listExpensesForMonth(year: number, month: number) {
           ? new Date(year, month, Math.min(e.dayOfMonth ?? 1, daysInMonth))
           : e.date;
       const occurrence = occurrenceByExpenseId.get(e.id);
+      const amountOverride = occurrence?.amountOverride != null ? Number(occurrence.amountOverride) : null;
       return {
         ...e,
         occurrenceDate,
         occurrenceStatus: occurrence?.status ?? defaultOccurrenceStatus(occurrenceDate, now),
         occurrencePaidAt: occurrence?.paidAt ?? null,
+        // The amount actually charged THIS month — the override when one's
+        // set, otherwise the expense's normal flat amount. Editing the
+        // expense itself still changes every month of a recurring series;
+        // this is only ever this one month's exception.
+        effectiveAmount: amountOverride ?? Number(e.amount),
+        amountOverride,
+        amountOverrideNote: occurrence?.amountOverrideNote ?? null,
       };
     })
     .sort((a, b) => a.occurrenceDate.getTime() - b.occurrenceDate.getTime());

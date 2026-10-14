@@ -25,7 +25,7 @@ export default async function AdminExpenseCategoryPage({
 
   const allExpenses = await listExpensesForMonth(year, month);
   const expenses = allExpenses.filter((e) => e.category === categoryKey);
-  const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  const total = expenses.reduce((sum, e) => sum + e.effectiveAmount, 0);
 
   return (
     <div>
@@ -67,6 +67,9 @@ export default async function AdminExpenseCategoryPage({
           notes: e.notes,
           occurrenceStatus: e.occurrenceStatus,
           occurrencePaidAt: e.occurrencePaidAt,
+          effectiveAmount: e.effectiveAmount,
+          amountOverride: e.amountOverride,
+          amountOverrideNote: e.amountOverrideNote,
         }))}
       />
     </div>

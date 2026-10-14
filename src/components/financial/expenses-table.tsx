@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ExpenseFormDialog } from "@/components/financial/expense-form-dialog";
 import { ExpenseOccurrenceStatusSelect } from "@/components/financial/expense-occurrence-status-select";
+import { ExpenseAmountOverrideButton } from "@/components/financial/expense-amount-override-dialog";
 import {
   formatCurrency,
   formatCalendarDate,
@@ -54,6 +55,12 @@ type Row = {
   // shared across months of the same recurring expense.
   occurrenceStatus: PaymentStatus;
   occurrencePaidAt: Date | null;
+  // This month's actually-charged amount (the override when one's set,
+  // otherwise `amount`) and the override itself, if any — also never
+  // shared across months of the same recurring expense.
+  effectiveAmount: number;
+  amountOverride: number | null;
+  amountOverrideNote: string | null;
 };
 
 export function ExpensesTable({ expenses }: { expenses: Row[] }) {
@@ -81,7 +88,25 @@ export function ExpensesTable({ expenses }: { expenses: Row[] }) {
             return (
               <TableRow key={e.id}>
                 <TableCell className="font-medium">{e.description}</TableCell>
-                <TableCell>{formatCurrency(e.amount)}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    {formatCurrency(e.effectiveAmount)}
+                    <ExpenseAmountOverrideButton
+                      expenseId={e.id}
+                      referenceMonth={
+                        new Date(e.occurrenceDate.getFullYear(), e.occurrenceDate.getMonth(), 1)
+                      }
+                      amount={e.amount}
+                      amountOverride={e.amountOverride}
+                      amountOverrideNote={e.amountOverrideNote}
+                    />
+                  </div>
+                  {e.amountOverride != null && e.amountOverrideNote && (
+                    <p className="text-[11px] leading-tight text-muted-foreground">
+                      {e.amountOverrideNote}
+                    </p>
+                  )}
+                </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {expenseCategoryLabel[e.category]}
                 </TableCell>

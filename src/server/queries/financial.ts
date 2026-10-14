@@ -161,32 +161,30 @@ export async function getFinancialOverview(year?: number, month?: number) {
   };
 }
 
-function daysInMonth(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-}
-
 function recurringActiveInMonth(e: Expense, monthStart: Date, monthEnd: Date) {
   return e.date <= monthEnd && (!e.endDate || e.endDate >= monthStart);
 }
 
-// Sums expenses that fall within [monthStart, monthEnd]. If `cutoff` is
-// given, only counts an expense once its effective day in that month has
-// actually arrived (used for "realizado" vs "previsto" — previsto omits
-// the cutoff and counts the whole month's known/expected expenses).
-export function expenseTotalForMonth(expenses: Expense[], monthStart: Date, monthEnd: Date, cutoff?: Date) {
+// Sums expenses that fall within [monthStart, monthEnd] — the whole
+// month's known/expected total ("previsto"). amountOverrides (expenseId →
+// this month's overridden amount, see ExpenseOccurrence.amountOverride)
+// lets a one-off exception for this specific month replace the expense's
+// normal flat amount, same as the rest of this function stays unaware of
+// which months are recurring vs one-time beyond their own date range.
+export function expenseTotalForMonth(
+  expenses: Expense[],
+  monthStart: Date,
+  monthEnd: Date,
+  amountOverrides?: Map<string, number>
+) {
   return expenses.reduce((sum, e) => {
+    const amount = amountOverrides?.get(e.id) ?? Number(e.amount);
     if (e.frequency === "ONE_TIME") {
       if (e.date < monthStart || e.date > monthEnd) return sum;
-      if (cutoff && e.date > cutoff) return sum;
-      return sum + Number(e.amount);
+      return sum + amount;
     }
     if (!recurringActiveInMonth(e, monthStart, monthEnd)) return sum;
-    if (cutoff) {
-      const day = Math.min(e.dayOfMonth ?? 1, daysInMonth(monthStart));
-      const effectiveDate = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
-      if (effectiveDate > cutoff) return sum;
-    }
-    return sum + Number(e.amount);
+    return sum + amount;
   }, 0);
 }
 
@@ -197,20 +195,23 @@ export function expenseTotalForMonth(expenses: Expense[], monthStart: Date, mont
 // was paid") — confirmation is a manual action now (see
 // setExpenseOccurrenceStatus): an overdue but still-unconfirmed expense
 // shows as Atrasado, not realizado, until someone actually marks it Pago.
+// Respects the same per-month amountOverrides as expenseTotalForMonth.
 export function expenseRealizedForMonth(
   expenses: Expense[],
   paidExpenseIds: Set<string>,
   monthStart: Date,
-  monthEnd: Date
+  monthEnd: Date,
+  amountOverrides?: Map<string, number>
 ) {
   return expenses.reduce((sum, e) => {
     if (!paidExpenseIds.has(e.id)) return sum;
+    const amount = amountOverrides?.get(e.id) ?? Number(e.amount);
     if (e.frequency === "ONE_TIME") {
       if (e.date < monthStart || e.date > monthEnd) return sum;
-      return sum + Number(e.amount);
+      return sum + amount;
     }
     if (!recurringActiveInMonth(e, monthStart, monthEnd)) return sum;
-    return sum + Number(e.amount);
+    return sum + amount;
   }, 0);
 }
 
@@ -429,7 +430,7 @@ export async function getFinancialSummary(year?: number, month?: number) {
     activeStudentsForRevenue,
     totalContributors,
     expenses,
-    paidExpenseOccurrences,
+    expenseOccurrences,
     teacherPayroll,
     paidTeacherTotal,
     partnerSplit,
@@ -453,8 +454,8 @@ export async function getFinancialSummary(year?: number, month?: number) {
     prisma.studentProfile.count({ where: { status: "ACTIVE" } }),
     prisma.expense.findMany(),
     prisma.expenseOccurrence.findMany({
-      where: { referenceMonth: monthStart, status: "PAID" },
-      select: { expenseId: true },
+      where: { referenceMonth: monthStart },
+      select: { expenseId: true, status: true, amountOverride: true },
     }),
     // Previsto still assumes every scheduled class happens — unaffected by
     // the payout tracking below, same as before.
@@ -484,9 +485,22 @@ export async function getFinancialSummary(year?: number, month?: number) {
         s.groupMembers.reduce((memberSum, m) => memberSum + Number(m.monthlyValue), 0),
       0
     );
-  const paidExpenseIds = new Set(paidExpenseOccurrences.map((o) => o.expenseId));
-  const manualExpenseRealized = expenseRealizedForMonth(expenses, paidExpenseIds, monthStart, monthEnd);
-  const manualExpensePrevisto = expenseTotalForMonth(expenses, monthStart, monthEnd);
+  const paidExpenseIds = new Set(
+    expenseOccurrences.filter((o) => o.status === "PAID").map((o) => o.expenseId)
+  );
+  const expenseAmountOverrides = new Map(
+    expenseOccurrences
+      .filter((o) => o.amountOverride != null)
+      .map((o) => [o.expenseId, Number(o.amountOverride)])
+  );
+  const manualExpenseRealized = expenseRealizedForMonth(
+    expenses,
+    paidExpenseIds,
+    monthStart,
+    monthEnd,
+    expenseAmountOverrides
+  );
+  const manualExpensePrevisto = expenseTotalForMonth(expenses, monthStart, monthEnd, expenseAmountOverrides);
 
   // "Gasto" for the month is manually-typed expenses (Marketing/R&D/
   // Outros/any stray Parceiros entries) plus the two derived
