@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, PenLine } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -13,7 +13,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PaymentStatusSelect } from "@/components/financial/payment-status-select";
 import { PaymentOverrideButton } from "@/components/students/payment-override-dialog";
 import {
@@ -102,14 +101,6 @@ export function StudentPaymentsTable({
                 <TableCell>
                   <div className="flex items-center gap-1">
                     {formatCurrency(p.amount)}
-                    {p.manualOverride && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <PenLine className="size-3 text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent>Ajuste manual: {p.manualOverrideNote}</TooltipContent>
-                      </Tooltip>
-                    )}
                     {editable && (
                       <PaymentOverrideButton
                         studentId={studentId}
@@ -123,6 +114,11 @@ export function StudentPaymentsTable({
                       />
                     )}
                   </div>
+                  {p.manualOverride && p.manualOverrideNote && (
+                    <p className="text-[11px] leading-tight text-muted-foreground">
+                      {p.manualOverrideNote}
+                    </p>
+                  )}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
