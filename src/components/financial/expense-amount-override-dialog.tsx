@@ -88,13 +88,12 @@ export function ExpenseAmountOverrideButton({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="note">Motivo do ajuste</Label>
+            <Label htmlFor="note">Motivo do ajuste (opcional)</Label>
             <Textarea
               id="note"
               name="note"
               placeholder="ex.: cobrança parcial, reembolso neste mês..."
               defaultValue={amountOverride != null ? (amountOverrideNote ?? "") : ""}
-              required
             />
           </div>
 

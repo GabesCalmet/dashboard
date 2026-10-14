@@ -148,9 +148,9 @@ export async function setExpenseOccurrenceStatus(
 // recurring bill, ...) that never changes the Expense's own flat `amount`
 // (which every other month of a recurring series still reads) and has no
 // effect on any other month, since each month is already its own
-// independent ExpenseOccurrence row. The note is required — a number that
-// no longer matches the expense's normal amount is otherwise unexplained
-// the next time anyone looks at it. Never touches status/paidAt.
+// independent ExpenseOccurrence row. The note is optional, unlike a
+// student cobrança override — left blank when there's nothing worth
+// writing down. Never touches status/paidAt.
 export async function setExpenseAmountOverride(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await requireRole("ADMIN", "COORDINATOR");
 
@@ -161,9 +161,6 @@ export async function setExpenseAmountOverride(_prev: ActionState, formData: For
 
   if (!expenseId || !referenceMonthRaw || !amountRaw) {
     return { error: "Preencha todos os campos." };
-  }
-  if (!note) {
-    return { error: "Descreva o motivo do ajuste." };
   }
   const amount = Number(amountRaw);
   if (!Number.isFinite(amount) || amount < 0) {
@@ -177,8 +174,13 @@ export async function setExpenseAmountOverride(_prev: ActionState, formData: For
 
   const occurrence = await prisma.expenseOccurrence.upsert({
     where: { expenseId_referenceMonth: { expenseId, referenceMonth: monthStart } },
-    create: { expenseId, referenceMonth: monthStart, amountOverride: amount, amountOverrideNote: note },
-    update: { amountOverride: amount, amountOverrideNote: note },
+    create: {
+      expenseId,
+      referenceMonth: monthStart,
+      amountOverride: amount,
+      amountOverrideNote: note || null,
+    },
+    update: { amountOverride: amount, amountOverrideNote: note || null },
   });
 
   await recordAudit({
@@ -186,7 +188,7 @@ export async function setExpenseAmountOverride(_prev: ActionState, formData: For
     entityId: occurrence.id,
     action: "UPDATE",
     actor,
-    changes: { expenseId, amountOverride: amount, note, referenceMonth: monthStart.toISOString() },
+    changes: { expenseId, amountOverride: amount, note: note || null, referenceMonth: monthStart.toISOString() },
   });
 
   revalidateFinancialPaths();
