@@ -33,11 +33,16 @@ export async function setCobrancaStatus(
   studentId: string,
   payerName: string | null,
   status: PaymentStatus,
-  referenceMonth: Date
+  referenceMonth: Date,
+  // Defaults to right now the moment status is set to PAID — pass an
+  // explicit date to record a payment confirmed late with its real date
+  // instead (e.g. backfilling, or marking something paid a few days after
+  // it actually happened).
+  paidAtOverride?: Date | null
 ) {
   const actor = await requireRole("ADMIN", "COORDINATOR");
   const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
-  const paidAt = status === "PAID" ? new Date() : null;
+  const paidAt = status === "PAID" ? (paidAtOverride ?? new Date()) : null;
 
   const existing = await prisma.payment.findFirst({
     where: { studentId, referenceMonth: monthStart, payerName },
@@ -76,7 +81,12 @@ export async function setCobrancaStatus(
     entityId: payment.id,
     action: "STATUS_CHANGE",
     actor,
-    changes: { status, payerName, referenceMonth: monthStart.toISOString() },
+    changes: {
+      status,
+      payerName,
+      referenceMonth: monthStart.toISOString(),
+      paidAt: paidAt?.toISOString() ?? null,
+    },
   });
   revalidatePath("/admin/financial");
   revalidatePath("/admin/financial/receita");

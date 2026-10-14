@@ -65,6 +65,8 @@ export default async function AdminExpenseCategoryPage({
           endDate: e.endDate,
           bankAccount: e.bankAccount,
           notes: e.notes,
+          occurrenceStatus: e.occurrenceStatus,
+          occurrencePaidAt: e.occurrencePaidAt,
         }))}
       />
     </div>

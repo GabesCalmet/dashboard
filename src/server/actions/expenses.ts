@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
 import { expenseFormSchema } from "@/lib/validation/expense";
 import type { ActionState } from "@/server/actions/students";
+import type { PaymentStatus } from "@prisma/client";
 
 function revalidateFinancialPaths() {
   revalidatePath("/admin/financial");
@@ -101,6 +102,45 @@ export async function endRecurringExpense(expenseId: string) {
     changes: { ended: true },
   });
   revalidateFinancialPaths();
+}
+
+// Confirms (or un-confirms) one specific month's occurrence of an expense
+// — a recurring expense's months are each tracked independently (see
+// ExpenseOccurrence), so marking October Pago never touches November's or
+// any other month's row. paidAt defaults to right now the moment status is
+// set to PAID, but an explicit value lets a late confirmation still record
+// the real date the payment actually happened.
+export async function setExpenseOccurrenceStatus(
+  expenseId: string,
+  referenceMonth: Date,
+  status: PaymentStatus,
+  paidAt?: Date | null
+) {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+  const resolvedPaidAt = status === "PAID" ? (paidAt ?? new Date()) : null;
+
+  const occurrence = await prisma.expenseOccurrence.upsert({
+    where: { expenseId_referenceMonth: { expenseId, referenceMonth: monthStart } },
+    create: { expenseId, referenceMonth: monthStart, status, paidAt: resolvedPaidAt },
+    update: { status, paidAt: resolvedPaidAt },
+  });
+
+  await recordAudit({
+    entityType: "ExpenseOccurrence",
+    entityId: occurrence.id,
+    action: "STATUS_CHANGE",
+    actor,
+    changes: {
+      expenseId,
+      status,
+      paidAt: resolvedPaidAt?.toISOString() ?? null,
+      referenceMonth: monthStart.toISOString(),
+    },
+  });
+
+  revalidateFinancialPaths();
+  return occurrence;
 }
 
 export async function deleteExpense(expenseId: string) {

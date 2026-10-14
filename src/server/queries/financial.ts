@@ -74,6 +74,7 @@ export async function getFinancialOverview(year?: number, month?: number) {
               payerName: payment.payerName,
               amount: Number(payment.amount),
               dueDate: payment.dueDate,
+              paidAt: payment.paidAt,
               status: payment.status,
               bankAccount: slot.bankAccount,
             };
@@ -92,6 +93,7 @@ export async function getFinancialOverview(year?: number, month?: number) {
             payerName: slot.payerName,
             amount: slot.amount,
             dueDate,
+            paidAt: null,
             status,
             bankAccount: slot.bankAccount,
           };
@@ -184,6 +186,30 @@ export function expenseTotalForMonth(expenses: Expense[], monthStart: Date, mont
       const effectiveDate = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
       if (effectiveDate > cutoff) return sum;
     }
+    return sum + Number(e.amount);
+  }, 0);
+}
+
+// Sums only expenses whose occurrence for this exact month has been
+// explicitly marked PAID (paidExpenseIds — an expenseId with a real
+// ExpenseOccurrence row for this month at status PAID). Replaces the old
+// date-cutoff approximation ("the due date already passed, so assume it
+// was paid") — confirmation is a manual action now (see
+// setExpenseOccurrenceStatus): an overdue but still-unconfirmed expense
+// shows as Atrasado, not realizado, until someone actually marks it Pago.
+export function expenseRealizedForMonth(
+  expenses: Expense[],
+  paidExpenseIds: Set<string>,
+  monthStart: Date,
+  monthEnd: Date
+) {
+  return expenses.reduce((sum, e) => {
+    if (!paidExpenseIds.has(e.id)) return sum;
+    if (e.frequency === "ONE_TIME") {
+      if (e.date < monthStart || e.date > monthEnd) return sum;
+      return sum + Number(e.amount);
+    }
+    if (!recurringActiveInMonth(e, monthStart, monthEnd)) return sum;
     return sum + Number(e.amount);
   }, 0);
 }
@@ -403,6 +429,7 @@ export async function getFinancialSummary(year?: number, month?: number) {
     activeStudentsForRevenue,
     totalContributors,
     expenses,
+    paidExpenseOccurrences,
     teacherPayroll,
     paidTeacherTotal,
     partnerSplit,
@@ -425,6 +452,10 @@ export async function getFinancialSummary(year?: number, month?: number) {
     }),
     prisma.studentProfile.count({ where: { status: "ACTIVE" } }),
     prisma.expense.findMany(),
+    prisma.expenseOccurrence.findMany({
+      where: { referenceMonth: monthStart, status: "PAID" },
+      select: { expenseId: true },
+    }),
     // Previsto still assumes every scheduled class happens — unaffected by
     // the payout tracking below, same as before.
     getTeacherPayrollForMonth(viewedMonth.getFullYear(), viewedMonth.getMonth()),
@@ -453,7 +484,8 @@ export async function getFinancialSummary(year?: number, month?: number) {
         s.groupMembers.reduce((memberSum, m) => memberSum + Number(m.monthlyValue), 0),
       0
     );
-  const manualExpenseRealized = expenseTotalForMonth(expenses, monthStart, monthEnd, now);
+  const paidExpenseIds = new Set(paidExpenseOccurrences.map((o) => o.expenseId));
+  const manualExpenseRealized = expenseRealizedForMonth(expenses, paidExpenseIds, monthStart, monthEnd);
   const manualExpensePrevisto = expenseTotalForMonth(expenses, monthStart, monthEnd);
 
   // "Gasto" for the month is manually-typed expenses (Marketing/R&D/

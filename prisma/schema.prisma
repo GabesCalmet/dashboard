@@ -521,23 +521,48 @@ enum ExpenseCategory {
 }
 
 model Expense {
-  id          String           @id @default(uuid())
+  id          String              @id @default(uuid())
   description String
-  amount      Decimal          @db.Decimal(10, 2)
+  amount      Decimal             @db.Decimal(10, 2)
   frequency   ExpenseFrequency
-  category    ExpenseCategory  @default(OUTROS)
+  category    ExpenseCategory     @default(OUTROS)
   // ONE_TIME: the date it happened/is due.
   // RECURRING: the date the recurring obligation started.
   date        DateTime
   dayOfMonth  Int? // RECURRING only: day of month it's due, 1-31
   // RECURRING only: when it stopped recurring — null means still ongoing.
   endDate     DateTime?
-  bankAccount BankAccount      @default(JOE) // which account this gasto is paid from
+  bankAccount BankAccount         @default(JOE) // which account this gasto is paid from
   notes       String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  occurrences ExpenseOccurrence[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
   @@map("expenses")
+}
+
+// One row per month an Expense is actually applicable for (one row total
+// for a ONE_TIME expense, one per month of a RECURRING one's run) —
+// confirming payment no longer happens implicitly just because the due
+// date passed; it's a manual action per month, same as a student's own
+// cobrança. No row for a given (expense, month) means "not yet confirmed"
+// — shown as Atrasado/Pendente live, same convention as an un-generated
+// Payment placeholder, never stored until someone actually acts on it.
+model ExpenseOccurrence {
+  id             String        @id @default(uuid())
+  expenseId      String
+  expense        Expense       @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  referenceMonth DateTime // first day of the month this occurrence is for
+  status         PaymentStatus @default(PENDING)
+  // Auto-set to "now" the moment status is set to PAID — editable so a
+  // payment confirmed late can still record the real date it happened.
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([expenseId, referenceMonth])
+  @@index([expenseId])
+  @@map("expense_occurrences")
 }
 
 // A manual cash-in record not tied to any student's billing cycle — e.g.

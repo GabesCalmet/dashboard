@@ -25,6 +25,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ExpenseFormDialog } from "@/components/financial/expense-form-dialog";
+import { ExpenseOccurrenceStatusSelect } from "@/components/financial/expense-occurrence-status-select";
 import {
   formatCurrency,
   formatCalendarDate,
@@ -33,7 +34,7 @@ import {
   bankAccountLabel,
 } from "@/lib/labels";
 import { deleteExpense, endRecurringExpense } from "@/server/actions/expenses";
-import type { Expense, ExpenseCategory, BankAccount } from "@prisma/client";
+import type { Expense, ExpenseCategory, BankAccount, PaymentStatus } from "@prisma/client";
 
 type Row = {
   id: string;
@@ -49,6 +50,10 @@ type Row = {
   endDate: Date | null;
   bankAccount: BankAccount;
   notes: string | null;
+  // This specific month's own confirmation — see ExpenseOccurrence. Never
+  // shared across months of the same recurring expense.
+  occurrenceStatus: PaymentStatus;
+  occurrencePaidAt: Date | null;
 };
 
 export function ExpensesTable({ expenses }: { expenses: Row[] }) {
@@ -66,6 +71,7 @@ export function ExpensesTable({ expenses }: { expenses: Row[] }) {
             <TableHead>Tipo</TableHead>
             <TableHead>Data</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Pagamento</TableHead>
             <TableHead className="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -98,6 +104,16 @@ export function ExpensesTable({ expenses }: { expenses: Row[] }) {
                   ) : (
                     <span className="text-sm text-muted-foreground">—</span>
                   )}
+                </TableCell>
+                <TableCell>
+                  <ExpenseOccurrenceStatusSelect
+                    expenseId={e.id}
+                    referenceMonth={
+                      new Date(e.occurrenceDate.getFullYear(), e.occurrenceDate.getMonth(), 1)
+                    }
+                    status={e.occurrenceStatus}
+                    paidAt={e.occurrencePaidAt}
+                  />
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
@@ -167,7 +183,7 @@ export function ExpensesTable({ expenses }: { expenses: Row[] }) {
           })}
           {expenses.length === 0 && (
             <TableRow>
-              <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+              <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
                 Nenhum gasto neste mês.
               </TableCell>
             </TableRow>

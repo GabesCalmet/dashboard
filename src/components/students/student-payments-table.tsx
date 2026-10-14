@@ -144,6 +144,7 @@ export function StudentPaymentsTable({
                       studentId={studentId}
                       payerName={p.payerName}
                       status={p.status}
+                      paidAt={p.paidAt}
                       referenceMonth={p.referenceMonth}
                     />
                   ) : (

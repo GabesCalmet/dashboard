@@ -25,6 +25,7 @@ type Row = {
   payerName: string | null;
   amount: number;
   dueDate: Date;
+  paidAt: Date | null;
   status: PaymentStatus;
   studentName: string;
   teacherName: string | null;
@@ -151,6 +152,7 @@ export function PaymentsTable({
                     studentId={p.studentId}
                     payerName={p.payerName}
                     status={p.status}
+                    paidAt={p.paidAt}
                     referenceMonth={referenceMonth}
                   />
                 </TableCell>

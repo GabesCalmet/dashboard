@@ -86,6 +86,7 @@ export function LatePaymentsTable({ payments }: { payments: Row[] }) {
                     studentId={p.studentId}
                     payerName={p.payerName}
                     status={"LATE" as PaymentStatus}
+                    paidAt={null}
                     referenceMonth={p.referenceMonth}
                   />
                 </TableCell>
