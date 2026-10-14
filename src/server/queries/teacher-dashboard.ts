@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
+import { startOfMonth, endOfMonth } from "date-fns";
+import { brazilDateTime, endOfBrazilDay, toBrazilDateString } from "@/lib/timezone";
 import { getTeacherPayrollDetail } from "@/server/queries/teachers";
 
 export async function getTeacherDashboardData(
@@ -10,12 +11,20 @@ export async function getTeacherDashboardData(
   const monthDate = new Date(referenceMonth.year, referenceMonth.month, 1);
   const monthStart = startOfMonth(monthDate);
   const monthEnd = endOfMonth(monthDate);
+  // date-fns' startOfDay/endOfDay(now) read the server's own local time —
+  // always UTC on Vercel, not Brazil time — so a class after 21:00 Brazil
+  // (past UTC midnight) or before 03:00 UTC gets bucketed into the wrong
+  // UTC day and either double-counted here or missing entirely relative to
+  // the calendar, which already buckets by the real Brazil calendar day.
+  const todayBrazilStr = toBrazilDateString(now);
+  const todayStart = brazilDateTime(todayBrazilStr, "00:00");
+  const todayEnd = endOfBrazilDay(new Date(todayBrazilStr));
 
   const [totalStudents, todayLessonsCount, upcomingLessons, completedLessonsThisMonth, previstoAgg, payroll] =
     await Promise.all([
       prisma.studentProfile.count({ where: { teacherId, status: "ACTIVE" } }),
       prisma.lesson.count({
-        where: { teacherId, scheduledAt: { gte: startOfDay(now), lte: endOfDay(now) } },
+        where: { teacherId, scheduledAt: { gte: todayStart, lte: todayEnd } },
       }),
       prisma.lesson.findMany({
         where: { teacherId, scheduledAt: { gt: now }, status: "SCHEDULED" },

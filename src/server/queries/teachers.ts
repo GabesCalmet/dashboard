@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
+import { startOfMonth, endOfMonth } from "date-fns";
+import { brazilDateTime, endOfBrazilDay, toBrazilDateString } from "@/lib/timezone";
 import { resolveHistoricalAmount, pickLatestOverlap } from "@/server/billing";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
 import type { TeacherPayMode, LessonStatus } from "@prisma/client";
@@ -748,8 +749,17 @@ export async function getTeacherDetail(teacherId: string) {
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);
 
+  // Brazil calendar day, not the server's own UTC day — see
+  // getTeacherDashboardData for why startOfDay/endOfDay(now) miscounts.
+  const todayBrazilStr = toBrazilDateString(now);
   const todayLessons = await prisma.lesson.count({
-    where: { teacherId, scheduledAt: { gte: startOfDay(now), lte: endOfDay(now) } },
+    where: {
+      teacherId,
+      scheduledAt: {
+        gte: brazilDateTime(todayBrazilStr, "00:00"),
+        lte: endOfBrazilDay(new Date(todayBrazilStr)),
+      },
+    },
   });
   const completedTotal = await prisma.lesson.count({
     where: { teacherId, status: "COMPLETED" },
