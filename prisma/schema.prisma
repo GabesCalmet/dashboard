@@ -137,7 +137,7 @@ model User {
   // teacher, and staff account.
   groupMemberOf    StudentGroupMember?
   notifications    Notification[]
-  leadInteractions LeadInteraction[] @relation("InteractionAuthor")
+  leadInteractions LeadInteraction[]   @relation("InteractionAuthor")
 
   @@map("users")
 }
@@ -172,32 +172,32 @@ model Plan {
 }
 
 model TeacherProfile {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  specialties   String[]
+  id                String    @id @default(uuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialties       String[]
   // Weekly recurring windows this teacher is NOT available — admin-visible
   // only (shown on their own Agenda and on this profile), not enforced
   // against scheduling. Same shape as StudentProfile.lessonSchedule:
   // [{ "weekday": 1, "start": "09:00", "end": "12:00" }, ...].
-  blockedSlots  Json     @default("[]")
-  hourlyRate    Decimal  @db.Decimal(10, 2)
+  blockedSlots      Json      @default("[]")
+  hourlyRate        Decimal   @db.Decimal(10, 2)
   // History of hourlyRate changes over time, same shape/sync rule as
   // StudentProfile.monthlyValueHistory — hourlyRate always mirrors
   // whichever entry is in effect today (or the most recent one), kept in
   // sync on every edit. Record-keeping only; no calculation currently
   // resolves a rate for a specific past month.
-  hourlyRateHistory Json @default("[]")
+  hourlyRateHistory Json      @default("[]")
   // Deprecated — no longer collected at cadastro; actual monthly class load
   // is computed instead (see server/queries/teachers.ts). Kept only so
   // existing rows don't need a backfill; new rows just get the default.
-  weeklyHours   Int      @default(0)
-  admissionDate DateTime
+  weeklyHours       Int       @default(0)
+  admissionDate     DateTime
   // Optional — this teacher's employment end date, if known.
-  endDate       DateTime?
-  notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  endDate           DateTime?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   students StudentProfile[] @relation("StudentProfile_teacher")
   lessons  Lesson[]
@@ -207,22 +207,22 @@ model TeacherProfile {
 }
 
 model StudentProfile {
-  id                String          @id @default(uuid())
-  userId            String          @unique
-  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                     String          @id @default(uuid())
+  userId                 String          @unique
+  user                   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   // Set only for a "grupo" cadastro — a name for the group itself (e.g. a
   // family or company name) so it can be found later by that, not just by
   // the primary member's name. Null for an ordinary individual student.
-  groupName         String?
-  cpf               String?         @unique
-  birthDate         DateTime?
-  address           String?
+  groupName              String?
+  cpf                    String?         @unique
+  birthDate              DateTime?
+  address                String?
   // Google Meet (or any video call) link for this student's classes — set
   // once on the cadastro instead of per lesson, shown as a "Entrar na aula"
   // button when a teacher or the student opens a class on their calendar.
-  meetLink          String?
-  teacherId         String?
-  teacher           TeacherProfile? @relation("StudentProfile_teacher", fields: [teacherId], references: [id])
+  meetLink               String?
+  teacherId              String?
+  teacher                TeacherProfile? @relation("StudentProfile_teacher", fields: [teacherId], references: [id])
   // History of teacher changes —
   // [{ "id": "<teacherId>", "from": "...", "until": "...", "rate": 25.0 }, ...].
   // teacherId always mirrors whichever entry is in effect today (or the
@@ -236,37 +236,37 @@ model StudentProfile {
   // a flat fee for that period, unaffected by how many classes actually
   // happen (previsto and realizado both just equal monthlyAmount), instead
   // of "rate" × hours given. Absent "mode" means HOURLY, same as today.
-  teacherHistory        Json            @default("[]")
+  teacherHistory         Json            @default("[]")
   // Mirrors whichever teacherHistory entry is in effect today — the
   // per-student/group amount the assigned teacher is paid per hour,
   // typically higher for a "grupo" cadastro (e.g. +R$5/hour per extra
   // participant, entered manually here rather than computed). Only used
   // when teacherPayMode is HOURLY.
-  teacherPayRate        Decimal         @default(0) @db.Decimal(10, 2)
+  teacherPayRate         Decimal         @default(0) @db.Decimal(10, 2)
   // Whether the currently-assigned teacher is paid hourly (the default,
   // teacherPayRate × hours given), a flat monthly amount
   // (teacherMonthlyAmount, regardless of classes given), or a percentage of
   // this student's monthlyValue (teacherPercentage) for this student/group.
   // Mirrors whichever teacherHistory entry is in effect today, same
   // convention as teacherPayRate.
-  teacherPayMode        TeacherPayMode  @default(HOURLY)
-  teacherMonthlyAmount  Decimal         @default(0) @db.Decimal(10, 2)
+  teacherPayMode         TeacherPayMode  @default(HOURLY)
+  teacherMonthlyAmount   Decimal         @default(0) @db.Decimal(10, 2)
   // Percentage (0-100) of monthlyValue paid to the teacher each month when
   // teacherPayMode is PERCENTAGE — resolved against the historically
   // correct monthlyValue for the payroll month, same as teacherMonthlyAmount
   // is a flat figure unaffected by how many classes actually happen.
-  teacherPercentage     Decimal         @default(0) @db.Decimal(5, 2)
-  courseId          String?
-  course            Course?         @relation(fields: [courseId], references: [id])
+  teacherPercentage      Decimal         @default(0) @db.Decimal(5, 2)
+  courseId               String?
+  course                 Course?         @relation(fields: [courseId], references: [id])
   // Record of past courses, same shape as teacherHistory — informational
   // only, doesn't drive any generation logic.
-  courseHistory     Json            @default("[]")
-  planId            String?
-  plan              Plan?           @relation(fields: [planId], references: [id])
+  courseHistory          Json            @default("[]")
+  planId                 String?
+  plan                   Plan?           @relation(fields: [planId], references: [id])
   // Record of past plans, same shape as teacherHistory — informational
   // only, doesn't drive any generation logic.
-  planHistory       Json            @default("[]")
-  monthlyValue      Decimal         @db.Decimal(10, 2)
+  planHistory            Json            @default("[]")
+  monthlyValue           Decimal         @db.Decimal(10, 2)
   // History of monthlyValue changes over time —
   // [{ "amount": 141.02, "from": "2026-01-01", "until": "2026-06-30" }, ...].
   // monthlyValue always mirrors whichever entry is in effect today (or the
@@ -274,56 +274,56 @@ model StudentProfile {
   // simple aggregate queries (dashboards, CSV) keep reading a flat number;
   // getBillingSlots resolves the historically-correct amount for a given
   // reference month from this instead when generating/previewing cobranças.
-  monthlyValueHistory Json          @default("[]")
-  bankAccount       BankAccount     @default(JOE) // which of the school's 3 accounts receives this student's payments
+  monthlyValueHistory    Json            @default("[]")
+  bankAccount            BankAccount     @default(JOE) // which of the school's 3 accounts receives this student's payments
   // History of bankAccount changes over time, same shape/sync rule as
   // monthlyValueHistory — bankAccount always mirrors whichever entry is in
   // effect today (or the most recent one); getBillingSlots resolves the
   // historically-correct account for a given reference month from this, so
   // a student who switches accounts mid-course keeps routing past months'
   // payments to whichever account was actually in effect then.
-  bankAccountHistory Json           @default("[]")
-  dueDay            Int             @default(10) // day of the month the invoice ("boleto") is due, 1-31
+  bankAccountHistory     Json            @default("[]")
+  dueDay                 Int             @default(10) // day of the month the invoice ("boleto") is due, 1-31
   // History of dueDay changes over time, same shape/sync rule as
   // monthlyValueHistory — dueDay always mirrors whichever entry is in
   // effect today (or the most recent one); getBillingSlots resolves the
   // historically-correct due day for a given reference month from this.
-  dueDayHistory     Json            @default("[]")
+  dueDayHistory          Json            @default("[]")
   // Optional third-party payer (e.g. a company) covering part or all of
   // monthlyValue, billed separately with its own due date. Null name means
   // no third party is configured — the student is billed the full amount.
-  thirdPartyPayerName String?
-  thirdPartyAmount     Decimal?      @db.Decimal(10, 2)
-  thirdPartyDueDay     Int? // 1-31
-  thirdPartyBankAccount BankAccount? // which account receives the third party's portion
-  lessonsPerMonth   Int             @default(4)
+  thirdPartyPayerName    String?
+  thirdPartyAmount       Decimal?        @db.Decimal(10, 2)
+  thirdPartyDueDay       Int? // 1-31
+  thirdPartyBankAccount  BankAccount? // which account receives the third party's portion
+  lessonsPerMonth        Int             @default(4)
   // History of lessonsPerMonth changes over time, same shape/sync rule as
   // monthlyValueHistory — informational record-keeping only, like
   // teacherHistory/courseHistory/planHistory (doesn't drive any
   // calculation, since actual monthly class load is computed from the
   // real generated lessons instead).
-  lessonsPerMonthHistory Json       @default("[]")
+  lessonsPerMonthHistory Json            @default("[]")
   // One entry per scheduled day, each with its own time:
   // [{ "weekday": 2, "start": "19:00", "end": "19:50" }, ...] (weekday 0=Sun..6=Sat)
-  lessonSchedule    Json            @default("[]")
-  level             CourseLevel     @default(A1)
-  levelProgress     Int             @default(0) // 0-100
-  lessonsContracted Int             @default(0)
-  startDate         DateTime        @default(now())
+  lessonSchedule         Json            @default("[]")
+  level                  CourseLevel     @default(A1)
+  levelProgress          Int             @default(0) // 0-100
+  lessonsContracted      Int             @default(0)
+  startDate              DateTime        @default(now())
   // Optional — when billing should start counting a student as billable,
   // independent of when their classes actually started (startDate). Falls
   // back to startDate when unset. Exists because the two can genuinely
   // differ — e.g. a class held on the last day of a month whose first
   // charge is only due the 1st of the next one.
-  billingStartDate  DateTime?
+  billingStartDate       DateTime?
   // Optional — when set, recurring lesson generation never schedules a
   // class past this date, and it's shown as the course's expected end.
-  endDate           DateTime?
-  objective         String?
-  notes             String?
-  status            StudentStatus   @default(ACTIVE)
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  endDate                DateTime?
+  objective              String?
+  notes                  String?
+  status                 StudentStatus   @default(ACTIVE)
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
 
   lessons          Lesson[]
   payments         Payment[]
@@ -353,25 +353,25 @@ model StudentProfile {
 // account explicitly first or it's left dangling with no profile to
 // resolve to.
 model StudentGroupMember {
-  id               String         @id @default(uuid())
-  studentProfileId String
-  studentProfile   StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
-  userId           String         @unique
-  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String         @id @default(uuid())
+  studentProfileId    String
+  studentProfile      StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  userId              String         @unique
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   // This participant's own share of the group's monthly value — billed as
   // their own separate cobrança each month (see getBillingSlots), same
   // Vigência history convention as StudentProfile.monthlyValue. The
   // primary member's share is still StudentProfile.monthlyValue itself;
   // this only covers everyone else.
-  monthlyValue        Decimal      @default(0) @db.Decimal(10, 2)
-  monthlyValueHistory Json         @default("[]")
+  monthlyValue        Decimal        @default(0) @db.Decimal(10, 2)
+  monthlyValueHistory Json           @default("[]")
   // This participant's own due day and bank account — each participant's
   // cobrança can go to a different account and fall due on a different
   // day, same Vigência convention as StudentProfile.dueDay/dueDayHistory.
-  dueDay              Int          @default(10)
-  dueDayHistory       Json         @default("[]")
-  bankAccount         BankAccount  @default(JOE)
-  createdAt        DateTime       @default(now())
+  dueDay              Int            @default(10)
+  dueDayHistory       Json           @default("[]")
+  bankAccount         BankAccount    @default(JOE)
+  createdAt           DateTime       @default(now())
 
   @@map("student_group_members")
 }
@@ -475,21 +475,32 @@ model Lesson {
 // ---------------------------------------------------------------------------
 
 model Payment {
-  id             String         @id @default(uuid())
-  studentId      String
-  student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  referenceMonth DateTime // first day of the reference month
-  amount         Decimal        @db.Decimal(10, 2)
-  dueDate        DateTime
-  paidAt         DateTime?
-  status         PaymentStatus  @default(PENDING)
-  method         String? // pix, boleto, card... (prepared for gateway integration)
+  id                 String         @id @default(uuid())
+  studentId          String
+  student            StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  referenceMonth     DateTime // first day of the reference month
+  amount             Decimal        @db.Decimal(10, 2)
+  dueDate            DateTime
+  paidAt             DateTime?
+  status             PaymentStatus  @default(PENDING)
+  method             String? // pix, boleto, card... (prepared for gateway integration)
   // Null = billed to the student themselves. Otherwise the name of the
   // third party (e.g. a company) this specific charge is billed to — a
   // student can have up to two Payment rows per month, one per payer.
-  payerName      String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  payerName          String?
+  // True once an admin has directly set amount/dueDate for this one
+  // month from the Cobranças table — a one-time, this-month-only
+  // exception (a discount, a due date pushed for a holiday, ...) that's
+  // never meant to change the cadastro's ongoing price/due day. Protects
+  // the row from resyncStudentPayments, which otherwise re-derives
+  // amount/dueDate from the cadastro on every run and would silently
+  // overwrite the override. manualOverrideNote records why, since a
+  // number that doesn't match the cadastro is otherwise unexplained
+  // months later.
+  manualOverride     Boolean        @default(false)
+  manualOverrideNote String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
 
   @@index([studentId])
   @@index([status])
@@ -565,19 +576,19 @@ enum PayoutKind {
 // Doesn't affect the teacher's own payroll view or Férias provisioning —
 // both stay accrual-based (see REALIZED_STATUSES in teachers.ts).
 model Payout {
-  id        String          @id @default(uuid())
-  kind      PayoutKind
-  teacherId String? // set only when kind == TEACHER
-  teacher   TeacherProfile? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  year      Int
-  month     Int // 0-indexed, same convention as the rest of the app
-  amount    Decimal         @db.Decimal(10, 2)
+  id          String          @id @default(uuid())
+  kind        PayoutKind
+  teacherId   String? // set only when kind == TEACHER
+  teacher     TeacherProfile? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  year        Int
+  month       Int // 0-indexed, same convention as the rest of the app
+  amount      Decimal         @db.Decimal(10, 2)
   // Which account this payout actually came out of — same accounts as
   // Expense.bankAccount, so getBankBalances can deduct it from the right
   // one regardless of whether it's a teacher or a partner payout.
-  bankAccount BankAccount   @default(JOE)
-  paidAt    DateTime        @default(now())
-  notes     String?
+  bankAccount BankAccount     @default(JOE)
+  paidAt      DateTime        @default(now())
+  notes       String?
 
   @@index([kind, teacherId, year, month])
   @@map("payouts")

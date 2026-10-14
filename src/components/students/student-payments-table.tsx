@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, PenLine } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -13,7 +13,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PaymentStatusSelect } from "@/components/financial/payment-status-select";
+import { PaymentOverrideButton } from "@/components/students/payment-override-dialog";
 import {
   formatCurrency,
   formatDate,
@@ -33,6 +35,8 @@ export type PaymentHistoryRow = {
   paidAt: Date | null;
   status: PaymentStatus;
   bankAccount: BankAccount;
+  manualOverride: boolean;
+  manualOverrideNote: string | null;
 };
 
 export function StudentPaymentsTable({
@@ -95,8 +99,48 @@ export function StudentPaymentsTable({
                 <TableCell className="text-sm text-muted-foreground">
                   {p.payerName ?? studentName}
                 </TableCell>
-                <TableCell>{formatCurrency(p.amount)}</TableCell>
-                <TableCell>{formatCalendarDate(p.dueDate)}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    {formatCurrency(p.amount)}
+                    {p.manualOverride && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <PenLine className="size-3 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>Ajuste manual: {p.manualOverrideNote}</TooltipContent>
+                      </Tooltip>
+                    )}
+                    {editable && (
+                      <PaymentOverrideButton
+                        studentId={studentId}
+                        payerName={p.payerName}
+                        referenceMonth={p.referenceMonth}
+                        amount={p.amount}
+                        dueDate={p.dueDate}
+                        manualOverride={p.manualOverride}
+                        manualOverrideNote={p.manualOverrideNote}
+                        label="Ajustar valor deste mês"
+                      />
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    {formatCalendarDate(p.dueDate)}
+                    {editable && (
+                      <PaymentOverrideButton
+                        studentId={studentId}
+                        payerName={p.payerName}
+                        referenceMonth={p.referenceMonth}
+                        amount={p.amount}
+                        dueDate={p.dueDate}
+                        manualOverride={p.manualOverride}
+                        manualOverrideNote={p.manualOverrideNote}
+                        label="Ajustar vencimento deste mês"
+                      />
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>{p.paidAt ? formatDate(p.paidAt) : "—"}</TableCell>
                 <TableCell>
                   {editable ? (

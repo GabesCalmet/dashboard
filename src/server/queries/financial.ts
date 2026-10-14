@@ -563,6 +563,8 @@ export async function getStudentPaymentHistory(studentId: string) {
     paidAt: Date | null;
     status: PaymentStatus;
     bankAccount: BankAccount;
+    manualOverride: boolean;
+    manualOverrideNote: string | null;
   }[] = [];
 
   while (cursor <= end) {
@@ -581,6 +583,8 @@ export async function getStudentPaymentHistory(studentId: string) {
           paidAt: real.paidAt,
           status: real.status,
           bankAccount: slot.bankAccount,
+          manualOverride: real.manualOverride,
+          manualOverrideNote: real.manualOverrideNote,
         });
       } else if (
         (student.status === "ACTIVE" || student.endDate) &&
@@ -596,6 +600,8 @@ export async function getStudentPaymentHistory(studentId: string) {
           paidAt: null,
           status: dueDate < now ? "LATE" : "PENDING",
           bankAccount: slot.bankAccount,
+          manualOverride: false,
+          manualOverrideNote: null,
         });
       }
     }

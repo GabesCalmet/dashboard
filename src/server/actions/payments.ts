@@ -12,6 +12,7 @@ import {
   isSlotBillableForMonth,
 } from "@/server/billing";
 import type { PaymentStatus } from "@prisma/client";
+import type { ActionState } from "@/server/actions/students";
 
 function dueDateFor(monthStart: Date, day: number) {
   const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
@@ -81,6 +82,116 @@ export async function setCobrancaStatus(
   revalidatePath("/admin/financial/receita");
 }
 
+// Directly sets amount/dueDate for one specific month's cobrança — a
+// one-time, this-month-only exception (a discount, a due date pushed for a
+// holiday, ...) that intentionally does NOT touch the student's cadastro
+// (monthlyValueHistory/dueDayHistory) and has no effect on any other
+// month's row, since each month is already its own independent Payment
+// row. Marks the row manualOverride so resyncStudentPayments leaves it
+// alone from here on instead of silently recomputing it back to whatever
+// the cadastro would normally produce. The note is required — a number
+// that no longer matches the cadastro is otherwise unexplained the next
+// time anyone looks at it.
+export async function setPaymentOverride(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+
+  const studentId = String(formData.get("studentId") ?? "");
+  const payerName = String(formData.get("payerName") ?? "") || null;
+  const referenceMonthRaw = String(formData.get("referenceMonth") ?? "");
+  const amountRaw = String(formData.get("amount") ?? "");
+  const dueDateRaw = String(formData.get("dueDate") ?? "");
+  const note = String(formData.get("note") ?? "").trim();
+
+  if (!studentId || !referenceMonthRaw || !amountRaw || !dueDateRaw) {
+    return { error: "Preencha todos os campos." };
+  }
+  if (!note) {
+    return { error: "Descreva o motivo do ajuste." };
+  }
+  const amount = Number(amountRaw);
+  if (!Number.isFinite(amount) || amount < 0) {
+    return { error: "Valor inválido." };
+  }
+  const referenceMonth = new Date(referenceMonthRaw);
+  const dueDate = new Date(dueDateRaw);
+  if (Number.isNaN(referenceMonth.getTime()) || Number.isNaN(dueDate.getTime())) {
+    return { error: "Data inválida." };
+  }
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+
+  const existing = await prisma.payment.findFirst({
+    where: { studentId, referenceMonth: monthStart, payerName },
+  });
+
+  let payment;
+  if (existing) {
+    payment = await prisma.payment.update({
+      where: { id: existing.id },
+      data: { amount, dueDate, manualOverride: true, manualOverrideNote: note },
+    });
+  } else {
+    payment = await prisma.payment.create({
+      data: {
+        studentId,
+        referenceMonth: monthStart,
+        amount,
+        dueDate,
+        payerName,
+        status: dueDate < new Date() ? "LATE" : "PENDING",
+        manualOverride: true,
+        manualOverrideNote: note,
+      },
+    });
+  }
+
+  await recordAudit({
+    entityType: "Payment",
+    entityId: payment.id,
+    action: "UPDATE",
+    actor,
+    changes: { manualOverride: true, amount, dueDate: dueDate.toISOString(), note, payerName },
+  });
+
+  revalidatePath("/admin/financial");
+  revalidatePath("/admin/financial/receita");
+  revalidatePath(`/admin/students/${studentId}`);
+  revalidatePath(`/coordinator/students/${studentId}`);
+
+  return { success: "Cobrança ajustada manualmente." };
+}
+
+// Reverts a manually-overridden row back to following the cadastro —
+// clears the protection flag so the next "Atualizar cobranças" recomputes
+// amount/dueDate normally. Doesn't touch the values itself; they stay as
+// whatever they currently are until that resync runs.
+export async function clearPaymentOverride(studentId: string, payerName: string | null, referenceMonth: Date) {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+
+  const existing = await prisma.payment.findFirst({
+    where: { studentId, referenceMonth: monthStart, payerName },
+  });
+  if (!existing) return;
+
+  await prisma.payment.update({
+    where: { id: existing.id },
+    data: { manualOverride: false, manualOverrideNote: null },
+  });
+
+  await recordAudit({
+    entityType: "Payment",
+    entityId: existing.id,
+    action: "UPDATE",
+    actor,
+    changes: { manualOverride: false },
+  });
+
+  revalidatePath("/admin/financial");
+  revalidatePath("/admin/financial/receita");
+  revalidatePath(`/admin/students/${studentId}`);
+  revalidatePath(`/coordinator/students/${studentId}`);
+}
+
 // Manual fallback for the daily cron (/api/cron/mark-late-payments) — runs
 // the exact same two sweeps (auto-generate this month's missing cobranças,
 // then flip any overdue PENDING to LATE) on demand, for when the scheduled
@@ -144,6 +255,7 @@ export async function resyncStudentPayments(studentId: string) {
 
   let updated = 0;
   for (const payment of payments) {
+    if (payment.manualOverride) continue;
     const slots = getBillingSlots(billingStudent, payment.referenceMonth);
     const slot = slots.find((s) => s.payerName === payment.payerName);
     if (!slot) continue;
