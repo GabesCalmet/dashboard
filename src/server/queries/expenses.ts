@@ -96,6 +96,10 @@ export async function listExpensesForMonth(year: number, month: number) {
         effectiveAmount: amountOverride ?? Number(e.amount),
         amountOverride,
         amountOverrideNote: occurrence?.amountOverrideNote ?? null,
+        // Which account this month's bill actually came out of — the
+        // override when one's set, otherwise the expense's own default.
+        effectiveBankAccount: occurrence?.bankAccountOverride ?? e.bankAccount,
+        bankAccountOverride: occurrence?.bankAccountOverride ?? null,
       };
     })
     .sort((a, b) => a.occurrenceDate.getTime() - b.occurrenceDate.getTime());

@@ -549,24 +549,29 @@ model Expense {
 // — shown as Atrasado/Pendente live, same convention as an un-generated
 // Payment placeholder, never stored until someone actually acts on it.
 model ExpenseOccurrence {
-  id                 String        @id @default(uuid())
-  expenseId          String
-  expense            Expense       @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-  referenceMonth     DateTime // first day of the month this occurrence is for
-  status             PaymentStatus @default(PENDING)
+  id                  String        @id @default(uuid())
+  expenseId           String
+  expense             Expense       @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  referenceMonth      DateTime // first day of the month this occurrence is for
+  status              PaymentStatus @default(PENDING)
   // Auto-set to "now" the moment status is set to PAID — editable so a
   // payment confirmed late can still record the real date it happened.
-  paidAt             DateTime?
+  paidAt              DateTime?
   // Overrides the Expense's flat `amount` for just this one month — e.g. a
   // recurring bill that was prorated or partially refunded once, without
   // changing what every other month of the same recurring expense charges.
   // Null means "use the expense's normal amount," same as not overriding a
   // student cobrança. amountOverrideNote records why, for the same reason
   // a cobrança override requires one.
-  amountOverride     Decimal?      @db.Decimal(10, 2)
-  amountOverrideNote String?
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  amountOverride      Decimal?      @db.Decimal(10, 2)
+  amountOverrideNote  String?
+  // Overrides which account this one month's bill actually came out of —
+  // a temporary, this-month-only exception. The Expense's own bankAccount
+  // stays the real/default account for every other month; null here means
+  // "use that default," same convention as amountOverride.
+  bankAccountOverride BankAccount?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
   @@unique([expenseId, referenceMonth])
   @@index([expenseId])

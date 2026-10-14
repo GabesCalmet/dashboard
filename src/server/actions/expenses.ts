@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
 import { expenseFormSchema } from "@/lib/validation/expense";
 import type { ActionState } from "@/server/actions/students";
-import type { PaymentStatus } from "@prisma/client";
+import type { PaymentStatus, BankAccount } from "@prisma/client";
 
 function revalidateFinancialPaths() {
   revalidatePath("/admin/financial");
@@ -221,6 +221,37 @@ export async function clearExpenseAmountOverride(expenseId: string, referenceMon
   });
 
   revalidateFinancialPaths();
+}
+
+// Sets (or clears, with bankAccount: null) which account this one month's
+// expense actually came out of — a simple, no-note, no-date, this-month-
+// only exception. The Expense's own bankAccount stays the real/default
+// account for every other month of a recurring series; null here just
+// means "follow that default again."
+export async function setExpenseBankAccountOverride(
+  expenseId: string,
+  referenceMonth: Date,
+  bankAccount: BankAccount | null
+) {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+
+  const occurrence = await prisma.expenseOccurrence.upsert({
+    where: { expenseId_referenceMonth: { expenseId, referenceMonth: monthStart } },
+    create: { expenseId, referenceMonth: monthStart, bankAccountOverride: bankAccount },
+    update: { bankAccountOverride: bankAccount },
+  });
+
+  await recordAudit({
+    entityType: "ExpenseOccurrence",
+    entityId: occurrence.id,
+    action: "UPDATE",
+    actor,
+    changes: { expenseId, bankAccountOverride: bankAccount, referenceMonth: monthStart.toISOString() },
+  });
+
+  revalidateFinancialPaths();
+  return occurrence;
 }
 
 export async function deleteExpense(expenseId: string) {

@@ -70,6 +70,8 @@ export default async function AdminExpenseCategoryPage({
           effectiveAmount: e.effectiveAmount,
           amountOverride: e.amountOverride,
           amountOverrideNote: e.amountOverrideNote,
+          effectiveBankAccount: e.effectiveBankAccount,
+          bankAccountOverride: e.bankAccountOverride,
         }))}
       />
     </div>

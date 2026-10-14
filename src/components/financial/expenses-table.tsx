@@ -27,12 +27,12 @@ import {
 import { ExpenseFormDialog } from "@/components/financial/expense-form-dialog";
 import { ExpenseOccurrenceStatusSelect } from "@/components/financial/expense-occurrence-status-select";
 import { ExpenseAmountOverrideButton } from "@/components/financial/expense-amount-override-dialog";
+import { ExpenseBankAccountSelect } from "@/components/financial/expense-bank-account-select";
 import {
   formatCurrency,
   formatCalendarDate,
   expenseFrequencyLabel,
   expenseCategoryLabel,
-  bankAccountLabel,
 } from "@/lib/labels";
 import { deleteExpense, endRecurringExpense } from "@/server/actions/expenses";
 import type { Expense, ExpenseCategory, BankAccount, PaymentStatus } from "@prisma/client";
@@ -61,6 +61,11 @@ type Row = {
   effectiveAmount: number;
   amountOverride: number | null;
   amountOverrideNote: string | null;
+  // Which account this month's bill actually came out of — the override
+  // when one's set, otherwise `bankAccount`. Also never shared across
+  // months of the same recurring expense.
+  effectiveBankAccount: BankAccount;
+  bankAccountOverride: BankAccount | null;
 };
 
 export function ExpensesTable({ expenses }: { expenses: Row[] }) {
@@ -110,8 +115,15 @@ export function ExpensesTable({ expenses }: { expenses: Row[] }) {
                 <TableCell className="text-sm text-muted-foreground">
                   {expenseCategoryLabel[e.category]}
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {bankAccountLabel[e.bankAccount]}
+                <TableCell>
+                  <ExpenseBankAccountSelect
+                    expenseId={e.id}
+                    referenceMonth={
+                      new Date(e.occurrenceDate.getFullYear(), e.occurrenceDate.getMonth(), 1)
+                    }
+                    bankAccount={e.bankAccount}
+                    bankAccountOverride={e.bankAccountOverride}
+                  />
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline">{expenseFrequencyLabel[e.frequency]}</Badge>
