@@ -111,7 +111,7 @@ export async function syncRecurringLessons(studentId: string) {
   const [existingRecurring, otherLessons] = await Promise.all([
     prisma.lesson.findMany({
       where: { studentId, isRecurring: true },
-      select: { id: true, scheduledAt: true, status: true },
+      select: { id: true, scheduledAt: true, status: true, durationMin: true, teacherId: true },
     }),
     // Manual bookings/makeups — never touched, only used below to avoid
     // double-booking a brand new generated lesson onto the exact same
@@ -213,12 +213,25 @@ export async function syncRecurringLessons(studentId: string) {
       const candidate = (existingByDate.get(dateKey) ?? []).find((l) => !claimed.has(l.id));
       if (candidate) {
         claimed.add(candidate.id);
-        if (candidate.scheduledAt.getTime() !== cursor.getTime()) {
+        const newDuration = durationFromTimes(entry.start, entry.end);
+        const newTeacherId = resolveTeacherId(student.teacherId, teacherHistory, cursor);
+        // Retime whenever the start instant, the duration, or the teacher
+        // changed — not just the start instant. Two schedule entries can
+        // share the same start time (e.g. a backdated duration-only
+        // change, like 19:00-19:30 replacing 19:00-19:45 for an earlier
+        // window) — comparing only scheduledAt silently missed that,
+        // leaving an already-generated lesson stuck at its old duration
+        // forever, no matter how many times the sync re-ran.
+        if (
+          candidate.scheduledAt.getTime() !== cursor.getTime() ||
+          candidate.durationMin !== newDuration ||
+          candidate.teacherId !== newTeacherId
+        ) {
           toRetime.push({
             id: candidate.id,
             scheduledAt: new Date(cursor),
-            durationMin: durationFromTimes(entry.start, entry.end),
-            teacherId: resolveTeacherId(student.teacherId, teacherHistory, cursor),
+            durationMin: newDuration,
+            teacherId: newTeacherId,
           });
         }
       } else if (!blockedTimes.has(cursor.getTime())) {
