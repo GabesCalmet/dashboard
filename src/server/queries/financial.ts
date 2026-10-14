@@ -534,9 +534,36 @@ export async function getFinancialSummary(year?: number, month?: number) {
     )
   );
 
+  // "Gasto" per month here must match the same realizado definition used
+  // for the single viewed month above (manualExpenseRealized +
+  // paidTeacherTotal + partnerSplit.realizado.partnersTotal) — otherwise
+  // the yearly chart/YTD figures (and the "Lucro" they drive) only reflect
+  // manually-typed expenses and silently omit teacher payroll and partner
+  // payouts, understating real spending and overstating profit.
+  const monthlyGastos = await Promise.all(
+    monthsInYear.map(async (mo) => {
+      const monthYear = mo.start.getFullYear();
+      const monthIdx = mo.start.getMonth();
+      const [occurrences, paidTeacher, partners] = await Promise.all([
+        prisma.expenseOccurrence.findMany({
+          where: { referenceMonth: mo.start, status: "PAID" },
+          select: { expenseId: true, amountOverride: true },
+        }),
+        getPaidTeacherPayrollTotal(monthYear, monthIdx),
+        getPartnerSplitForMonth(monthYear, monthIdx),
+      ]);
+      const paidIds = new Set(occurrences.map((o) => o.expenseId));
+      const overrides = new Map(
+        occurrences.filter((o) => o.amountOverride != null).map((o) => [o.expenseId, Number(o.amountOverride)])
+      );
+      const manualGasto = expenseRealizedForMonth(expenses, paidIds, mo.start, mo.end, overrides);
+      return manualGasto + paidTeacher + partners.realizado.partnersTotal;
+    })
+  );
+
   const yearlyChart = monthsInYear.map((mo, i) => {
     const receita = Number(monthlyReceitas[i]._sum.amount ?? 0);
-    const gasto = expenseTotalForMonth(expenses, mo.start, mo.end);
+    const gasto = monthlyGastos[i];
     return { month: format(mo.start, "MMM"), receita, gasto, lucro: receita - gasto };
   });
 
