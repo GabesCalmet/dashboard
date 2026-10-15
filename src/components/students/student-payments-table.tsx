@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PaymentStatusSelect } from "@/components/financial/payment-status-select";
 import { PaymentOverrideButton } from "@/components/students/payment-override-dialog";
+import { PaymentBankAccountSelect } from "@/components/students/payment-bank-account-select";
 import {
   formatCurrency,
   formatDate,
@@ -22,6 +23,7 @@ import {
   formatCalendarMonthYear,
   paymentStatusLabel,
   paymentStatusVariant,
+  bankAccountLabel,
 } from "@/lib/labels";
 import type { PaymentStatus, BankAccount } from "@prisma/client";
 
@@ -34,6 +36,8 @@ export type PaymentHistoryRow = {
   paidAt: Date | null;
   status: PaymentStatus;
   bankAccount: BankAccount;
+  effectiveBankAccount: BankAccount;
+  bankAccountOverride: BankAccount | null;
   manualOverride: boolean;
   manualOverrideNote: string | null;
 };
@@ -85,6 +89,7 @@ export function StudentPaymentsTable({
             <TableRow>
               <TableHead>Referência</TableHead>
               <TableHead>Pagador</TableHead>
+              <TableHead>Conta</TableHead>
               <TableHead>Valor</TableHead>
               <TableHead>Vencimento</TableHead>
               <TableHead>Pago em</TableHead>
@@ -97,6 +102,21 @@ export function StudentPaymentsTable({
                 <TableCell>{formatCalendarMonthYear(p.referenceMonth)}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {p.payerName ?? studentName}
+                </TableCell>
+                <TableCell>
+                  {editable ? (
+                    <PaymentBankAccountSelect
+                      studentId={studentId}
+                      payerName={p.payerName}
+                      referenceMonth={p.referenceMonth}
+                      bankAccount={p.bankAccount}
+                      bankAccountOverride={p.bankAccountOverride}
+                    />
+                  ) : (
+                    <span className="text-sm text-muted-foreground">
+                      {bankAccountLabel[p.effectiveBankAccount]}
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
@@ -157,7 +177,7 @@ export function StudentPaymentsTable({
             ))}
             {filteredPayments.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                   Nenhum pagamento registrado neste ano.
                 </TableCell>
               </TableRow>

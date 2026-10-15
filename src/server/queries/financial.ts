@@ -317,9 +317,9 @@ export async function getBankBalances(asOf?: Date) {
   const received: Record<BankAccount, number> = { GABES: 0, JOE: 0, ASAAS: 0 };
   const receivedItems: Record<BankAccount, BankLedgerItem[]> = { GABES: [], JOE: [], ASAAS: [] };
   for (const p of paidPayments) {
-    const account = p.payerName
-      ? (p.student.thirdPartyBankAccount ?? p.student.bankAccount)
-      : p.student.bankAccount;
+    const account =
+      p.bankAccountOverride ??
+      (p.payerName ? (p.student.thirdPartyBankAccount ?? p.student.bankAccount) : p.student.bankAccount);
     const amount = Number(p.amount);
     received[account] += amount;
     receivedItems[account].push({
@@ -680,7 +680,13 @@ export async function getStudentPaymentHistory(studentId: string) {
     dueDate: Date;
     paidAt: Date | null;
     status: PaymentStatus;
+    // bankAccount is the cadastro-resolved default for this slot/month
+    // (unaffected by any override, so a "Padrão (X)" label always names
+    // the real default); effectiveBankAccount is what actually applies —
+    // the override when one's set, otherwise the same as bankAccount.
     bankAccount: BankAccount;
+    effectiveBankAccount: BankAccount;
+    bankAccountOverride: BankAccount | null;
     manualOverride: boolean;
     manualOverrideNote: string | null;
   }[] = [];
@@ -701,6 +707,8 @@ export async function getStudentPaymentHistory(studentId: string) {
           paidAt: real.paidAt,
           status: real.status,
           bankAccount: slot.bankAccount,
+          effectiveBankAccount: real.bankAccountOverride ?? slot.bankAccount,
+          bankAccountOverride: real.bankAccountOverride,
           manualOverride: real.manualOverride,
           manualOverrideNote: real.manualOverrideNote,
         });
@@ -718,6 +726,8 @@ export async function getStudentPaymentHistory(studentId: string) {
           paidAt: null,
           status: dueDate < now ? "LATE" : "PENDING",
           bankAccount: slot.bankAccount,
+          effectiveBankAccount: slot.bankAccount,
+          bankAccountOverride: null,
           manualOverride: false,
           manualOverrideNote: null,
         });

@@ -11,7 +11,7 @@ import {
   resolveBillingStart,
   isSlotBillableForMonth,
 } from "@/server/billing";
-import type { PaymentStatus } from "@prisma/client";
+import type { PaymentStatus, BankAccount } from "@prisma/client";
 import type { ActionState } from "@/server/actions/students";
 
 function dueDateFor(monthStart: Date, day: number) {
@@ -196,6 +196,69 @@ export async function clearPaymentOverride(studentId: string, payerName: string 
   revalidatePath("/admin/financial/receita");
   revalidatePath(`/admin/students/${studentId}`);
   revalidatePath(`/coordinator/students/${studentId}`);
+}
+
+// Sets (or clears, with bankAccount: null) which account this one month's
+// cobrança actually goes to — a simple, no-note, this-month-only
+// exception, same pattern as the gasto bank-account override. Doesn't
+// touch amount/dueDate/status, and has no effect on any other month,
+// since each month is already its own independent Payment row.
+export async function setPaymentBankAccountOverride(
+  studentId: string,
+  payerName: string | null,
+  referenceMonth: Date,
+  bankAccount: BankAccount | null
+) {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+
+  const existing = await prisma.payment.findFirst({
+    where: { studentId, referenceMonth: monthStart, payerName },
+  });
+
+  let payment;
+  if (existing) {
+    payment = await prisma.payment.update({
+      where: { id: existing.id },
+      data: { bankAccountOverride: bankAccount },
+    });
+  } else {
+    const student = await prisma.studentProfile.findUniqueOrThrow({
+      where: { id: studentId },
+      include: { groupMembers: { include: { user: true } } },
+    });
+    const slot = getBillingSlots(withBillingGroupMembers(student), monthStart).find(
+      (s) => s.payerName === payerName
+    );
+    if (!slot) throw new Error("Cobrança não encontrada para este pagador.");
+    const dueDate = dueDateFor(monthStart, slot.dueDay);
+    payment = await prisma.payment.create({
+      data: {
+        studentId,
+        referenceMonth: monthStart,
+        amount: slot.amount,
+        dueDate,
+        payerName: slot.payerName,
+        status: dueDate < new Date() ? "LATE" : "PENDING",
+        bankAccountOverride: bankAccount,
+      },
+    });
+  }
+
+  await recordAudit({
+    entityType: "Payment",
+    entityId: payment.id,
+    action: "UPDATE",
+    actor,
+    changes: { bankAccountOverride: bankAccount, payerName, referenceMonth: monthStart.toISOString() },
+  });
+
+  revalidatePath("/admin/financial");
+  revalidatePath("/admin/financial/receita");
+  revalidatePath(`/admin/students/${studentId}`);
+  revalidatePath(`/coordinator/students/${studentId}`);
+
+  return payment;
 }
 
 // Manual fallback for the daily cron (/api/cron/mark-late-payments) — runs

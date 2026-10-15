@@ -475,19 +475,19 @@ model Lesson {
 // ---------------------------------------------------------------------------
 
 model Payment {
-  id                 String         @id @default(uuid())
-  studentId          String
-  student            StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  referenceMonth     DateTime // first day of the reference month
-  amount             Decimal        @db.Decimal(10, 2)
-  dueDate            DateTime
-  paidAt             DateTime?
-  status             PaymentStatus  @default(PENDING)
-  method             String? // pix, boleto, card... (prepared for gateway integration)
+  id                  String         @id @default(uuid())
+  studentId           String
+  student             StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  referenceMonth      DateTime // first day of the reference month
+  amount              Decimal        @db.Decimal(10, 2)
+  dueDate             DateTime
+  paidAt              DateTime?
+  status              PaymentStatus  @default(PENDING)
+  method              String? // pix, boleto, card... (prepared for gateway integration)
   // Null = billed to the student themselves. Otherwise the name of the
   // third party (e.g. a company) this specific charge is billed to — a
   // student can have up to two Payment rows per month, one per payer.
-  payerName          String?
+  payerName           String?
   // True once an admin has directly set amount/dueDate for this one
   // month from the Cobranças table — a one-time, this-month-only
   // exception (a discount, a due date pushed for a holiday, ...) that's
@@ -497,10 +497,16 @@ model Payment {
   // overwrite the override. manualOverrideNote records why, since a
   // number that doesn't match the cadastro is otherwise unexplained
   // months later.
-  manualOverride     Boolean        @default(false)
-  manualOverrideNote String?
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  manualOverride      Boolean        @default(false)
+  manualOverrideNote  String?
+  // Overrides which account this one month's cobrança actually goes to —
+  // a simple, this-month-only exception (no note, no date, same as the
+  // gasto bank-account override). Null means "use the cadastro's
+  // normally-resolved account" (see getBillingSlots/
+  // resolveHistoricalBankAccount); doesn't touch bankAccountHistory.
+  bankAccountOverride BankAccount?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
   @@index([studentId])
   @@index([status])
