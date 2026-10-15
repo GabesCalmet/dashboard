@@ -293,7 +293,7 @@ export async function getBankBalances(asOf?: Date) {
     // whenever someone happened to click the status dropdown.
     prisma.payment.findMany({
       where: { status: "PAID", dueDate: { lte: now } },
-      include: { student: { include: { user: true } } },
+      include: { student: { include: { user: true, groupMembers: { include: { user: true } } } } },
     }),
     prisma.expense.findMany(),
     prisma.expenseOccurrence.findMany({
@@ -317,9 +317,20 @@ export async function getBankBalances(asOf?: Date) {
   const received: Record<BankAccount, number> = { GABES: 0, JOE: 0, ASAAS: 0 };
   const receivedItems: Record<BankAccount, BankLedgerItem[]> = { GABES: [], JOE: [], ASAAS: [] };
   for (const p of paidPayments) {
-    const account =
-      p.bankAccountOverride ??
-      (p.payerName ? (p.student.thirdPartyBankAccount ?? p.student.bankAccount) : p.student.bankAccount);
+    // Resolved the same way the Cobranças table resolves it — historically,
+    // for this payment's own referenceMonth, not the student's current flat
+    // bankAccount. A student/third-party/group-member's account can change
+    // over time (bankAccountHistory), and the old flat lookup here used
+    // whatever's current today for every past payment regardless of what
+    // was actually true back then — see the Gabriel Lima VIP-147 bug this
+    // fixes (his account changed Joe → Gabriel partway through the year,
+    // and every past payment, including Joe-era ones, was misattributed to
+    // Gabriel). getBillingSlots also correctly resolves a group member's
+    // own account instead of always falling back to the primary student's.
+    const slot = getBillingSlots(withBillingGroupMembers(p.student), p.referenceMonth).find(
+      (s) => s.payerName === p.payerName
+    );
+    const account = p.bankAccountOverride ?? slot?.bankAccount ?? p.student.bankAccount;
     const amount = Number(p.amount);
     received[account] += amount;
     receivedItems[account].push({
