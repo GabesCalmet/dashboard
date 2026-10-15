@@ -171,7 +171,7 @@ export default async function AdminFinancialPage({
           href="/admin/financial/ferias"
         />
         <StatCard
-          label="Mensal — realizado"
+          label="Mensal — atual"
           value={formatCurrency(data.feriasMonthlyRealizado)}
           icon={PiggyBank}
           accent
@@ -184,7 +184,7 @@ export default async function AdminFinancialPage({
           href="/admin/financial/ferias"
         />
         <StatCard
-          label="Anual — realizado"
+          label="Anual — atual"
           value={formatCurrency(data.feriasAnnualRealizado)}
           icon={PiggyBank}
           accent
