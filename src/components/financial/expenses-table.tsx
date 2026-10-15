@@ -120,10 +120,17 @@ export function ExpensesTable({
                 <TableCell>
                   <div className="flex items-center gap-1">
                     {formatCurrency(e.effectiveAmount)}
+                    {/* occurrenceDate is UTC midnight of the intended calendar day
+                        (built server-side) — this component is "use client", so
+                        plain getFullYear()/getMonth() would read it in the
+                        browser's own Brazil (UTC-3) time instead, which rolls a
+                        day-1 occurrence back into the PREVIOUS month. Reading the
+                        UTC components keeps this referenceMonth matching the
+                        month this row is actually being shown under. */}
                     <ExpenseAmountOverrideButton
                       expenseId={e.id}
                       referenceMonth={
-                        new Date(e.occurrenceDate.getFullYear(), e.occurrenceDate.getMonth(), 1)
+                        new Date(e.occurrenceDate.getUTCFullYear(), e.occurrenceDate.getUTCMonth(), 1)
                       }
                       amount={e.amount}
                       amountOverride={e.amountOverride}
@@ -143,7 +150,7 @@ export function ExpensesTable({
                   <ExpenseBankAccountSelect
                     expenseId={e.id}
                     referenceMonth={
-                      new Date(e.occurrenceDate.getFullYear(), e.occurrenceDate.getMonth(), 1)
+                      new Date(e.occurrenceDate.getUTCFullYear(), e.occurrenceDate.getUTCMonth(), 1)
                     }
                     bankAccount={e.bankAccount}
                     bankAccountOverride={e.bankAccountOverride}
@@ -170,7 +177,7 @@ export function ExpensesTable({
                   <ExpenseOccurrenceStatusSelect
                     expenseId={e.id}
                     referenceMonth={
-                      new Date(e.occurrenceDate.getFullYear(), e.occurrenceDate.getMonth(), 1)
+                      new Date(e.occurrenceDate.getUTCFullYear(), e.occurrenceDate.getUTCMonth(), 1)
                     }
                     status={e.occurrenceStatus}
                     paidAt={e.occurrencePaidAt}
