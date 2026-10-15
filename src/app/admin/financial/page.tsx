@@ -45,6 +45,16 @@ export default async function AdminFinancialPage({
   const manualCategories = categoryTotals.filter(
     (c) => c.category === "MARKETING" || c.category === "RD" || c.category === "OUTROS"
   );
+  // "Lucro final" is what's actually left for the school after its own
+  // running costs (Marketing/R&D/Outros/Férias) come out of its own 1/3
+  // share — "Para a escola" by itself still overstates it, since those
+  // costs aren't paid by the partners' shares.
+  const manualTotalRealizado = manualCategories.reduce((sum, c) => sum + c.realizado, 0);
+  const manualTotalPrevisto = manualCategories.reduce((sum, c) => sum + c.previsto, 0);
+  const lucroFinalRealizado =
+    data.partnerSplit.realizado.school - manualTotalRealizado - data.feriasMonthlyRealizado;
+  const lucroFinalPrevisto =
+    data.partnerSplit.previsto.school - manualTotalPrevisto - data.feriasMonthlyPrevisto;
 
   return (
     <div>
@@ -127,9 +137,6 @@ export default async function AdminFinancialPage({
               <div className="space-y-3">
                 <SummaryRow label="Receita recebida" value={data.revenueRealized} tone="accent" />
                 <SummaryRow label="Professores" value={data.teacherPayrollRealizado} tone="destructive" />
-                {manualCategories.map((c) => (
-                  <SummaryRow key={c.category} label={c.label} value={c.realizado} tone="destructive" />
-                ))}
                 <SummaryRow label="Parceiros — Joe" value={data.partnerSplit.realizado.joe} tone="strong" />
                 <SummaryRow
                   label="Parceiros — Gabriel"
@@ -137,6 +144,11 @@ export default async function AdminFinancialPage({
                   tone="strong"
                 />
                 <SummaryRow label="Para a escola" value={data.partnerSplit.realizado.school} tone="strong" />
+                {manualCategories.map((c) => (
+                  <SummaryRow key={c.category} label={c.label} value={c.realizado} tone="destructive" />
+                ))}
+                <SummaryRow label="Férias" value={data.feriasMonthlyRealizado} tone="destructive" />
+                <SummaryRow label="Lucro final" value={lucroFinalRealizado} tone="accent" />
               </div>
             </div>
             <div>
@@ -146,9 +158,6 @@ export default async function AdminFinancialPage({
               <div className="space-y-3">
                 <SummaryRow label="Receita prevista" value={data.revenuePrevisto} tone="accent" />
                 <SummaryRow label="Professores" value={data.teacherPayrollPrevisto} tone="destructive" />
-                {manualCategories.map((c) => (
-                  <SummaryRow key={c.category} label={c.label} value={c.previsto} tone="destructive" />
-                ))}
                 <SummaryRow label="Parceiros — Joe" value={data.partnerSplit.previsto.joe} tone="strong" />
                 <SummaryRow
                   label="Parceiros — Gabriel"
@@ -156,6 +165,11 @@ export default async function AdminFinancialPage({
                   tone="strong"
                 />
                 <SummaryRow label="Para a escola" value={data.partnerSplit.previsto.school} tone="strong" />
+                {manualCategories.map((c) => (
+                  <SummaryRow key={c.category} label={c.label} value={c.previsto} tone="destructive" />
+                ))}
+                <SummaryRow label="Férias" value={data.feriasMonthlyPrevisto} tone="destructive" />
+                <SummaryRow label="Lucro final" value={lucroFinalPrevisto} tone="accent" />
               </div>
             </div>
           </div>
