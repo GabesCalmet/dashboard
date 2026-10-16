@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
+import { getTotalChargeRevenueForMonth } from "@/server/student-charges";
 
 export async function getAdminDashboardData(referenceMonth?: { year: number; month: number }) {
   const now = new Date();
@@ -66,27 +67,14 @@ export async function getAdminDashboardData(referenceMonth?: { year: number; mon
     prisma.payment.count({ where: { status: "LATE", student: { status: "ACTIVE" } } }),
   ]);
 
-  // Ticket médio = each course's real total (own portion + whatever a
-  // third party covers on top, plus every group participant's own share),
-  // averaged — using a manual sum/count rather than a DB _avg since _avg
-  // would skip students with no third party instead of treating their
-  // thirdPartyAmount as 0, and can't reach into the groupMembers relation.
-  let avgTicket = 0;
-  if (activeStudents > 0) {
-    const students = await prisma.studentProfile.findMany({
-      where: { status: "ACTIVE" },
-      select: { monthlyValue: true, thirdPartyAmount: true, groupMembers: { select: { monthlyValue: true } } },
-    });
-    const total = students.reduce(
-      (sum, s) =>
-        sum +
-        Number(s.monthlyValue) +
-        Number(s.thirdPartyAmount ?? 0) +
-        s.groupMembers.reduce((memberSum, m) => memberSum + Number(m.monthlyValue), 0),
-      0
-    );
-    avgTicket = total / activeStudents;
-  }
+  // Ticket médio = each course's real total this month (own portion +
+  // whatever a third party covers on top, plus every group participant's
+  // own share — see getTotalChargeRevenueForMonth), divided by how many
+  // active students there are. Not the same denominator as a charge slot
+  // count — a "grupo" cadastro counts once here (one StudentProfile) even
+  // though it may contribute several slots to the revenue total, same
+  // averaging convention this figure always used.
+  const avgTicket = activeStudents > 0 ? (await getTotalChargeRevenueForMonth(monthStart)) / activeStudents : 0;
 
   const avgLessonsPerStudent =
     activeStudents > 0

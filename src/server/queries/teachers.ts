@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth } from "date-fns";
 import { brazilDateTime, endOfBrazilDay, toBrazilDateString } from "@/lib/timezone";
 import { resolveHistoricalAmount, pickLatestOverlap } from "@/server/billing";
+import { getOwnChargeAmountsForMonth } from "@/server/student-charges";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
 import type { TeacherPayMode, LessonStatus } from "@prisma/client";
 
@@ -49,15 +50,18 @@ type TeacherAssignment = {
 
 // Resolves how a teacher is paid for a specific student/group in a given
 // month — hourly (rate × hours given), a flat monthly amount, or a
-// percentage of that month's monthlyValue (both of the latter unaffected
-// by how many classes actually happen) — from the student's teacherHistory
-// entry for that teacher covering the month, if one was configured; else
-// the student's current flat
+// percentage of that month's own StudentCharge amount (both of the latter
+// unaffected by how many classes actually happen) — from the student's
+// teacherHistory entry for that teacher covering the month, if one was
+// configured; else the student's current flat
 // teacherPayRate/teacherPayMode/teacherMonthlyAmount/teacherPercentage, for
 // a still-current assignment that's never had a change recorded; the
 // teacher's own flat hourlyRate is the last-resort fallback for HOURLY, so
 // payroll for a student nobody has configured a rate for yet keeps working
-// exactly as it did before this feature existed.
+// exactly as it did before this feature existed. chargeOwnAmount is the
+// student's own active-charge amount for this month (payerName: null;
+// see getOwnChargeAmountsForMonth), pre-resolved by the caller since this
+// function stays synchronous — 0 when there's no active charge that month.
 function resolveTeacherAssignment(
   student: {
     teacherId: string | null;
@@ -66,13 +70,12 @@ function resolveTeacherAssignment(
     teacherPayMode: TeacherPayMode;
     teacherMonthlyAmount: unknown;
     teacherPercentage: unknown;
-    monthlyValue: unknown;
-    monthlyValueHistory: unknown;
     startDate: Date;
   },
   teacherId: string,
   referenceMonth: Date,
-  fallbackHourlyRate: number
+  fallbackHourlyRate: number,
+  chargeOwnAmount: number
 ): TeacherAssignment {
   const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
   const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
@@ -95,10 +98,6 @@ function resolveTeacherAssignment(
     if (until && until < monthStart) return false;
     return true;
   });
-  const resolvedMonthlyValue = () =>
-    resolveHistoricalAmount(student.monthlyValue, student.monthlyValueHistory, monthStart, {
-      zeroOnGap: true,
-    });
 
   if (match?.mode === "MONTHLY") {
     return {
@@ -115,7 +114,7 @@ function resolveTeacherAssignment(
       assigned: true,
       mode: "PERCENTAGE",
       rate: 0,
-      monthlyAmount: (resolvedMonthlyValue() * percentage) / 100,
+      monthlyAmount: (chargeOwnAmount * percentage) / 100,
       percentage,
     };
   }
@@ -138,7 +137,7 @@ function resolveTeacherAssignment(
         assigned: true,
         mode: "PERCENTAGE",
         rate: 0,
-        monthlyAmount: (resolvedMonthlyValue() * percentage) / 100,
+        monthlyAmount: (chargeOwnAmount * percentage) / 100,
         percentage,
       };
     }
@@ -231,8 +230,6 @@ const teacherAssignmentSelect = {
   teacherPayMode: true,
   teacherMonthlyAmount: true,
   teacherPercentage: true,
-  monthlyValue: true,
-  monthlyValueHistory: true,
   startDate: true,
 } as const;
 
@@ -367,6 +364,7 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
     : [];
   const students = [...assignedStudents, ...extraStudents];
   const studentById = new Map(students.map((s) => [s.id, s]));
+  const chargeOwnAmounts = await getOwnChargeAmountsForMonth(students.map((s) => s.id), monthStart);
 
   const rows = teachers.map((t) => {
     const fallbackHourlyRate = resolveHistoricalAmount(t.hourlyRate, t.hourlyRateHistory, monthStart);
@@ -375,7 +373,13 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
     const flatHandled = new Set<string>();
 
     for (const student of students) {
-      const assignment = resolveTeacherAssignment(student, t.id, monthStart, fallbackHourlyRate);
+      const assignment = resolveTeacherAssignment(
+        student,
+        t.id,
+        monthStart,
+        fallbackHourlyRate,
+        chargeOwnAmounts.get(student.id) ?? 0
+      );
       if (assignment.assigned && isFlatAssignment(assignment.mode)) {
         previsto += assignment.monthlyAmount;
         realizado += assignment.monthlyAmount;
@@ -388,7 +392,13 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
       if (flatHandled.has(g.studentId)) continue;
       const student = studentById.get(g.studentId);
       if (!student) continue;
-      const assignment = resolveTeacherAssignment(student, t.id, monthStart, fallbackHourlyRate);
+      const assignment = resolveTeacherAssignment(
+        student,
+        t.id,
+        monthStart,
+        fallbackHourlyRate,
+        chargeOwnAmounts.get(student.id) ?? 0
+      );
       const pay = (g.durationMin / 60) * assignment.rate;
       previsto += pay;
       if ((REALIZED_STATUSES as readonly string[]).includes(g.status)) realizado += pay;
@@ -529,6 +539,7 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
     : [];
   const students = [...assignedStudents, ...extraStudents];
   const studentById = new Map(students.map((s) => [s.id, s]));
+  const chargeOwnAmounts = await getOwnChargeAmountsForMonth(students.map((s) => s.id), monthStart);
 
   const payByStatus = new Map<string, number>();
   const byStudent = new Map<
@@ -555,7 +566,13 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
   // regardless of how many lessons this teacher+student pair had this
   // month (including zero).
   for (const student of assignedStudents) {
-    const assignment = resolveTeacherAssignment(student, teacherId, monthStart, fallbackHourlyRate);
+    const assignment = resolveTeacherAssignment(
+      student,
+      teacherId,
+      monthStart,
+      fallbackHourlyRate,
+      chargeOwnAmounts.get(student.id) ?? 0
+    );
     if (assignment.assigned && isFlatAssignment(assignment.mode)) {
       byStudent.set(student.id, {
         hours: 0,
@@ -580,7 +597,13 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
   for (const g of studentBreakdown) {
     const student = studentById.get(g.studentId);
     const assignment = student
-      ? resolveTeacherAssignment(student, teacherId, monthStart, fallbackHourlyRate)
+      ? resolveTeacherAssignment(
+          student,
+          teacherId,
+          monthStart,
+          fallbackHourlyRate,
+          chargeOwnAmounts.get(student.id) ?? 0
+        )
       : { assigned: false, mode: "HOURLY" as const, rate: fallbackHourlyRate, monthlyAmount: 0, percentage: 0 };
     const hours = (g._sum.durationMin ?? 0) / 60;
     const isRealized = (REALIZED_STATUSES as readonly string[]).includes(g.status);

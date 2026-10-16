@@ -1,16 +1,27 @@
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { bankAccountLabel } from "@/lib/labels";
-import {
-  getBillingSlots,
-  withBillingGroupMembers,
-  resolveSlotStudentName,
-  isSlotBillableForMonth,
-  resolveBillingStart,
-} from "@/server/billing";
+import { resolveSlotStudentName } from "@/server/billing";
+import { getChargeSlotsForMonth, getTotalChargeRevenueForMonth } from "@/server/student-charges";
 import { getTeacherPayrollForMonth, getTeacherFeriasForYear } from "@/server/queries/teachers";
 import { getPaidTeacherPayrollTotal, getPartnerPayoutAmount } from "@/server/queries/payouts";
-import type { BankAccount, Expense, PaymentStatus } from "@prisma/client";
+import type { BankAccount, Expense, PaymentStatus, StudentCharge } from "@prisma/client";
+
+// Groups a flat list of StudentCharge rows (already ordered newest-first,
+// e.g. via `orderBy: { createdAt: "desc" }`) by studentId, and converts
+// each row's Decimal amount to a plain number — the shape
+// getChargeSlotsForMonth expects. Shared by every query below that needs
+// per-student charge slots for a given month.
+function groupChargesByStudent(charges: StudentCharge[]) {
+  const byStudent = new Map<string, { payerName: string | null; amount: number; frequency: StudentCharge["frequency"]; date: Date; dueDay: number | null; endDate: Date | null; bankAccount: BankAccount }[]>();
+  for (const c of charges) {
+    const entry = { ...c, amount: Number(c.amount) };
+    const bucket = byStudent.get(c.studentId);
+    if (bucket) bucket.push(entry);
+    else byStudent.set(c.studentId, [entry]);
+  }
+  return byStudent;
+}
 
 export async function getFinancialOverview(year?: number, month?: number) {
   const now = new Date();
@@ -19,87 +30,101 @@ export async function getFinancialOverview(year?: number, month?: number) {
   const monthEnd = endOfMonth(monthStart);
   const daysInMonth = monthEnd.getDate();
 
-  const [received, activeStudents, payments] = await Promise.all([
+  const studentInclude = {
+    user: true,
+    teacher: { include: { user: true } },
+    groupMembers: { include: { user: true } },
+  } as const;
+
+  const [received, charges, payments] = await Promise.all([
     prisma.payment.aggregate({
       where: { referenceMonth: monthStart, status: "PAID" },
       _sum: { amount: true },
     }),
-    prisma.studentProfile.findMany({
-      where: { status: "ACTIVE" },
-      include: {
-        user: true,
-        teacher: { include: { user: true } },
-        groupMembers: { include: { user: true } },
-      },
-    }),
+    prisma.studentCharge.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.payment.findMany({
       where: { referenceMonth: monthStart },
-      include: { student: { include: { user: true } } },
+      include: { student: { include: studentInclude } },
     }),
   ]);
 
-  const paymentBySlot = new Map(payments.map((p) => [`${p.studentId}::${p.payerName ?? ""}`, p]));
-  const studentIdsWithPayment = new Set(payments.map((p) => p.studentId));
+  const chargesByStudent = groupChargesByStudent(charges);
+  const studentById = new Map(payments.map((p) => [p.studentId, p.student]));
 
-  // Every active student billable by this month shows up here — one row
-  // per billing slot (their own portion, plus a separate one for a
-  // third-party payer if configured) — either the real cobrança for this
-  // month, or a placeholder (not yet billed) so nobody's missing just
-  // because "Gerar cobranças" hasn't been run yet. billingStartDate (when
-  // set) governs this independently of startDate — classes and billing
-  // don't have to start the same month. A slot is only billable once its
-  // own resolved due date actually falls on/after billingStartDate
-  // (isSlotBillableForMonth), not just "sometime in the same month" — that
-  // distinction matters whenever billingStartDate lands after a slot's
-  // dueDay within that month. A real Payment row (if one somehow exists)
-  // is never hidden, only the synthesized placeholder is skipped.
-  const rows = activeStudents
-    .filter((s) => resolveBillingStart(s) <= monthEnd || studentIdsWithPayment.has(s.id))
-    .flatMap((s) => {
-      const billingStart = resolveBillingStart(s);
-      return getBillingSlots(withBillingGroupMembers(s), monthStart)
-        .filter(
-          (slot) =>
-            paymentBySlot.has(`${s.id}::${slot.payerName ?? ""}`) ||
-            isSlotBillableForMonth(billingStart, monthStart, slot.dueDay, s.endDate)
-        )
-        .map((slot) => {
-          const payment = paymentBySlot.get(`${s.id}::${slot.payerName ?? ""}`);
-          if (payment) {
-            return {
-              id: payment.id,
-              studentId: s.id,
-              studentName: resolveSlotStudentName(payment.payerName, s),
-              teacherName: s.teacher?.user.name ?? null,
-              payerName: payment.payerName,
-              amount: Number(payment.amount),
-              dueDate: payment.dueDate,
-              paidAt: payment.paidAt,
-              status: payment.status,
-              bankAccount: slot.bankAccount,
-            };
-          }
-          const dueDate = new Date(
-            monthStart.getFullYear(),
-            monthStart.getMonth(),
-            Math.min(slot.dueDay, daysInMonth)
-          );
-          const status: PaymentStatus = dueDate < now ? "LATE" : "PENDING";
-          return {
-            id: null,
-            studentId: s.id,
-            studentName: resolveSlotStudentName(slot.payerName, s),
-            teacherName: s.teacher?.user.name ?? null,
-            payerName: slot.payerName,
-            amount: slot.amount,
-            dueDate,
-            paidAt: null,
-            status,
-            bankAccount: slot.bankAccount,
-          };
-        });
-    })
-    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+  // Any studentId with a currently-active charge but no payment loaded yet
+  // this month needs its own name/teacher fetched separately.
+  const missingStudentIds = [...chargesByStudent.keys()].filter((id) => !studentById.has(id));
+  if (missingStudentIds.length > 0) {
+    const fetched = await prisma.studentProfile.findMany({
+      where: { id: { in: missingStudentIds } },
+      include: studentInclude,
+    });
+    for (const s of fetched) studentById.set(s.id, s);
+  }
+
+  // Every real Payment row this month shows up unconditionally first — a
+  // row that's already real history must never vanish just because its
+  // originating charge was since edited/deleted (same principle as
+  // getStudentPaymentHistory). Then a live placeholder for any still-
+  // active charge slot with no real row yet, so nobody's missing just
+  // because "Gerar cobranças" hasn't run for this month.
+  const rows: {
+    id: string | null;
+    studentId: string;
+    studentName: string;
+    teacherName: string | null;
+    payerName: string | null;
+    amount: number;
+    dueDate: Date;
+    paidAt: Date | null;
+    status: PaymentStatus;
+    bankAccount: BankAccount;
+  }[] = [];
+  const claimedKeys = new Set<string>();
+
+  for (const p of payments) {
+    const slot = getChargeSlotsForMonth(chargesByStudent.get(p.studentId) ?? [], monthStart).find(
+      (s) => s.payerName === p.payerName
+    );
+    rows.push({
+      id: p.id,
+      studentId: p.studentId,
+      studentName: resolveSlotStudentName(p.payerName, p.student),
+      teacherName: p.student.teacher?.user.name ?? null,
+      payerName: p.payerName,
+      amount: Number(p.amount),
+      dueDate: p.dueDate,
+      paidAt: p.paidAt,
+      status: p.status,
+      bankAccount: p.bankAccountOverride ?? slot?.bankAccount ?? p.student.bankAccount,
+    });
+    claimedKeys.add(`${p.studentId}::${p.payerName ?? ""}`);
+  }
+
+  for (const [studentId, list] of chargesByStudent) {
+    const student = studentById.get(studentId);
+    if (!student) continue;
+    for (const slot of getChargeSlotsForMonth(list, monthStart)) {
+      const key = `${studentId}::${slot.payerName ?? ""}`;
+      if (claimedKeys.has(key)) continue;
+      const dueDate = new Date(monthStart.getFullYear(), monthStart.getMonth(), Math.min(slot.dueDay, daysInMonth));
+      const status: PaymentStatus = dueDate < now ? "LATE" : "PENDING";
+      rows.push({
+        id: null,
+        studentId,
+        studentName: resolveSlotStudentName(slot.payerName, student),
+        teacherName: student.teacher?.user.name ?? null,
+        payerName: slot.payerName,
+        amount: slot.amount,
+        dueDate,
+        paidAt: null,
+        status,
+        bankAccount: slot.bankAccount,
+      });
+    }
+  }
+
+  rows.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
 
   // A paused row means nothing is owed for that month — it never counts
   // toward what's "expected", so it can't inflate inadimplência either.
@@ -286,7 +311,7 @@ export async function getBankBalances(asOf?: Date) {
   // (the current, still-ongoing month) the balance is as of right now.
   const now = asOf && asOf < nowReal ? asOf : nowReal;
 
-  const [paidPayments, expenses, paidExpenseOccurrences, payouts, manualIncomes] = await Promise.all([
+  const [paidPayments, charges, expenses, paidExpenseOccurrences, payouts, manualIncomes] = await Promise.all([
     // Counted as of its dueDate, not paidAt — a payment that was really
     // for (say) January but only got marked PAID in the system months
     // later should still show up as January's money, not get pushed to
@@ -295,6 +320,7 @@ export async function getBankBalances(asOf?: Date) {
       where: { status: "PAID", dueDate: { lte: now } },
       include: { student: { include: { user: true, groupMembers: { include: { user: true } } } } },
     }),
+    prisma.studentCharge.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.expense.findMany(),
     prisma.expenseOccurrence.findMany({
       where: { status: "PAID" },
@@ -307,6 +333,8 @@ export async function getBankBalances(asOf?: Date) {
     prisma.manualIncome.findMany({ where: { date: { lte: now } } }),
   ]);
 
+  const chargesByStudent = groupChargesByStudent(charges);
+
   const paidOccurrencesByExpenseId = new Map<string, typeof paidExpenseOccurrences>();
   for (const o of paidExpenseOccurrences) {
     const bucket = paidOccurrencesByExpenseId.get(o.expenseId);
@@ -318,16 +346,16 @@ export async function getBankBalances(asOf?: Date) {
   const receivedItems: Record<BankAccount, BankLedgerItem[]> = { GABES: [], JOE: [], ASAAS: [] };
   for (const p of paidPayments) {
     // Resolved the same way the Cobranças table resolves it — historically,
-    // for this payment's own referenceMonth, not the student's current flat
-    // bankAccount. A student/third-party/group-member's account can change
-    // over time (bankAccountHistory), and the old flat lookup here used
-    // whatever's current today for every past payment regardless of what
-    // was actually true back then — see the Gabriel Lima VIP-147 bug this
-    // fixes (his account changed Joe → Gabriel partway through the year,
-    // and every past payment, including Joe-era ones, was misattributed to
-    // Gabriel). getBillingSlots also correctly resolves a group member's
-    // own account instead of always falling back to the primary student's.
-    const slot = getBillingSlots(withBillingGroupMembers(p.student), p.referenceMonth).find(
+    // for this payment's own referenceMonth, from that student's charges at
+    // the time, not whatever's current today. A student/third-party/group-
+    // member's account can change over time, and a flat current-value
+    // lookup here would misattribute every past payment to whichever
+    // account happens to be current now regardless of what was actually
+    // true back then — see the Gabriel Lima VIP-147 bug this originally
+    // fixed. getChargeSlotsForMonth also correctly resolves a group
+    // member's own account instead of always falling back to the primary
+    // student's.
+    const slot = getChargeSlotsForMonth(chargesByStudent.get(p.studentId) ?? [], p.referenceMonth).find(
       (s) => s.payerName === p.payerName
     );
     const account = p.bankAccountOverride ?? slot?.bankAccount ?? p.student.bankAccount;
@@ -410,46 +438,20 @@ export async function getBankBalances(asOf?: Date) {
 // page — each passes whichever month is being browsed.
 export async function getPartnerSplitForMonth(year: number, month: number) {
   const monthStart = new Date(year, month, 1);
-  const monthEnd = new Date(year, month + 1, 0);
 
-  const [receivedAgg, activeStudentsForRevenue, teacherPayroll, paidTeacherTotal, paidJoe, paidGabriel] =
-    await Promise.all([
-      prisma.payment.aggregate({
-        where: { referenceMonth: monthStart, status: "PAID" },
-        _sum: { amount: true },
-      }),
-      prisma.studentProfile.findMany({
-        where: { status: "ACTIVE" },
-        select: {
-          monthlyValue: true,
-          monthlyValueHistory: true,
-          thirdPartyAmount: true,
-          startDate: true,
-          billingStartDate: true,
-          dueDayHistory: true,
-          groupMembers: { select: { monthlyValue: true } },
-        },
-      }),
-      getTeacherPayrollForMonth(year, month),
-      getPaidTeacherPayrollTotal(year, month),
-      getPartnerPayoutAmount("PARTNER_JOE", year, month),
-      getPartnerPayoutAmount("PARTNER_GABRIEL", year, month),
-    ]);
+  const [receivedAgg, revenuePrevisto, teacherPayroll, paidTeacherTotal, paidJoe, paidGabriel] = await Promise.all([
+    prisma.payment.aggregate({
+      where: { referenceMonth: monthStart, status: "PAID" },
+      _sum: { amount: true },
+    }),
+    getTotalChargeRevenueForMonth(monthStart),
+    getTeacherPayrollForMonth(year, month),
+    getPaidTeacherPayrollTotal(year, month),
+    getPartnerPayoutAmount("PARTNER_JOE", year, month),
+    getPartnerPayoutAmount("PARTNER_GABRIEL", year, month),
+  ]);
 
   const revenueRealized = Number(receivedAgg._sum.amount ?? 0);
-  // Same billing-start guard as getFinancialSummary's revenuePrevisto —
-  // otherwise a currently-active student would inflate the Parceiros
-  // split's previsto for a month before they'd even enrolled.
-  const revenuePrevisto = activeStudentsForRevenue
-    .filter((s) => resolveBillingStart(s) <= monthEnd)
-    .reduce(
-      (sum, s) =>
-        sum +
-        Number(s.monthlyValue) +
-        Number(s.thirdPartyAmount ?? 0) +
-        s.groupMembers.reduce((memberSum, m) => memberSum + Number(m.monthlyValue), 0),
-      0
-    );
 
   const schoolSharePrevisto = (revenuePrevisto - teacherPayroll.totals.previsto) / 3;
   const schoolShareRealizado = (revenueRealized - paidTeacherTotal) / 3;
@@ -483,7 +485,7 @@ export async function getFinancialSummary(year?: number, month?: number) {
 
   const [
     receivedAgg,
-    activeStudentsForRevenue,
+    revenuePrevisto,
     totalContributors,
     expenses,
     expenseOccurrences,
@@ -495,18 +497,13 @@ export async function getFinancialSummary(year?: number, month?: number) {
       where: { referenceMonth: monthStart, status: "PAID" },
       _sum: { amount: true },
     }),
-    prisma.studentProfile.findMany({
-      where: { status: "ACTIVE" },
-      select: {
-        monthlyValue: true,
-        monthlyValueHistory: true,
-        thirdPartyAmount: true,
-        startDate: true,
-        billingStartDate: true,
-        dueDayHistory: true,
-        groupMembers: { select: { monthlyValue: true } },
-      },
-    }),
+    // Every active charge slot's amount for the viewed month — the
+    // student's own portion, a third party's, each group member's (see
+    // getChargeSlotsForMonth). A charge's own date range already governs
+    // whether it counts for this month, so nothing here needs a separate
+    // "has this student become billable yet" guard the way the old
+    // cadastro-history version did.
+    getTotalChargeRevenueForMonth(monthStart),
     prisma.studentProfile.count({ where: { status: "ACTIVE" } }),
     prisma.expense.findMany(),
     prisma.expenseOccurrence.findMany({
@@ -525,22 +522,6 @@ export async function getFinancialSummary(year?: number, month?: number) {
   ]);
 
   const revenueRealized = Number(receivedAgg._sum.amount ?? 0);
-  // The course's real monthly total is the student's own portion plus
-  // whatever a third party covers on top of it, plus every group
-  // participant's own separate share (see getBillingSlots). Only counts a
-  // student once they'd actually become billable by the viewed month —
-  // otherwise a currently-active student's current monthlyValue would
-  // wrongly inflate "previsto" for a month before they even enrolled.
-  const revenuePrevisto = activeStudentsForRevenue
-    .filter((s) => resolveBillingStart(s) <= monthEnd)
-    .reduce(
-      (sum, s) =>
-        sum +
-        Number(s.monthlyValue) +
-        Number(s.thirdPartyAmount ?? 0) +
-        s.groupMembers.reduce((memberSum, m) => memberSum + Number(m.monthlyValue), 0),
-      0
-    );
   const paidExpenseIds = new Set(
     expenseOccurrences.filter((o) => o.status === "PAID").map((o) => o.expenseId)
   );
@@ -663,30 +644,23 @@ export async function listStudentCharges(studentId: string) {
 
 // Full billing picture for one student's own Financeiro tab — every real
 // generated Payment plus a live placeholder (same rule the Cobranças table
-// uses) for any month since they became billable that hasn't been
+// uses) for any month since their earliest StudentCharge that hasn't been
 // generated yet, so the tab doesn't only show whichever months an admin
-// happened to click "Gerar cobranças" for. Billing starts from
-// billingStartDate when set — independent of startDate, since classes and
-// billing don't have to start the same month. Placeholders are capped at
-// the student's endDate when one's set — that's the authoritative "this is
-// when billing stopped" signal, independent of status, so a since-
-// paused/canceled student with a real endDate still gets a correct
-// placeholder for any month still inside it (e.g. a backdated cadastro
-// edit adding an earlier month that was missed, same as an ACTIVE
-// student). Only without any endDate at all does a non-ACTIVE student fall
-// back to showing real rows only — there's no safe signal for how far to
-// generate without one. Real past rows for a since-paused/canceled
-// student are always included regardless.
+// happened to click "Gerar cobranças" for. Each charge's own date/endDate
+// governs which months it produces a placeholder for — see
+// getChargeSlotsForMonth. Real past rows are always included regardless of
+// whether any current charge still produces a matching slot for that
+// month (a row that's already real history must never vanish just because
+// its charge was since edited or deleted).
 export async function getStudentPaymentHistory(studentId: string) {
-  const student = await prisma.studentProfile.findUniqueOrThrow({
-    where: { id: studentId },
-    include: { groupMembers: { include: { user: true } } },
-  });
-  const billingStudent = withBillingGroupMembers(student);
-  const realPayments = await prisma.payment.findMany({ where: { studentId } });
+  const [student, realPayments, charges] = await Promise.all([
+    prisma.studentProfile.findUniqueOrThrow({ where: { id: studentId } }),
+    prisma.payment.findMany({ where: { studentId } }),
+    prisma.studentCharge.findMany({ where: { studentId }, orderBy: { createdAt: "desc" } }),
+  ]);
+  const chargeList = charges.map((c) => ({ ...c, amount: Number(c.amount) }));
 
   const now = new Date();
-  const billingStart = resolveBillingStart(student);
   const end = new Date(now.getFullYear() + 1, 11, 1);
 
   const rows: {
@@ -721,7 +695,7 @@ export async function getStudentPaymentHistory(studentId: string) {
   const claimedKeys = new Set<string>();
   for (const real of realPayments) {
     const monthKey = real.referenceMonth.toISOString().slice(0, 7);
-    const slot = getBillingSlots(billingStudent, real.referenceMonth).find(
+    const slot = getChargeSlotsForMonth(chargeList, real.referenceMonth).find(
       (s) => s.payerName === real.payerName
     );
     rows.push({
@@ -741,21 +715,28 @@ export async function getStudentPaymentHistory(studentId: string) {
     claimedKeys.add(`${monthKey}::${real.payerName ?? ""}`);
   }
 
-  // Then a live placeholder for any still-billable slot with no real row
-  // yet (not yet generated/paid) — same as before, just skipping anything
-  // a real row above already covers.
-  const cursor = new Date(billingStart.getFullYear(), billingStart.getMonth(), 1);
-  while (cursor <= end) {
-    const monthKey = cursor.toISOString().slice(0, 7);
-    const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
+  // Then a live placeholder for any still-active charge slot with no real
+  // row yet (not yet generated/paid) — walking from the earliest charge's
+  // own start, skipping anything a real row above already covers. Not
+  // gated by student.status — a charge's own date range is now the sole
+  // authority on whether it's still billable (see
+  // createMissingPaymentsForMonth), so a paused/canceled student whose
+  // charge was never "encerrada" still shows what it would generate, same
+  // as any other open charge.
+  if (chargeList.length > 0) {
+    const earliestMonth = chargeList.reduce((min, c) => {
+      const m = new Date(c.date.getFullYear(), c.date.getMonth(), 1);
+      return m < min ? m : min;
+    }, new Date(chargeList[0].date.getFullYear(), chargeList[0].date.getMonth(), 1));
 
-    for (const slot of getBillingSlots(billingStudent, cursor)) {
-      const key = `${monthKey}::${slot.payerName ?? ""}`;
-      if (claimedKeys.has(key)) continue;
-      if (
-        (student.status === "ACTIVE" || student.endDate) &&
-        isSlotBillableForMonth(billingStart, cursor, slot.dueDay, student.endDate)
-      ) {
+    const cursor = new Date(earliestMonth);
+    while (cursor <= end) {
+      const monthKey = cursor.toISOString().slice(0, 7);
+      const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
+
+      for (const slot of getChargeSlotsForMonth(chargeList, cursor)) {
+        const key = `${monthKey}::${slot.payerName ?? ""}`;
+        if (claimedKeys.has(key)) continue;
         const dueDate = new Date(cursor.getFullYear(), cursor.getMonth(), Math.min(slot.dueDay, daysInMonth));
         rows.push({
           id: null,
@@ -772,9 +753,9 @@ export async function getStudentPaymentHistory(studentId: string) {
           manualOverrideNote: null,
         });
       }
-    }
 
-    cursor.setMonth(cursor.getMonth() + 1);
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
   }
 
   return rows.sort((a, b) => b.referenceMonth.getTime() - a.referenceMonth.getTime());
@@ -798,21 +779,29 @@ export async function getLatePayments() {
     orderBy: { dueDate: "asc" },
   });
 
-  return payments.map((p) => ({
-    id: p.id,
-    studentId: p.studentId,
-    studentName: resolveSlotStudentName(p.payerName, p.student),
-    teacherName: p.student.teacher?.user.name ?? null,
-    payerName: p.payerName,
-    amount: Number(p.amount),
-    dueDate: p.dueDate,
-    referenceMonth: p.referenceMonth,
-    // Not stored per-payment — resolved the same way getBillingSlots does:
-    // the third party's own account for their slot, the student's
-    // otherwise.
-    bankAccount:
-      p.payerName && p.payerName === p.student.thirdPartyPayerName
-        ? (p.student.thirdPartyBankAccount ?? p.student.bankAccount)
-        : p.student.bankAccount,
-  }));
+  const studentIds = [...new Set(payments.map((p) => p.studentId))];
+  const charges = studentIds.length
+    ? await prisma.studentCharge.findMany({
+        where: { studentId: { in: studentIds } },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
+  const chargesByStudent = groupChargesByStudent(charges);
+
+  return payments.map((p) => {
+    const slot = getChargeSlotsForMonth(chargesByStudent.get(p.studentId) ?? [], p.referenceMonth).find(
+      (s) => s.payerName === p.payerName
+    );
+    return {
+      id: p.id,
+      studentId: p.studentId,
+      studentName: resolveSlotStudentName(p.payerName, p.student),
+      teacherName: p.student.teacher?.user.name ?? null,
+      payerName: p.payerName,
+      amount: Number(p.amount),
+      dueDate: p.dueDate,
+      referenceMonth: p.referenceMonth,
+      bankAccount: p.bankAccountOverride ?? slot?.bankAccount ?? p.student.bankAccount,
+    };
+  });
 }

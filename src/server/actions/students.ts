@@ -392,8 +392,9 @@ export async function removeStudentGroupMember(memberId: string) {
   revalidatePath(`/coordinator/students/${member.studentProfileId}`);
 }
 
-// Updates one group member's own monthly value — their separate billing
-// slot (see getBillingSlots).
+// Updates one group member's own monthly value on the cadastro — no
+// longer read by actual billing (see StudentCharge), kept only as a
+// reference figure on the Membros do grupo card.
 export async function updateGroupMemberValue(
   memberId: string,
   _prev: ActionState,

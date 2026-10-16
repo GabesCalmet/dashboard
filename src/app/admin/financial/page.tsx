@@ -14,6 +14,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MonthNav } from "@/components/financial/month-nav";
+import { MigrateChargesButton } from "@/components/financial/migrate-charges-button";
 import { BankAccountCard } from "@/components/financial/bank-account-card";
 import { YearlyGrowthChart } from "@/components/financial/yearly-growth-chart";
 import { getFinancialSummary, getBankBalances } from "@/server/queries/financial";
@@ -58,7 +59,11 @@ export default async function AdminFinancialPage({
 
   return (
     <div>
-      <PageHeader title="Financeiro" description="Visão geral de receita, gastos e caixa da escola." />
+      <PageHeader
+        title="Financeiro"
+        description="Visão geral de receita, gastos e caixa da escola."
+        actions={<MigrateChargesButton />}
+      />
 
       {/* Not affected by the month switcher below — just links to the
           Receita/Gastos pages, which browse their own months independently. */}

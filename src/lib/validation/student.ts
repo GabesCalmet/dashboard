@@ -254,11 +254,10 @@ export const studentFormSchema = z.object({
     }),
   level: z.enum(["A1", "A2", "B1", "B2", "C1", "C2"]),
   startDate: z.string().optional(),
-  // When billing should start counting this student as billable — separate
-  // from startDate (when their classes start), and required rather than
-  // falling back to it silently (a student enrolling mid-month with an
-  // early dueDay could otherwise get billed for a due date before they
-  // even started — see isSlotBillableForMonth).
+  // No longer drives actual billing (see StudentCharge, which has its own
+  // independent start date) — still used as the floor for the lesson-
+  // cycle math on the student's own page ("Total de aulas contratadas"),
+  // separate from startDate (when their classes start).
   billingStartDate: z.string().min(1, "Informe a data de início da cobrança"),
   endDate: z.string().optional(),
   objective: z.string().optional(),

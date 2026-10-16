@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
-import { getBillingSlots, withBillingGroupMembers, createMissingPaymentsForMonth } from "@/server/billing";
+import { getStudentChargeSlotsForMonth, createMissingPaymentsForMonth } from "@/server/student-charges";
 import type { PaymentStatus, BankAccount } from "@prisma/client";
 import type { ActionState } from "@/server/actions/students";
 
@@ -14,7 +14,7 @@ function dueDateFor(monthStart: Date, day: number) {
 }
 
 // Sets a cobrança status for one of a student's billing slots (their own,
-// or a third party's — see server/billing.ts) in a given reference month —
+// or a third party's — see server/student-charges.ts) in a given reference month —
 // whether or not it's been "generated" yet. If no Payment row exists for
 // that slot/month (nobody's clicked "Gerar cobranças", or it's a past
 // month being backfilled), one is created directly with the requested
@@ -49,11 +49,7 @@ export async function setCobrancaStatus(
       data: { status, paidAt },
     });
   } else {
-    const student = await prisma.studentProfile.findUniqueOrThrow({
-      where: { id: studentId },
-      include: { groupMembers: { include: { user: true } } },
-    });
-    const slot = getBillingSlots(withBillingGroupMembers(student), monthStart).find(
+    const slot = (await getStudentChargeSlotsForMonth(studentId, monthStart)).find(
       (s) => s.payerName === payerName
     );
     if (!slot) throw new Error("Cobrança não encontrada para este pagador.");
@@ -216,11 +212,7 @@ export async function setPaymentBankAccountOverride(
       data: { bankAccountOverride: bankAccount },
     });
   } else {
-    const student = await prisma.studentProfile.findUniqueOrThrow({
-      where: { id: studentId },
-      include: { groupMembers: { include: { user: true } } },
-    });
-    const slot = getBillingSlots(withBillingGroupMembers(student), monthStart).find(
+    const slot = (await getStudentChargeSlotsForMonth(studentId, monthStart)).find(
       (s) => s.payerName === payerName
     );
     if (!slot) throw new Error("Cobrança não encontrada para este pagador.");
