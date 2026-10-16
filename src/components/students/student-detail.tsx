@@ -466,6 +466,7 @@ export function StudentDetailView({
                   payments={paymentHistory}
                   studentId={student.id}
                   studentName={student.user.name}
+                  bankAccount={student.bankAccount}
                   editable={permissions.canEdit}
                 />
               </TabsContent>
