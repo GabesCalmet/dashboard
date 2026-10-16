@@ -50,11 +50,6 @@ import type { CourseLevel, StudentStatus, BankAccount } from "@prisma/client";
 
 type Option = { id: string; label: string };
 
-const bankAccountOptions: Option[] = Object.entries(bankAccountLabel).map(([id, label]) => ({
-  id,
-  label,
-}));
-
 type StudentDefaults = {
   id: string;
   name: string;
@@ -81,13 +76,10 @@ type StudentDefaults = {
   planId?: string | null;
   planHistory?: SelectHistoryEntry[];
   monthlyValue: number;
-  monthlyValueHistory?: ValueHistoryEntry[];
   lessonsPerMonth?: number;
   lessonsPerMonthHistory?: ValueHistoryEntry[];
   bankAccount?: BankAccount;
-  bankAccountHistory?: SelectHistoryEntry[];
   dueDay?: number;
-  dueDayHistory?: ValueHistoryEntry[];
   thirdPartyPayerName?: string | null;
   thirdPartyAmount?: number | null;
   thirdPartyDueDay?: number | null;
@@ -251,13 +243,19 @@ export function StudentFormDialog({
               <DateInput id="birthDate" name="birthDate" defaultValue={student?.birthDate} />
             </div>
 
-            <MonthlyValueHistoryEditor
-              amountFieldName="monthlyValue"
-              historyFieldName="monthlyValueHistory"
-              defaultAmount={student?.monthlyValue ?? 0}
-              defaultHistory={student?.monthlyValueHistory ?? []}
-              onChange={(amount) => setMonthlyValue(amount)}
-            />
+            <div className="space-y-1.5">
+              <Label htmlFor="monthlyValue">Valor mensal (R$)</Label>
+              <Input
+                id="monthlyValue"
+                name="monthlyValue"
+                type="number"
+                step="0.01"
+                min="0"
+                defaultValue={student?.monthlyValue ?? 0}
+                onChange={(e) => setMonthlyValue(Number(e.target.value))}
+                required
+              />
+            </div>
 
             {/* Separate from Valor mensal on purpose — this tracks its own
                 vigência independently (e.g. 8 aulas/mês split across two
@@ -278,26 +276,34 @@ export function StudentFormDialog({
               onChange={(amount) => setLessonsPerMonth(amount)}
             />
 
-            <SelectHistoryEditor
-              label="Conta bancária"
-              valueFieldName="bankAccount"
-              historyFieldName="bankAccountHistory"
-              options={bankAccountOptions}
-              defaultValue={student?.bankAccount ?? "JOE"}
-              defaultHistory={student?.bankAccountHistory ?? []}
-            />
+            <div className="space-y-1.5">
+              <Label>Conta bancária</Label>
+              <Select name="bankAccount" defaultValue={student?.bankAccount ?? "JOE"} required>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(bankAccountLabel).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <MonthlyValueHistoryEditor
-              label="Dia de vencimento do boleto"
-              amountLabel="Dia"
-              amountFieldName="dueDay"
-              historyFieldName="dueDayHistory"
-              defaultAmount={student?.dueDay ?? 10}
-              defaultHistory={student?.dueDayHistory ?? []}
-              step="1"
-              min={1}
-              max={31}
-            />
+            <div className="space-y-1.5">
+              <Label htmlFor="dueDay">Dia de vencimento do boleto</Label>
+              <Input
+                id="dueDay"
+                name="dueDay"
+                type="number"
+                min={1}
+                max={31}
+                defaultValue={student?.dueDay ?? 10}
+                required
+              />
+            </div>
           </div>
 
           {studentType === "grupo" && !student?.isGroup && <GroupMembersEditor />}

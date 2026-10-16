@@ -12,10 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  MonthlyValueHistoryEditor,
-  type ValueHistoryEntry,
-} from "@/components/students/monthly-value-history-editor";
 import { bankAccountLabel } from "@/lib/labels";
 import type { BankAccount } from "@prisma/client";
 
@@ -26,9 +22,7 @@ export type GroupMemberEntry = {
   email: string;
   phone: string;
   monthlyValue: number;
-  monthlyValueHistory: ValueHistoryEntry[];
   dueDay: number;
-  dueDayHistory: ValueHistoryEntry[];
   bankAccount: BankAccount;
 };
 
@@ -57,9 +51,7 @@ export function GroupMembersEditor({ fieldName = "groupMembers" }: { fieldName?:
         email: "",
         phone: "",
         monthlyValue: 0,
-        monthlyValueHistory: [],
         dueDay: 10,
-        dueDayHistory: [],
         bankAccount: "JOE",
         _id: nextId++,
       },
@@ -78,40 +70,19 @@ export function GroupMembersEditor({ fieldName = "groupMembers" }: { fieldName?:
     setEntries((prev) => prev.map((e) => (e._id === id ? { ...e, [field]: value } : e)));
   }
 
-  function updateValue(id: number, amount: number, history: ValueHistoryEntry[]) {
-    setEntries((prev) =>
-      prev.map((e) => (e._id === id ? { ...e, monthlyValue: amount, monthlyValueHistory: history } : e))
-    );
-  }
-
-  function updateDueDay(id: number, day: number, history: ValueHistoryEntry[]) {
-    setEntries((prev) =>
-      prev.map((e) => (e._id === id ? { ...e, dueDay: day, dueDayHistory: history } : e))
-    );
+  function updateNumber(id: number, field: "monthlyValue" | "dueDay", value: number) {
+    setEntries((prev) => prev.map((e) => (e._id === id ? { ...e, [field]: value } : e)));
   }
 
   const value: GroupMemberEntry[] = entries.map(
-    ({
+    ({ name, username, password, email, phone, monthlyValue, dueDay, bankAccount }) => ({
       name,
       username,
       password,
       email,
       phone,
       monthlyValue,
-      monthlyValueHistory,
       dueDay,
-      dueDayHistory,
-      bankAccount,
-    }) => ({
-      name,
-      username,
-      password,
-      email,
-      phone,
-      monthlyValue,
-      monthlyValueHistory,
-      dueDay,
-      dueDayHistory,
       bankAccount,
     })
   );
@@ -172,11 +143,16 @@ export function GroupMembersEditor({ fieldName = "groupMembers" }: { fieldName?:
             <Input value={entry.phone} onChange={(e) => updateEntry(entry._id, "phone", e.target.value)} />
           </div>
 
-          <MonthlyValueHistoryEditor
-            defaultAmount={entry.monthlyValue}
-            defaultHistory={entry.monthlyValueHistory}
-            onChange={(amount, history) => updateValue(entry._id, amount, history)}
-          />
+          <div className="space-y-1.5">
+            <Label>Valor mensal (R$)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={entry.monthlyValue}
+              onChange={(e) => updateNumber(entry._id, "monthlyValue", Number(e.target.value))}
+            />
+          </div>
 
           <div className="space-y-1.5">
             <Label>Conta bancária</Label>
@@ -197,16 +173,16 @@ export function GroupMembersEditor({ fieldName = "groupMembers" }: { fieldName?:
             </Select>
           </div>
 
-          <MonthlyValueHistoryEditor
-            label="Dia de vencimento do boleto"
-            amountLabel="Dia"
-            step="1"
-            min={1}
-            max={31}
-            defaultAmount={entry.dueDay}
-            defaultHistory={entry.dueDayHistory}
-            onChange={(day, history) => updateDueDay(entry._id, day, history)}
-          />
+          <div className="space-y-1.5">
+            <Label>Dia de vencimento do boleto</Label>
+            <Input
+              type="number"
+              min={1}
+              max={31}
+              value={entry.dueDay}
+              onChange={(e) => updateNumber(entry._id, "dueDay", Number(e.target.value))}
+            />
+          </div>
         </div>
       ))}
 

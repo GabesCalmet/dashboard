@@ -285,9 +285,7 @@ export function StudentDetailView({
                     email: m.user.email,
                     phone: m.user.phone,
                     monthlyValue: Number(m.monthlyValue),
-                    monthlyValueHistory: parseValueHistory(m.monthlyValueHistory),
                     dueDay: m.dueDay,
-                    dueDayHistory: parseValueHistory(m.dueDayHistory),
                     bankAccount: m.bankAccount,
                   })),
                   email: student.user.email,
@@ -307,13 +305,10 @@ export function StudentDetailView({
                   planId: student.planId,
                   planHistory: parseSelectHistory(student.planHistory),
                   monthlyValue: Number(student.monthlyValue),
-                  monthlyValueHistory: parseValueHistory(student.monthlyValueHistory),
                   lessonsPerMonth: student.lessonsPerMonth,
                   lessonsPerMonthHistory: parseValueHistory(student.lessonsPerMonthHistory),
                   bankAccount: student.bankAccount,
-                  bankAccountHistory: parseSelectHistory(student.bankAccountHistory),
                   dueDay: student.dueDay,
-                  dueDayHistory: parseValueHistory(student.dueDayHistory),
                   thirdPartyPayerName: student.thirdPartyPayerName,
                   thirdPartyAmount: student.thirdPartyAmount ? Number(student.thirdPartyAmount) : null,
                   thirdPartyDueDay: student.thirdPartyDueDay,
@@ -511,7 +506,6 @@ export function StudentDetailView({
                 name: student.user.name,
                 username: student.user.username,
                 monthlyValue: Number(student.monthlyValue),
-                monthlyValueHistory: parseValueHistory(student.monthlyValueHistory),
               }}
               members={student.groupMembers.map((m) => ({
                 id: m.id,
@@ -519,7 +513,6 @@ export function StudentDetailView({
                 name: m.user.name,
                 username: m.user.username,
                 monthlyValue: Number(m.monthlyValue),
-                monthlyValueHistory: parseValueHistory(m.monthlyValueHistory),
               }))}
               canManage={permissions.canEdit}
             />

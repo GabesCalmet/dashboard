@@ -10,10 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  MonthlyValueHistoryEditor,
-  type ValueHistoryEntry,
-} from "@/components/students/monthly-value-history-editor";
 import { bankAccountLabel } from "@/lib/labels";
 import type { BankAccount } from "@prisma/client";
 
@@ -24,9 +20,7 @@ export type GroupMemberFields = {
   email: string | null;
   phone: string | null;
   monthlyValue: number;
-  monthlyValueHistory: ValueHistoryEntry[];
   dueDay: number;
-  dueDayHistory: ValueHistoryEntry[];
   bankAccount: BankAccount;
 };
 
@@ -54,39 +48,29 @@ export function GroupMemberFieldsEditor({
     members.map((m) => ({ ...m, email: m.email ?? "", phone: m.phone ?? "" }))
   );
 
-  function update(userId: string, field: "name" | "email" | "phone" | "bankAccount", value: string) {
+  function update(
+    userId: string,
+    field: "name" | "email" | "phone" | "bankAccount",
+    value: string
+  ) {
     setEntries((prev) => prev.map((e) => (e.userId === userId ? { ...e, [field]: value } : e)));
   }
 
-  function updateValue(userId: string, amount: number, history: ValueHistoryEntry[]) {
-    setEntries((prev) =>
-      prev.map((e) =>
-        e.userId === userId ? { ...e, monthlyValue: amount, monthlyValueHistory: history } : e
-      )
-    );
-  }
-
-  function updateDueDay(userId: string, day: number, history: ValueHistoryEntry[]) {
-    setEntries((prev) =>
-      prev.map((e) => (e.userId === userId ? { ...e, dueDay: day, dueDayHistory: history } : e))
-    );
+  function updateNumber(userId: string, field: "monthlyValue" | "dueDay", value: number) {
+    setEntries((prev) => prev.map((e) => (e.userId === userId ? { ...e, [field]: value } : e)));
   }
 
   if (entries.length === 0) return null;
 
-  const value = entries.map(
-    ({ userId, name, email, phone, monthlyValue, monthlyValueHistory, dueDay, dueDayHistory, bankAccount }) => ({
-      userId,
-      name,
-      email,
-      phone,
-      monthlyValue,
-      monthlyValueHistory,
-      dueDay,
-      dueDayHistory,
-      bankAccount,
-    })
-  );
+  const value = entries.map(({ userId, name, email, phone, monthlyValue, dueDay, bankAccount }) => ({
+    userId,
+    name,
+    email,
+    phone,
+    monthlyValue,
+    dueDay,
+    bankAccount,
+  }));
 
   return (
     <div className="space-y-4 sm:col-span-2">
@@ -119,11 +103,16 @@ export function GroupMemberFieldsEditor({
             <Input value={entry.phone} onChange={(e) => update(entry.userId, "phone", e.target.value)} />
           </div>
 
-          <MonthlyValueHistoryEditor
-            defaultAmount={entry.monthlyValue}
-            defaultHistory={entry.monthlyValueHistory}
-            onChange={(amount, history) => updateValue(entry.userId, amount, history)}
-          />
+          <div className="space-y-1.5">
+            <Label>Valor mensal (R$)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={entry.monthlyValue}
+              onChange={(e) => updateNumber(entry.userId, "monthlyValue", Number(e.target.value))}
+            />
+          </div>
 
           <div className="space-y-1.5">
             <Label>Conta bancária</Label>
@@ -144,16 +133,16 @@ export function GroupMemberFieldsEditor({
             </Select>
           </div>
 
-          <MonthlyValueHistoryEditor
-            label="Dia de vencimento do boleto"
-            amountLabel="Dia"
-            step="1"
-            min={1}
-            max={31}
-            defaultAmount={entry.dueDay}
-            defaultHistory={entry.dueDayHistory}
-            onChange={(day, history) => updateDueDay(entry.userId, day, history)}
-          />
+          <div className="space-y-1.5">
+            <Label>Dia de vencimento do boleto</Label>
+            <Input
+              type="number"
+              min={1}
+              max={31}
+              value={entry.dueDay}
+              onChange={(e) => updateNumber(entry.userId, "dueDay", Number(e.target.value))}
+            />
+          </div>
 
           <p className="text-xs text-muted-foreground sm:col-span-2">
             Usuário e senha são gerenciados em &quot;Membros do grupo&quot;.

@@ -11,12 +11,7 @@ import {
   setUsernameAccountUsername,
 } from "@/server/accounts";
 import { recordAudit } from "@/server/audit";
-import {
-  studentFormSchema,
-  usernameField,
-  passwordField,
-  numericHistoryField,
-} from "@/lib/validation/student";
+import { studentFormSchema, usernameField, passwordField } from "@/lib/validation/student";
 import { levelOrder } from "@/lib/labels";
 import { syncRecurringLessons } from "@/server/lessons/recurring";
 
@@ -64,11 +59,8 @@ export async function createStudent(
         planId: data.planId || undefined,
         planHistory: data.planHistory,
         monthlyValue: data.monthlyValue,
-        monthlyValueHistory: data.monthlyValueHistory,
         bankAccount: data.bankAccount,
-        bankAccountHistory: data.bankAccountHistory,
         dueDay: data.dueDay,
-        dueDayHistory: data.dueDayHistory,
         thirdPartyPayerName: data.thirdPartyAmount ? data.thirdPartyPayerName : undefined,
         thirdPartyAmount: data.thirdPartyAmount,
         thirdPartyDueDay: data.thirdPartyAmount ? data.thirdPartyDueDay : undefined,
@@ -113,9 +105,7 @@ export async function createStudent(
           studentProfileId: student.id,
           userId: memberUser.id,
           monthlyValue: member.monthlyValue,
-          monthlyValueHistory: member.monthlyValueHistory,
           dueDay: member.dueDay,
-          dueDayHistory: member.dueDayHistory,
           bankAccount: member.bankAccount,
         },
       });
@@ -186,9 +176,7 @@ export async function updateStudent(
         where: { userId: m.userId },
         data: {
           monthlyValue: m.monthlyValue,
-          monthlyValueHistory: m.monthlyValueHistory,
           dueDay: m.dueDay,
-          dueDayHistory: m.dueDayHistory,
           bankAccount: m.bankAccount,
         },
       })
@@ -212,11 +200,8 @@ export async function updateStudent(
         planId: data.planId || null,
         planHistory: data.planHistory,
         monthlyValue: data.monthlyValue,
-        monthlyValueHistory: data.monthlyValueHistory,
         bankAccount: data.bankAccount,
-        bankAccountHistory: data.bankAccountHistory,
         dueDay: data.dueDay,
-        dueDayHistory: data.dueDayHistory,
         thirdPartyPayerName: data.thirdPartyAmount ? data.thirdPartyPayerName : null,
         thirdPartyAmount: data.thirdPartyAmount ?? null,
         thirdPartyDueDay: data.thirdPartyAmount ? data.thirdPartyDueDay : null,
@@ -256,9 +241,7 @@ export async function updateStudent(
           studentProfileId: studentId,
           userId: memberUser.id,
           monthlyValue: member.monthlyValue,
-          monthlyValueHistory: member.monthlyValueHistory,
           dueDay: member.dueDay,
-          dueDayHistory: member.dueDayHistory,
           bankAccount: member.bankAccount,
         },
       });
@@ -409,9 +392,8 @@ export async function removeStudentGroupMember(memberId: string) {
   revalidatePath(`/coordinator/students/${member.studentProfileId}`);
 }
 
-// Updates one group member's own monthly value/history — their separate
-// billing slot (see getBillingSlots), same Vigência convention as the
-// primary member's own monthlyValue on StudentProfile.
+// Updates one group member's own monthly value — their separate billing
+// slot (see getBillingSlots).
 export async function updateGroupMemberValue(
   memberId: string,
   _prev: ActionState,
@@ -422,7 +404,6 @@ export async function updateGroupMemberValue(
   const parsed = z
     .object({
       monthlyValue: z.coerce.number().min(0, "Valor inválido"),
-      monthlyValueHistory: numericHistoryField,
     })
     .safeParse(raw);
 
@@ -433,7 +414,7 @@ export async function updateGroupMemberValue(
 
   const member = await prisma.studentGroupMember.update({
     where: { id: memberId },
-    data: { monthlyValue: data.monthlyValue, monthlyValueHistory: data.monthlyValueHistory },
+    data: { monthlyValue: data.monthlyValue },
   });
 
   await recordAudit({
@@ -449,10 +430,10 @@ export async function updateGroupMemberValue(
   return { success: "Valor atualizado." };
 }
 
-// Updates the group's own-login participant's monthly value/history —
-// there's no conceptual "primary" (see removeGroupOwner below), this is
-// just the one participant whose login the StudentProfile row happens to
-// be keyed on right now, edited the same way as any other member's.
+// Updates the group's own-login participant's monthly value — there's no
+// conceptual "primary" (see removeGroupOwner below), this is just the one
+// participant whose login the StudentProfile row happens to be keyed on
+// right now, edited the same way as any other member's.
 export async function updateGroupOwnerValue(
   studentId: string,
   _prev: ActionState,
@@ -463,7 +444,6 @@ export async function updateGroupOwnerValue(
   const parsed = z
     .object({
       monthlyValue: z.coerce.number().min(0, "Valor inválido"),
-      monthlyValueHistory: numericHistoryField,
     })
     .safeParse(raw);
 
@@ -474,7 +454,7 @@ export async function updateGroupOwnerValue(
 
   await prisma.studentProfile.update({
     where: { id: studentId },
-    data: { monthlyValue: data.monthlyValue, monthlyValueHistory: data.monthlyValueHistory },
+    data: { monthlyValue: data.monthlyValue },
   });
 
   await recordAudit({

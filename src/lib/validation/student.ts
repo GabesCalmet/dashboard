@@ -86,29 +86,14 @@ export const numericHistoryField = z
     }
   });
 
-function parseAmountHistory(value: unknown): { amount: number; from?: string; until?: string }[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((h): h is { amount: number; from?: string; until?: string } => {
-      const r = h as Record<string, unknown> | null;
-      return Boolean(r) && typeof r?.amount === "number";
-    })
-    .map((h) => ({
-      amount: h.amount,
-      from: typeof h.from === "string" && h.from ? h.from : undefined,
-      until: typeof h.until === "string" && h.until ? h.until : undefined,
-    }));
-}
-
 // Submitted by GroupMembersEditor (create form only) as a JSON string, e.g.
 // '[{"name":"...","username":"...","password":"...","email":"...","phone":"...",
-// "monthlyValue":150,"monthlyValueHistory":[...],"dueDay":10,
-// "dueDayHistory":[...],"bankAccount":"JOE"}]' — one additional login for a
-// "grupo" student, beyond the primary name/username/password above, with
-// the exact same billing fields as the primary's own card. Loose
-// validation here (real uniqueness/length checks happen per-member in
-// provisionUsernameAccount, same as the primary) since a malformed entry
-// should just be dropped, not fail the whole cadastro.
+// "monthlyValue":150,"dueDay":10,"bankAccount":"JOE"}]' — one additional
+// login for a "grupo" student, beyond the primary name/username/password
+// above, with the exact same billing fields as the primary's own card.
+// Loose validation here (real uniqueness/length checks happen per-member
+// in provisionUsernameAccount, same as the primary) since a malformed
+// entry should just be dropped, not fail the whole cadastro.
 const groupMembersField = z
   .string()
   .optional()
@@ -135,9 +120,7 @@ const groupMembersField = z
           email: typeof e.email === "string" && e.email ? e.email : undefined,
           phone: typeof e.phone === "string" && e.phone ? e.phone : undefined,
           monthlyValue: typeof e.monthlyValue === "number" ? e.monthlyValue : 0,
-          monthlyValueHistory: parseAmountHistory(e.monthlyValueHistory),
           dueDay: typeof e.dueDay === "number" ? e.dueDay : 10,
-          dueDayHistory: parseAmountHistory(e.dueDayHistory),
           bankAccount: (["GABES", "JOE", "ASAAS"] as const).includes(e.bankAccount)
             ? e.bankAccount
             : "JOE",
@@ -149,13 +132,12 @@ const groupMembersField = z
 
 // Submitted by GroupMemberFieldsEditor (edit form only) as a JSON string,
 // e.g. '[{"userId":"...","name":"...","email":"...","phone":"...",
-// "monthlyValue":150,"monthlyValueHistory":[...],"dueDay":10,
-// "dueDayHistory":[...],"bankAccount":"JOE"}]' — lets every participant's
-// own basic info and billing (valor, conta bancária, dia de vencimento) be
-// edited from the same "Editar aluno" dialog instead of needing a separate
-// place per member. Username and password aren't included here — those
-// stay under Ver senha/Alterar senha on the Membros do grupo card, same as
-// before.
+// "monthlyValue":150,"dueDay":10,"bankAccount":"JOE"}]' — lets every
+// participant's own basic info and billing (valor, conta bancária, dia de
+// vencimento) be edited from the same "Editar aluno" dialog instead of
+// needing a separate place per member. Username and password aren't
+// included here — those stay under Ver senha/Alterar senha on the
+// Membros do grupo card, same as before.
 const groupMemberUpdatesField = z
   .string()
   .optional()
@@ -172,9 +154,7 @@ const groupMemberUpdatesField = z
           email: typeof e.email === "string" && e.email ? e.email : undefined,
           phone: typeof e.phone === "string" && e.phone ? e.phone : undefined,
           monthlyValue: typeof e.monthlyValue === "number" ? e.monthlyValue : 0,
-          monthlyValueHistory: parseAmountHistory(e.monthlyValueHistory),
           dueDay: typeof e.dueDay === "number" ? e.dueDay : 10,
-          dueDayHistory: parseAmountHistory(e.dueDayHistory),
           bankAccount: (["GABES", "JOE", "ASAAS"] as const).includes(e.bankAccount)
             ? e.bankAccount
             : "JOE",
@@ -204,10 +184,9 @@ export const studentFormSchema = z.object({
   teacherId: z.string().optional(),
   teacherHistory: teacherHistoryField,
   // The amount the assigned teacher is paid per hour for this specific
-  // student/group — mirrors whichever teacherHistory entry is current, same
-  // convention as monthlyValue/monthlyValueHistory. Payroll falls back to
-  // the teacher's own hourlyRate when this is unset (0). Only used when
-  // teacherPayMode is HOURLY.
+  // student/group — mirrors whichever teacherHistory entry is current.
+  // Payroll falls back to the teacher's own hourlyRate when this is unset
+  // (0). Only used when teacherPayMode is HOURLY.
   teacherPayRate: z.coerce.number().min(0, "Valor inválido").default(0),
   teacherPayMode: z.enum(["HOURLY", "MONTHLY", "PERCENTAGE"]).default("HOURLY"),
   // Flat amount the assigned teacher is paid per month for this
@@ -222,24 +201,20 @@ export const studentFormSchema = z.object({
   planId: z.string().optional(),
   planHistory: selectHistoryField,
   monthlyValue: z.coerce.number().min(0, "Valor inválido"),
-  monthlyValueHistory: numericHistoryField,
   // Flat number of classes this student is actually contracted for per
   // month (e.g. 8 for "2x por semana") — admin-entered, independent of how
   // many weekdays a given calendar month happens to have. Mirrors whichever
-  // lessonsPerMonthHistory entry is in effect today, same convention as
-  // monthlyValue/monthlyValueHistory. Used for "Aulas restantes no mês" on
-  // the student's own dashboard and the teacher's "Esperadas" load (both
-  // always about the current month, so the flat mirror is enough); the
-  // monthly PDF report instead resolves the historically-correct entry for
-  // whatever month it's generating, since a student's contracted count can
-  // change over time (e.g. 8/mês split across two days a week, later
-  // consolidated into 4/mês on one day).
+  // lessonsPerMonthHistory entry is in effect today. Used for "Aulas
+  // restantes no mês" on the student's own dashboard and the teacher's
+  // "Esperadas" load (both always about the current month, so the flat
+  // mirror is enough); the monthly PDF report instead resolves the
+  // historically-correct entry for whatever month it's generating, since a
+  // student's contracted count can change over time (e.g. 8/mês split
+  // across two days a week, later consolidated into 4/mês on one day).
   lessonsPerMonth: z.coerce.number().int().min(0, "Valor inválido").default(0),
   lessonsPerMonthHistory: numericHistoryField,
   bankAccount: z.enum(["GABES", "JOE", "ASAAS"]).default("JOE"),
-  bankAccountHistory: selectHistoryField,
   dueDay: z.coerce.number().int().min(1).max(31).default(10),
-  dueDayHistory: numericHistoryField,
   // Third party (e.g. a company) covering part or all of monthlyValue,
   // billed separately with its own due date. Only submitted by the form
   // when "tem pagador terceiro" is checked — absent otherwise, so these

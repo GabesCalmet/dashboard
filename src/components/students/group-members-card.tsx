@@ -30,10 +30,6 @@ import {
 import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
 import { SetPasswordButton } from "@/components/shared/set-password-button";
 import {
-  MonthlyValueHistoryEditor,
-  type ValueHistoryEntry,
-} from "@/components/students/monthly-value-history-editor";
-import {
   addStudentGroupMember,
   removeStudentGroupMember,
   removeGroupOwner,
@@ -49,7 +45,6 @@ type Participant = {
   name: string;
   username: string | null;
   monthlyValue: number;
-  monthlyValueHistory: ValueHistoryEntry[];
 };
 
 // No participant is "the" student here — the shared profile (lessons,
@@ -224,12 +219,18 @@ function EditValueDialog({
         </DialogHeader>
 
         <form action={formAction} className="space-y-4">
-          <MonthlyValueHistoryEditor
-            amountFieldName="monthlyValue"
-            historyFieldName="monthlyValueHistory"
-            defaultAmount={participant.monthlyValue}
-            defaultHistory={participant.monthlyValueHistory}
-          />
+          <div className="space-y-1.5">
+            <Label htmlFor="monthlyValue">Valor mensal (R$)</Label>
+            <Input
+              id="monthlyValue"
+              name="monthlyValue"
+              type="number"
+              step="0.01"
+              min="0"
+              defaultValue={participant.monthlyValue}
+              required
+            />
+          </div>
 
           <DialogFooter>
             <Button type="submit" disabled={isPending}>
