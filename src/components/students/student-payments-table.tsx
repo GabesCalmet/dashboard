@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { PaymentStatusSelect } from "@/components/financial/payment-status-select";
 import { PaymentOverrideButton } from "@/components/students/payment-override-dialog";
 import { PaymentBankAccountSelect } from "@/components/students/payment-bank-account-select";
-import { AddPaymentDialog } from "@/components/students/add-payment-dialog";
 import {
   formatCurrency,
   formatDate,
@@ -47,7 +46,6 @@ export function StudentPaymentsTable({
   payments,
   studentId,
   studentName,
-  bankAccount,
   editable = false,
 }: {
   payments: PaymentHistoryRow[];
@@ -56,9 +54,6 @@ export function StudentPaymentsTable({
   // payerName (their own billing slot), instead of a generic "Aluno" that
   // doesn't say which of a "grupo" cadastro's several names it actually is.
   studentName: string;
-  // The cadastro's current default account — just used to prefill
-  // "Adicionar cobrança", not read for anything else here.
-  bankAccount: BankAccount;
   // Lets an admin change a cobrança's status directly from the student's
   // own page — same action (setCobrancaStatus) the admin Cobranças table
   // uses, so it works for both real rows and not-yet-generated placeholders.
@@ -71,24 +66,21 @@ export function StudentPaymentsTable({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setYear((y) => y - 1)} aria-label="Ano anterior">
-            <ChevronLeft className="size-4" />
-          </Button>
-          <span className="min-w-16 text-center text-sm font-medium">{year}</span>
-          <Button variant="outline" size="icon" onClick={() => setYear((y) => y + 1)} aria-label="Próximo ano">
-            <ChevronRight className="size-4" />
-          </Button>
-          <Input
-            type="number"
-            value={year}
-            onChange={(e) => e.target.value && setYear(Number(e.target.value))}
-            className="w-24"
-            aria-label="Ir para o ano"
-          />
-        </div>
-        {editable && <AddPaymentDialog studentId={studentId} defaultBankAccount={bankAccount} />}
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="icon" onClick={() => setYear((y) => y - 1)} aria-label="Ano anterior">
+          <ChevronLeft className="size-4" />
+        </Button>
+        <span className="min-w-16 text-center text-sm font-medium">{year}</span>
+        <Button variant="outline" size="icon" onClick={() => setYear((y) => y + 1)} aria-label="Próximo ano">
+          <ChevronRight className="size-4" />
+        </Button>
+        <Input
+          type="number"
+          value={year}
+          onChange={(e) => e.target.value && setYear(Number(e.target.value))}
+          className="w-24"
+          aria-label="Ir para o ano"
+        />
       </div>
 
       <div className="overflow-hidden rounded-xl border">

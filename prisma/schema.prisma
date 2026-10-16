@@ -327,6 +327,7 @@ model StudentProfile {
 
   lessons          Lesson[]
   payments         Payment[]
+  charges          StudentCharge[]
   levelHistory     LevelHistory[]
   certificates     Certificate[]
   quizAttempts     QuizAttempt[]
@@ -516,6 +517,35 @@ model Payment {
 enum ExpenseFrequency {
   ONE_TIME
   RECURRING
+}
+
+// A billing definition for one student's cobrança — the "Expense, but with
+// a payer" template that drives Payment generation, kept entirely separate
+// from the cadastro (see Payment and ExpenseOccurrence for the same
+// definition/occurrence split on the gastos side). One StudentCharge can
+// be ONE_TIME (a single month's charge, `date` is the due date) or
+// RECURRING (`date` is when billing starts, `dueDay` is the day of the
+// month it's due, `endDate` is when it stops — null means still ongoing).
+// A cadastro can have several concurrent charges (the student's own, a
+// group member's, a third party's), told apart by payerName — same
+// convention as Payment.payerName.
+model StudentCharge {
+  id          String           @id @default(uuid())
+  studentId   String
+  student     StudentProfile   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  payerName   String? // null = billed to the student themselves
+  description String?
+  amount      Decimal          @db.Decimal(10, 2)
+  frequency   ExpenseFrequency
+  date        DateTime // ONE_TIME: the due date. RECURRING: when billing starts.
+  dueDay      Int? // RECURRING only: day of month it's due, 1-31
+  endDate     DateTime? // RECURRING only: when it stops — null means still ongoing
+  bankAccount BankAccount      @default(JOE)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([studentId])
+  @@map("student_charges")
 }
 
 enum ExpenseCategory {

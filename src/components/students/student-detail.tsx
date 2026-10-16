@@ -23,6 +23,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { MonthNav } from "@/components/financial/month-nav";
 import { LessonHistoryTable } from "@/components/students/lesson-history-table";
 import { StudentPaymentsTable, type PaymentHistoryRow } from "@/components/students/student-payments-table";
+import { StudentChargesTable, type StudentChargeRow } from "@/components/students/student-charges-table";
 import { StudentFormDialog } from "@/components/students/student-form-dialog";
 import type { ScheduleEntry } from "@/components/students/lesson-schedule-editor";
 import type { ValueHistoryEntry } from "@/components/students/monthly-value-history-editor";
@@ -53,6 +54,7 @@ export function StudentDetailView({
   auditEntries = [],
   monthNav,
   paymentHistory = [],
+  charges = [],
   initialTab,
 }: {
   student: Student;
@@ -63,6 +65,9 @@ export function StudentDetailView({
   // Full billing picture (real + placeholder) for the Financeiro tab —
   // only fetched/passed by pages that set permissions.showFinancial.
   paymentHistory?: PaymentHistoryRow[];
+  // This student's cobrança definitions (see StudentCharge) — same
+  // gating as paymentHistory.
+  charges?: StudentChargeRow[];
   // Lets "Aulas A Dar Esse Mês" be checked for a past month instead of
   // only the real current one. selfPath is this same page's URL (no query),
   // used to build the ?month=YYYY-MM prev/next links.
@@ -452,12 +457,18 @@ export function StudentDetailView({
             </TabsContent>
 
             {permissions.showFinancial && (
-              <TabsContent value="financial" className="mt-4">
+              <TabsContent value="financial" className="mt-4 space-y-4">
+                <StudentChargesTable
+                  studentId={student.id}
+                  studentName={student.user.name}
+                  charges={charges}
+                  bankAccount={student.bankAccount}
+                  editable={permissions.canEdit}
+                />
                 <StudentPaymentsTable
                   payments={paymentHistory}
                   studentId={student.id}
                   studentName={student.user.name}
-                  bankAccount={student.bankAccount}
                   editable={permissions.canEdit}
                 />
               </TabsContent>

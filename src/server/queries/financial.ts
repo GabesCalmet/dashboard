@@ -650,6 +650,17 @@ export async function getFinancialSummary(year?: number, month?: number) {
   };
 }
 
+// A student's own cobrança definitions (see StudentCharge) — the "+" list
+// on their Financeiro tab, shown above the Payment history so the admin
+// can see/edit what's actually driving generation (amount, due day, bank
+// account, vigência) without digging through individual months.
+export async function listStudentCharges(studentId: string) {
+  return prisma.studentCharge.findMany({
+    where: { studentId },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
 // Full billing picture for one student's own Financeiro tab — every real
 // generated Payment plus a live placeholder (same rule the Cobranças table
 // uses) for any month since they became billable that hasn't been

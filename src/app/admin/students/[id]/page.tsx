@@ -7,7 +7,7 @@ import {
   listPlansForSelect,
 } from "@/server/queries/students";
 import { getAuditTrail } from "@/server/audit";
-import { getStudentPaymentHistory } from "@/server/queries/financial";
+import { getStudentPaymentHistory, listStudentCharges } from "@/server/queries/financial";
 import { parseMonthParam } from "@/lib/month-param";
 
 export default async function AdminStudentDetailPage({
@@ -20,13 +20,14 @@ export default async function AdminStudentDetailPage({
   const { id } = await params;
   const { month: monthParamValue, tab } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
-  const [student, teachers, courses, plans, audit, paymentHistory] = await Promise.all([
+  const [student, teachers, courses, plans, audit, paymentHistory, charges] = await Promise.all([
     getStudentDetail(id),
     listActiveTeachersForSelect(),
     listCoursesForSelect(),
     listPlansForSelect(),
     getAuditTrail("StudentProfile", id),
     getStudentPaymentHistory(id),
+    listStudentCharges(id),
   ]);
 
   if (!student) notFound();
@@ -37,6 +38,17 @@ export default async function AdminStudentDetailPage({
       basePath="/admin/students"
       monthNav={{ year, month, selfPath: `/admin/students/${id}` }}
       paymentHistory={paymentHistory}
+      charges={charges.map((c) => ({
+        id: c.id,
+        payerName: c.payerName,
+        description: c.description,
+        amount: Number(c.amount),
+        frequency: c.frequency,
+        date: c.date,
+        dueDay: c.dueDay,
+        endDate: c.endDate,
+        bankAccount: c.bankAccount,
+      }))}
       initialTab={tab}
       permissions={{
         canEdit: true,
