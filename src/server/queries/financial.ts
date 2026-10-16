@@ -674,13 +674,9 @@ export async function getStudentPaymentHistory(studentId: string) {
   });
   const billingStudent = withBillingGroupMembers(student);
   const realPayments = await prisma.payment.findMany({ where: { studentId } });
-  const paymentBySlot = new Map(
-    realPayments.map((p) => [`${p.referenceMonth.toISOString().slice(0, 7)}::${p.payerName ?? ""}`, p])
-  );
 
   const now = new Date();
   const billingStart = resolveBillingStart(student);
-  const cursor = new Date(billingStart.getFullYear(), billingStart.getMonth(), 1);
   const end = new Date(now.getFullYear() + 1, 11, 1);
 
   const rows: {
@@ -702,28 +698,51 @@ export async function getStudentPaymentHistory(studentId: string) {
     manualOverrideNote: string | null;
   }[] = [];
 
+  // Every real Payment row is shown unconditionally, regardless of whether
+  // the cadastro's CURRENT config still produces a matching billing slot
+  // for that exact month — a row that's already been generated (or paid)
+  // is real history and must never silently vanish just because a later
+  // price/due-day history entry created a gap that the slot resolver now
+  // (correctly) treats as "not billable" for NEW charges. Without this, a
+  // real row stayed invisible here while still showing up everywhere else
+  // that reads Payment directly (bank balances, Receita) — see the Mateus
+  // Santana VIP-162 bug this fixes (a declared Mar–Sep gap hid his already-
+  // paid March row from his own Cobranças tab).
+  const claimedKeys = new Set<string>();
+  for (const real of realPayments) {
+    const monthKey = real.referenceMonth.toISOString().slice(0, 7);
+    const slot = getBillingSlots(billingStudent, real.referenceMonth).find(
+      (s) => s.payerName === real.payerName
+    );
+    rows.push({
+      id: real.id,
+      payerName: real.payerName,
+      amount: Number(real.amount),
+      referenceMonth: real.referenceMonth,
+      dueDate: real.dueDate,
+      paidAt: real.paidAt,
+      status: real.status,
+      bankAccount: slot?.bankAccount ?? student.bankAccount,
+      effectiveBankAccount: real.bankAccountOverride ?? slot?.bankAccount ?? student.bankAccount,
+      bankAccountOverride: real.bankAccountOverride,
+      manualOverride: real.manualOverride,
+      manualOverrideNote: real.manualOverrideNote,
+    });
+    claimedKeys.add(`${monthKey}::${real.payerName ?? ""}`);
+  }
+
+  // Then a live placeholder for any still-billable slot with no real row
+  // yet (not yet generated/paid) — same as before, just skipping anything
+  // a real row above already covers.
+  const cursor = new Date(billingStart.getFullYear(), billingStart.getMonth(), 1);
   while (cursor <= end) {
     const monthKey = cursor.toISOString().slice(0, 7);
     const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
 
     for (const slot of getBillingSlots(billingStudent, cursor)) {
-      const real = paymentBySlot.get(`${monthKey}::${slot.payerName ?? ""}`);
-      if (real) {
-        rows.push({
-          id: real.id,
-          payerName: real.payerName,
-          amount: Number(real.amount),
-          referenceMonth: real.referenceMonth,
-          dueDate: real.dueDate,
-          paidAt: real.paidAt,
-          status: real.status,
-          bankAccount: slot.bankAccount,
-          effectiveBankAccount: real.bankAccountOverride ?? slot.bankAccount,
-          bankAccountOverride: real.bankAccountOverride,
-          manualOverride: real.manualOverride,
-          manualOverrideNote: real.manualOverrideNote,
-        });
-      } else if (
+      const key = `${monthKey}::${slot.payerName ?? ""}`;
+      if (claimedKeys.has(key)) continue;
+      if (
         (student.status === "ACTIVE" || student.endDate) &&
         isSlotBillableForMonth(billingStart, cursor, slot.dueDay, student.endDate)
       ) {
