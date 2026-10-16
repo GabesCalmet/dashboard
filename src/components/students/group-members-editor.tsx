@@ -5,15 +5,6 @@ import { Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { bankAccountLabel } from "@/lib/labels";
-import type { BankAccount } from "@prisma/client";
 
 export type GroupMemberEntry = {
   name: string;
@@ -21,9 +12,6 @@ export type GroupMemberEntry = {
   password: string;
   email: string;
   phone: string;
-  monthlyValue: number;
-  dueDay: number;
-  bankAccount: BankAccount;
 };
 
 let nextId = 0;
@@ -32,29 +20,19 @@ type EditorEntry = GroupMemberEntry & { _id: number };
 // Additional logins for a "grupo" student, submitted alongside the main
 // cadastro form as one JSON field — see groupMembersField in
 // lib/validation/student.ts and createStudent, which provisions one
-// separate account (and its own billing, via monthlyValue/dueDay/
-// bankAccount) per entry after the primary student is created. Each
-// entry mirrors the exact same field set and layout as the primary's own
-// card above it — one full-width field per row — so every participant
-// looks the same regardless of which one happens to be the form's
-// "primary".
+// separate account per entry after the primary student is created.
+// Billing for each participant is set up afterward, from the Financeiro
+// tab (see StudentCharge), not here. Each entry mirrors the exact same
+// field set and layout as the primary's own card above it — one
+// full-width field per row — so every participant looks the same
+// regardless of which one happens to be the form's "primary".
 export function GroupMembersEditor({ fieldName = "groupMembers" }: { fieldName?: string }) {
   const [entries, setEntries] = useState<EditorEntry[]>([]);
 
   function addEntry() {
     setEntries((prev) => [
       ...prev,
-      {
-        name: "",
-        username: "",
-        password: "",
-        email: "",
-        phone: "",
-        monthlyValue: 0,
-        dueDay: 10,
-        bankAccount: "JOE",
-        _id: nextId++,
-      },
+      { name: "", username: "", password: "", email: "", phone: "", _id: nextId++ },
     ]);
   }
 
@@ -64,28 +42,19 @@ export function GroupMembersEditor({ fieldName = "groupMembers" }: { fieldName?:
 
   function updateEntry(
     id: number,
-    field: "name" | "username" | "password" | "email" | "phone" | "bankAccount",
+    field: "name" | "username" | "password" | "email" | "phone",
     value: string
   ) {
     setEntries((prev) => prev.map((e) => (e._id === id ? { ...e, [field]: value } : e)));
   }
 
-  function updateNumber(id: number, field: "monthlyValue" | "dueDay", value: number) {
-    setEntries((prev) => prev.map((e) => (e._id === id ? { ...e, [field]: value } : e)));
-  }
-
-  const value: GroupMemberEntry[] = entries.map(
-    ({ name, username, password, email, phone, monthlyValue, dueDay, bankAccount }) => ({
-      name,
-      username,
-      password,
-      email,
-      phone,
-      monthlyValue,
-      dueDay,
-      bankAccount,
-    })
-  );
+  const value: GroupMemberEntry[] = entries.map(({ name, username, password, email, phone }) => ({
+    name,
+    username,
+    password,
+    email,
+    phone,
+  }));
 
   return (
     <div className="space-y-4 sm:col-span-2">
@@ -141,47 +110,6 @@ export function GroupMembersEditor({ fieldName = "groupMembers" }: { fieldName?:
           <div className="space-y-1.5 sm:col-span-2">
             <Label>Telefone</Label>
             <Input value={entry.phone} onChange={(e) => updateEntry(entry._id, "phone", e.target.value)} />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Valor mensal (R$)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={entry.monthlyValue}
-              onChange={(e) => updateNumber(entry._id, "monthlyValue", Number(e.target.value))}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Conta bancária</Label>
-            <Select
-              value={entry.bankAccount}
-              onValueChange={(v) => updateEntry(entry._id, "bankAccount", v)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(bankAccountLabel).map(([v, label]) => (
-                  <SelectItem key={v} value={v}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Dia de vencimento do boleto</Label>
-            <Input
-              type="number"
-              min={1}
-              max={31}
-              value={entry.dueDay}
-              onChange={(e) => updateNumber(entry._id, "dueDay", Number(e.target.value))}
-            />
           </div>
         </div>
       ))}

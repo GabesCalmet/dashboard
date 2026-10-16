@@ -87,13 +87,13 @@ export const numericHistoryField = z
   });
 
 // Submitted by GroupMembersEditor (create form only) as a JSON string, e.g.
-// '[{"name":"...","username":"...","password":"...","email":"...","phone":"...",
-// "monthlyValue":150,"dueDay":10,"bankAccount":"JOE"}]' — one additional
-// login for a "grupo" student, beyond the primary name/username/password
-// above, with the exact same billing fields as the primary's own card.
-// Loose validation here (real uniqueness/length checks happen per-member
-// in provisionUsernameAccount, same as the primary) since a malformed
-// entry should just be dropped, not fail the whole cadastro.
+// '[{"name":"...","username":"...","password":"...","email":"...","phone":"..."}]'
+// — one additional login for a "grupo" student, beyond the primary
+// name/username/password above. Billing for each participant is set up
+// afterward from the Financeiro tab (see StudentCharge), not here. Loose
+// validation here (real uniqueness/length checks happen per-member in
+// provisionUsernameAccount, same as the primary) since a malformed entry
+// should just be dropped, not fail the whole cadastro.
 const groupMembersField = z
   .string()
   .optional()
@@ -119,11 +119,6 @@ const groupMembersField = z
           password: e.password,
           email: typeof e.email === "string" && e.email ? e.email : undefined,
           phone: typeof e.phone === "string" && e.phone ? e.phone : undefined,
-          monthlyValue: typeof e.monthlyValue === "number" ? e.monthlyValue : 0,
-          dueDay: typeof e.dueDay === "number" ? e.dueDay : 10,
-          bankAccount: (["GABES", "JOE", "ASAAS"] as const).includes(e.bankAccount)
-            ? e.bankAccount
-            : "JOE",
         }));
     } catch {
       return [];
@@ -131,13 +126,11 @@ const groupMembersField = z
   });
 
 // Submitted by GroupMemberFieldsEditor (edit form only) as a JSON string,
-// e.g. '[{"userId":"...","name":"...","email":"...","phone":"...",
-// "monthlyValue":150,"dueDay":10,"bankAccount":"JOE"}]' — lets every
-// participant's own basic info and billing (valor, conta bancária, dia de
-// vencimento) be edited from the same "Editar aluno" dialog instead of
-// needing a separate place per member. Username and password aren't
-// included here — those stay under Ver senha/Alterar senha on the
-// Membros do grupo card, same as before.
+// e.g. '[{"userId":"...","name":"...","email":"...","phone":"..."}]' —
+// lets every participant's own basic info be edited from the same "Editar
+// aluno" dialog instead of needing a separate place per member. Username
+// and password aren't included here — those stay under Ver senha/Alterar
+// senha on the Membros do grupo card, same as before.
 const groupMemberUpdatesField = z
   .string()
   .optional()
@@ -153,11 +146,6 @@ const groupMemberUpdatesField = z
           name: typeof e.name === "string" ? e.name.trim() : "",
           email: typeof e.email === "string" && e.email ? e.email : undefined,
           phone: typeof e.phone === "string" && e.phone ? e.phone : undefined,
-          monthlyValue: typeof e.monthlyValue === "number" ? e.monthlyValue : 0,
-          dueDay: typeof e.dueDay === "number" ? e.dueDay : 10,
-          bankAccount: (["GABES", "JOE", "ASAAS"] as const).includes(e.bankAccount)
-            ? e.bankAccount
-            : "JOE",
         }))
         .filter((e) => e.name.length >= 2);
     } catch {
@@ -200,7 +188,6 @@ export const studentFormSchema = z.object({
   courseHistory: selectHistoryField,
   planId: z.string().optional(),
   planHistory: selectHistoryField,
-  monthlyValue: z.coerce.number().min(0, "Valor inválido"),
   // Flat number of classes this student is actually contracted for per
   // month (e.g. 8 for "2x por semana") — admin-entered, independent of how
   // many weekdays a given calendar month happens to have. Mirrors whichever
@@ -213,16 +200,6 @@ export const studentFormSchema = z.object({
   // across two days a week, later consolidated into 4/mês on one day).
   lessonsPerMonth: z.coerce.number().int().min(0, "Valor inválido").default(0),
   lessonsPerMonthHistory: numericHistoryField,
-  bankAccount: z.enum(["GABES", "JOE", "ASAAS"]).default("JOE"),
-  dueDay: z.coerce.number().int().min(1).max(31).default(10),
-  // Third party (e.g. a company) covering part or all of monthlyValue,
-  // billed separately with its own due date. Only submitted by the form
-  // when "tem pagador terceiro" is checked — absent otherwise, so these
-  // stay genuinely unset (not "0") when there's no third party.
-  thirdPartyPayerName: z.string().optional(),
-  thirdPartyAmount: z.coerce.number().min(0.01, "Valor inválido").optional(),
-  thirdPartyDueDay: z.coerce.number().int().min(1).max(31).optional(),
-  thirdPartyBankAccount: z.enum(["GABES", "JOE", "ASAAS"]).optional(),
   // Submitted by LessonScheduleEditor as a JSON string, e.g.
   // '[{"weekday":2,"start":"19:00","end":"19:50"}]'.
   lessonSchedule: z

@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Loader2, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { Loader2, Plus, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,29 +29,21 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
 import { SetPasswordButton } from "@/components/shared/set-password-button";
-import {
-  addStudentGroupMember,
-  removeStudentGroupMember,
-  removeGroupOwner,
-  updateGroupMemberValue,
-  updateGroupOwnerValue,
-  type ActionState,
-} from "@/server/actions/students";
+import { addStudentGroupMember, removeStudentGroupMember, removeGroupOwner } from "@/server/actions/students";
 import { useActionToast } from "@/hooks/use-action-toast";
-import { formatCurrency } from "@/lib/labels";
 
 type Participant = {
   userId: string;
   name: string;
   username: string | null;
-  monthlyValue: number;
 };
 
 // No participant is "the" student here — the shared profile (lessons,
 // progress, financeiro) belongs to the group as a whole, each participant
-// just has their own separate login and their own billing amount, and every
-// row below behaves identically (edit value, view/change credentials,
-// remove). Whichever login the underlying StudentProfile row happens to be
+// just has their own separate login, and every row below behaves
+// identically (view/change credentials, remove). Billing for a
+// participant is set up from the Financeiro tab (see StudentCharge), not
+// here. Whichever login the underlying StudentProfile row happens to be
 // keyed on ("owner") is an implementation detail, not a role — see
 // removeGroupOwner for how removing that one hands the row off first.
 export function GroupMembersCard({
@@ -77,7 +69,6 @@ export function GroupMembersCard({
         <ParticipantRow
           participant={owner}
           canManage={canManage}
-          editAction={updateGroupOwnerValue.bind(null, studentId)}
           onRemove={() => removeGroupOwner(studentId)}
         />
         {members.map((m) => (
@@ -85,7 +76,6 @@ export function GroupMembersCard({
             key={m.id}
             participant={m}
             canManage={canManage}
-            editAction={updateGroupMemberValue.bind(null, m.id)}
             onRemove={() => removeStudentGroupMember(m.id)}
           />
         ))}
@@ -97,12 +87,10 @@ export function GroupMembersCard({
 function ParticipantRow({
   participant,
   canManage,
-  editAction,
   onRemove,
 }: {
   participant: Participant;
   canManage: boolean;
-  editAction: (prev: ActionState, formData: FormData) => Promise<ActionState>;
   onRemove: () => Promise<void>;
 }) {
   return (
@@ -110,13 +98,9 @@ function ParticipantRow({
       <div className="min-w-0">
         <p className="truncate text-sm font-medium">{participant.name}</p>
         <p className="truncate text-xs text-muted-foreground">{participant.username}</p>
-        <p className="truncate text-xs text-muted-foreground">
-          Valor mensal: {formatCurrency(participant.monthlyValue)}
-        </p>
       </div>
       {canManage && (
         <div className="flex flex-wrap gap-1.5">
-          <EditValueDialog participant={participant} action={editAction} />
           <ViewCredentialsButton userId={participant.userId} size="sm" />
           <SetPasswordButton userId={participant.userId} size="sm" />
           <RemoveParticipantButton name={participant.name} onRemove={onRemove} />
@@ -143,8 +127,8 @@ function AddGroupMemberDialog({ studentId }: { studentId: string }) {
         <DialogHeader>
           <DialogTitle>Adicionar participante do grupo</DialogTitle>
           <DialogDescription>
-            Cria um login próprio que acessa o mesmo cadastro (aulas, progresso e financeiro), com
-            sua própria cobrança mensal.
+            Cria um login próprio que acessa o mesmo cadastro (aulas, progresso e financeiro). A
+            cobrança deste participante é configurada depois, na aba Financeiro.
           </DialogDescription>
         </DialogHeader>
 
@@ -168,10 +152,6 @@ function AddGroupMemberDialog({ studentId }: { studentId: string }) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="member-monthlyValue">Valor mensal (R$)</Label>
-            <Input id="member-monthlyValue" name="monthlyValue" type="number" step="0.01" defaultValue={0} />
-          </div>
-          <div className="space-y-1.5">
             <Label htmlFor="member-email">Email (opcional)</Label>
             <Input id="member-email" name="email" type="email" />
           </div>
@@ -184,58 +164,6 @@ function AddGroupMemberDialog({ studentId }: { studentId: string }) {
             <Button type="submit" disabled={isPending}>
               {isPending && <Loader2 className="animate-spin" />}
               Adicionar
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function EditValueDialog({
-  participant,
-  action,
-}: {
-  participant: Participant;
-  action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
-}) {
-  const [state, formAction, isPending] = useActionState(action, undefined);
-  const [open, setOpen] = useState(false);
-  useActionToast(state, () => setOpen(false));
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Pencil /> Valor
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Valor mensal — {participant.name}</DialogTitle>
-          <DialogDescription>
-            A cobrança mensal deste participante, separada do resto do grupo.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form action={formAction} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="monthlyValue">Valor mensal (R$)</Label>
-            <Input
-              id="monthlyValue"
-              name="monthlyValue"
-              type="number"
-              step="0.01"
-              min="0"
-              defaultValue={participant.monthlyValue}
-              required
-            />
-          </div>
-
-          <DialogFooter>
-            <Button type="submit" disabled={isPending}>
-              {isPending && <Loader2 className="animate-spin" />}
-              Salvar
             </Button>
           </DialogFooter>
         </form>

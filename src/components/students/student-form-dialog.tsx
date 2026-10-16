@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -45,8 +44,8 @@ import {
   GroupMemberFieldsEditor,
   type GroupMemberFields,
 } from "@/components/students/group-member-fields-editor";
-import { levelLabel, bankAccountLabel } from "@/lib/labels";
-import type { CourseLevel, StudentStatus, BankAccount } from "@prisma/client";
+import { levelLabel } from "@/lib/labels";
+import type { CourseLevel, StudentStatus } from "@prisma/client";
 
 type Option = { id: string; label: string };
 
@@ -75,15 +74,8 @@ type StudentDefaults = {
   courseHistory?: SelectHistoryEntry[];
   planId?: string | null;
   planHistory?: SelectHistoryEntry[];
-  monthlyValue: number;
   lessonsPerMonth?: number;
   lessonsPerMonthHistory?: ValueHistoryEntry[];
-  bankAccount?: BankAccount;
-  dueDay?: number;
-  thirdPartyPayerName?: string | null;
-  thirdPartyAmount?: number | null;
-  thirdPartyDueDay?: number | null;
-  thirdPartyBankAccount?: BankAccount | null;
   lessonSchedule?: ScheduleEntry[];
   level: CourseLevel;
   startDate?: string;
@@ -109,16 +101,13 @@ export function StudentFormDialog({
   const action = isEdit ? updateStudent.bind(null, student!.id) : createStudent;
   const [state, formAction, isPending] = useActionState(action, undefined);
   const [open, setOpen] = useState(false);
-  const [hasThirdParty, setHasThirdParty] = useState(Boolean(student?.thirdPartyAmount));
   const [studentType, setStudentType] = useState<"individual" | "grupo">(
     student?.isGroup ? "grupo" : "individual"
   );
-  // Lifted out of the monthlyValue editor purely so TeacherAssignmentEditor
-  // can show a live "≈ R$/aula" preview beside the Mensal fixo/Percentual
-  // inputs — not otherwise used here, since each editor still submits its
-  // own fields.
+  // Lifted out of the Aulas/mês editor purely so TeacherAssignmentEditor
+  // can show a live "≈ R$/aula" preview beside the Mensal fixo input — not
+  // otherwise used here, since each editor still submits its own fields.
   const [lessonsPerMonth, setLessonsPerMonth] = useState(student?.lessonsPerMonth ?? 4);
-  const [monthlyValue, setMonthlyValue] = useState(student?.monthlyValue ?? 0);
   useActionToast(state, () => setOpen(false));
 
   return (
@@ -243,26 +232,12 @@ export function StudentFormDialog({
               <DateInput id="birthDate" name="birthDate" defaultValue={student?.birthDate} />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="monthlyValue">Valor mensal (R$)</Label>
-              <Input
-                id="monthlyValue"
-                name="monthlyValue"
-                type="number"
-                step="0.01"
-                min="0"
-                defaultValue={student?.monthlyValue ?? 0}
-                onChange={(e) => setMonthlyValue(Number(e.target.value))}
-                required
-              />
-            </div>
-
-            {/* Separate from Valor mensal on purpose — this tracks its own
-                vigência independently (e.g. 8 aulas/mês split across two
-                days a week, later consolidated into 4/mês on one day), and
-                only the monthly PDF report resolves it historically; the
-                rest of the app (dashboard remaining count, teacher load)
-                only ever cares about today's value, read from the same
+            {/* Independent from billing on purpose — this tracks its own
+                vigência (e.g. 8 aulas/mês split across two days a week,
+                later consolidated into 4/mês on one day), and only the
+                monthly PDF report resolves it historically; the rest of
+                the app (dashboard remaining count, teacher load) only
+                ever cares about today's value, read from the same
                 lessonsPerMonth mirror either way. */}
             <MonthlyValueHistoryEditor
               label="Aulas contratadas por mês"
@@ -275,35 +250,6 @@ export function StudentFormDialog({
               min={0}
               onChange={(amount) => setLessonsPerMonth(amount)}
             />
-
-            <div className="space-y-1.5">
-              <Label>Conta bancária</Label>
-              <Select name="bankAccount" defaultValue={student?.bankAccount ?? "JOE"} required>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(bankAccountLabel).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="dueDay">Dia de vencimento do boleto</Label>
-              <Input
-                id="dueDay"
-                name="dueDay"
-                type="number"
-                min={1}
-                max={31}
-                defaultValue={student?.dueDay ?? 10}
-                required
-              />
-            </div>
           </div>
 
           {studentType === "grupo" && !student?.isGroup && <GroupMembersEditor />}
@@ -324,8 +270,9 @@ export function StudentFormDialog({
               required
             />
             <p className="text-xs text-muted-foreground">
-              O primeiro mês cobrado é o que já contém esta data — informe o dia exato em que a
-              cobrança deve começar, mesmo que seja diferente do início das aulas.
+              Usada para contar os ciclos de aulas contratadas (&quot;Total de aulas
+              contratadas&quot;) — informe o dia exato em que a cobrança começou/começa, mesmo
+              que seja diferente do início das aulas. As cobranças em si ficam em Financeiro.
             </p>
           </div>
           <div className="space-y-1.5">
@@ -364,7 +311,6 @@ export function StudentFormDialog({
             defaultMonthlyAmount={student?.teacherMonthlyAmount ?? 0}
             defaultPercentage={student?.teacherPercentage ?? 0}
             lessonsPerMonth={lessonsPerMonth}
-            monthlyValue={monthlyValue}
           />
 
           <SelectHistoryEditor
@@ -384,72 +330,6 @@ export function StudentFormDialog({
             defaultValue={student?.planId}
             defaultHistory={student?.planHistory ?? []}
           />
-
-          <div className="flex items-end pb-1.5">
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={hasThirdParty}
-                onCheckedChange={(checked) => setHasThirdParty(checked === true)}
-              />
-              Parte ou todo o valor é pago por terceiros (empresa)
-            </label>
-          </div>
-
-          {hasThirdParty && (
-            <>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="thirdPartyPayerName">Nome do terceiro (empresa)</Label>
-                <Input
-                  id="thirdPartyPayerName"
-                  name="thirdPartyPayerName"
-                  defaultValue={student?.thirdPartyPayerName ?? ""}
-                  required
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="thirdPartyAmount">Valor pago pelo terceiro (R$)</Label>
-                <Input
-                  id="thirdPartyAmount"
-                  name="thirdPartyAmount"
-                  type="number"
-                  step="0.01"
-                  defaultValue={student?.thirdPartyAmount ?? ""}
-                  required
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="thirdPartyDueDay">Dia de vencimento (terceiro)</Label>
-                <Input
-                  id="thirdPartyDueDay"
-                  name="thirdPartyDueDay"
-                  type="number"
-                  min={1}
-                  max={31}
-                  defaultValue={student?.thirdPartyDueDay ?? ""}
-                  required
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Conta bancária (terceiro)</Label>
-                <Select
-                  name="thirdPartyBankAccount"
-                  defaultValue={student?.thirdPartyBankAccount ?? "JOE"}
-                  required
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(bankAccountLabel).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          )}
 
           <div className="space-y-1.5 sm:col-span-2">
             <Label>Dia(s) e horário(s) da(s) aula(s)</Label>

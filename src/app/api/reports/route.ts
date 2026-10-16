@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { csvResponse } from "@/lib/csv";
+import { getChargeSlotsForMonth } from "@/server/student-charges";
 import {
   levelLabel,
   lessonStatusLabel,
@@ -22,21 +23,39 @@ export async function GET(request: NextRequest) {
       const students = await prisma.studentProfile.findMany({
         include: { user: true, teacher: { include: { user: true } }, course: true },
       });
+      // Valor mensal/Dia vencimento now come from each student's own
+      // active StudentCharge (see the Financeiro tab) rather than the
+      // cadastro, which no longer drives billing at all — batched here
+      // instead of queried per student.
+      const now = new Date();
+      const charges = await prisma.studentCharge.findMany({ orderBy: { createdAt: "desc" } });
+      const chargesByStudent = new Map<string, typeof charges>();
+      for (const c of charges) {
+        const bucket = chargesByStudent.get(c.studentId);
+        if (bucket) bucket.push(c);
+        else chargesByStudent.set(c.studentId, [c]);
+      }
       return csvResponse(
         "alunos.csv",
-        students.map((s) => ({
-          Nome: s.user.name,
-          Usuario: s.user.username,
-          Email: s.user.email,
-          Nivel: levelLabel[s.level],
-          Status: studentStatusLabel[s.status],
-          Professor: s.teacher?.user.name ?? "",
-          Curso: s.course?.name ?? "",
-          "Valor mensal": s.monthlyValue.toString(),
-          "Dia vencimento": s.dueDay,
-          "Aulas/mes": s.lessonsPerMonth,
-          "Data inicio": s.startDate.toISOString().slice(0, 10),
-        }))
+        students.map((s) => {
+          const ownSlot = getChargeSlotsForMonth(
+            (chargesByStudent.get(s.id) ?? []).map((c) => ({ ...c, amount: Number(c.amount) })),
+            now
+          ).find((slot) => slot.payerName === null);
+          return {
+            Nome: s.user.name,
+            Usuario: s.user.username,
+            Email: s.user.email,
+            Nivel: levelLabel[s.level],
+            Status: studentStatusLabel[s.status],
+            Professor: s.teacher?.user.name ?? "",
+            Curso: s.course?.name ?? "",
+            "Valor mensal": ownSlot ? ownSlot.amount.toString() : "",
+            "Dia vencimento": ownSlot ? ownSlot.dueDay : "",
+            "Aulas/mes": s.lessonsPerMonth,
+            "Data inicio": s.startDate.toISOString().slice(0, 10),
+          };
+        })
       );
     }
     case "teachers": {

@@ -80,7 +80,6 @@ export function TeacherAssignmentEditor({
   defaultMonthlyAmount = 0,
   defaultPercentage = 0,
   lessonsPerMonth,
-  monthlyValue,
 }: {
   valueFieldName: string;
   historyFieldName: string;
@@ -95,11 +94,10 @@ export function TeacherAssignmentEditor({
   defaultMode?: TeacherPayMode;
   defaultMonthlyAmount?: number;
   defaultPercentage?: number;
-  // Live values from the rest of the form (Aulas/mês and Valor mensal) —
-  // used only to compute the informational "≈ R$/aula" preview beside the
-  // Mensal fixo / Percentual inputs, not persisted by this component.
+  // Live value from the rest of the form (Aulas/mês) — used only to
+  // compute the informational "≈ R$/aula" preview beside the Mensal fixo
+  // input, not persisted by this component.
   lessonsPerMonth: number;
-  monthlyValue: number;
 }) {
   const [entries, setEntries] = useState<EditorEntry[]>(() =>
     defaultHistory.length > 0
@@ -306,19 +304,10 @@ export function TeacherAssignmentEditor({
                       value={entry.percentage ?? 0}
                       onChange={(e) => updatePercentage(entry._id, e.target.value)}
                     />
-                    <span className="text-sm text-muted-foreground">
-                      {(() => {
-                        const percentageAmount = (monthlyValue * (entry.percentage ?? 0)) / 100;
-                        const value = perAula(percentageAmount, lessonsPerMonth);
-                        return value === null
-                          ? "Defina Aulas/mês para calcular o valor por aula"
-                          : `≈ ${formatCurrency(percentageAmount)}/mês · ${formatCurrency(value)} por aula`;
-                      })()}
-                    </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    O professor recebe este percentual do valor mensal pago pelo aluno, independente da
-                    quantidade de aulas dadas.
+                    O professor recebe este percentual do valor cobrado do aluno naquele mês
+                    (ver cobranças, na aba Financeiro), independente da quantidade de aulas dadas.
                   </p>
                 </>
               )}

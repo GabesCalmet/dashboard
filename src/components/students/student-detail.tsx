@@ -36,12 +36,7 @@ import { MonthlyReportButton } from "@/components/students/monthly-report-button
 import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
 import { SetPasswordButton } from "@/components/shared/set-password-button";
 import { AuditTrail } from "@/components/shared/audit-trail";
-import {
-  studentStatusLabel,
-  studentStatusVariant,
-  formatDate,
-  bankAccountLabel,
-} from "@/lib/labels";
+import { studentStatusLabel, studentStatusVariant, formatDate } from "@/lib/labels";
 import type { getStudentDetail } from "@/server/queries/students";
 
 type Student = NonNullable<Awaited<ReturnType<typeof getStudentDetail>>>;
@@ -289,9 +284,6 @@ export function StudentDetailView({
                     username: m.user.username,
                     email: m.user.email,
                     phone: m.user.phone,
-                    monthlyValue: Number(m.monthlyValue),
-                    dueDay: m.dueDay,
-                    bankAccount: m.bankAccount,
                   })),
                   email: student.user.email,
                   cpf: student.cpf,
@@ -309,15 +301,8 @@ export function StudentDetailView({
                   courseHistory: parseSelectHistory(student.courseHistory),
                   planId: student.planId,
                   planHistory: parseSelectHistory(student.planHistory),
-                  monthlyValue: Number(student.monthlyValue),
                   lessonsPerMonth: student.lessonsPerMonth,
                   lessonsPerMonthHistory: parseValueHistory(student.lessonsPerMonthHistory),
-                  bankAccount: student.bankAccount,
-                  dueDay: student.dueDay,
-                  thirdPartyPayerName: student.thirdPartyPayerName,
-                  thirdPartyAmount: student.thirdPartyAmount ? Number(student.thirdPartyAmount) : null,
-                  thirdPartyDueDay: student.thirdPartyDueDay,
-                  thirdPartyBankAccount: student.thirdPartyBankAccount,
                   lessonSchedule: parseLessonSchedule(student.lessonSchedule),
                   level: student.level,
                   startDate: student.startDate.toISOString().slice(0, 10),
@@ -410,8 +395,6 @@ export function StudentDetailView({
                         : formatDate(student.startDate)
                     }
                   />
-                  <InfoRow label="Vencimento do boleto" value={`Dia ${student.dueDay}`} />
-                  <InfoRow label="Conta bancária" value={bankAccountLabel[student.bankAccount]} />
                   <InfoRow
                     label="Professor atual"
                     value={formatCurrentTeacher(
@@ -516,14 +499,12 @@ export function StudentDetailView({
                 userId: student.userId,
                 name: student.user.name,
                 username: student.user.username,
-                monthlyValue: Number(student.monthlyValue),
               }}
               members={student.groupMembers.map((m) => ({
                 id: m.id,
                 userId: m.userId,
                 name: m.user.name,
                 username: m.user.username,
-                monthlyValue: Number(m.monthlyValue),
               }))}
               canManage={permissions.canEdit}
             />

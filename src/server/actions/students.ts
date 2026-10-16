@@ -58,13 +58,12 @@ export async function createStudent(
         courseHistory: data.courseHistory,
         planId: data.planId || undefined,
         planHistory: data.planHistory,
-        monthlyValue: data.monthlyValue,
-        bankAccount: data.bankAccount,
-        dueDay: data.dueDay,
-        thirdPartyPayerName: data.thirdPartyAmount ? data.thirdPartyPayerName : undefined,
-        thirdPartyAmount: data.thirdPartyAmount,
-        thirdPartyDueDay: data.thirdPartyAmount ? data.thirdPartyDueDay : undefined,
-        thirdPartyBankAccount: data.thirdPartyAmount ? data.thirdPartyBankAccount : undefined,
+        // Billing lives entirely in StudentCharge now (see the Financeiro
+        // tab) — monthlyValue has no DB default (NOT NULL), so it still
+        // needs an explicit value here; dueDay/bankAccount/thirdParty* all
+        // have their own DB defaults (or are nullable) and are simply
+        // left unset.
+        monthlyValue: 0,
         lessonsPerMonth: data.lessonsPerMonth,
         lessonsPerMonthHistory: data.lessonsPerMonthHistory,
         lessonSchedule: data.lessonSchedule,
@@ -101,13 +100,7 @@ export async function createStudent(
         phone: member.phone,
       });
       await prisma.studentGroupMember.create({
-        data: {
-          studentProfileId: student.id,
-          userId: memberUser.id,
-          monthlyValue: member.monthlyValue,
-          dueDay: member.dueDay,
-          bankAccount: member.bankAccount,
-        },
+        data: { studentProfileId: student.id, userId: memberUser.id },
       });
     }
 
@@ -171,16 +164,6 @@ export async function updateStudent(
         data: { name: m.name, email: m.email ?? null, phone: m.phone },
       })
     ),
-    ...memberUpdates.map((m) =>
-      prisma.studentGroupMember.update({
-        where: { userId: m.userId },
-        data: {
-          monthlyValue: m.monthlyValue,
-          dueDay: m.dueDay,
-          bankAccount: m.bankAccount,
-        },
-      })
-    ),
     prisma.studentProfile.update({
       where: { id: studentId },
       data: {
@@ -199,13 +182,11 @@ export async function updateStudent(
         courseHistory: data.courseHistory,
         planId: data.planId || null,
         planHistory: data.planHistory,
-        monthlyValue: data.monthlyValue,
-        bankAccount: data.bankAccount,
-        dueDay: data.dueDay,
-        thirdPartyPayerName: data.thirdPartyAmount ? data.thirdPartyPayerName : null,
-        thirdPartyAmount: data.thirdPartyAmount ?? null,
-        thirdPartyDueDay: data.thirdPartyAmount ? data.thirdPartyDueDay : null,
-        thirdPartyBankAccount: data.thirdPartyAmount ? data.thirdPartyBankAccount : null,
+        // Billing (monthlyValue/bankAccount/dueDay/thirdParty*) is no
+        // longer part of this form at all — deliberately omitted here so
+        // whatever's already in those columns stays untouched, exactly
+        // like monthlyValueHistory/dueDayHistory/bankAccountHistory
+        // before it. See StudentCharge/the Financeiro tab instead.
         lessonsPerMonth: data.lessonsPerMonth,
         lessonsPerMonthHistory: data.lessonsPerMonthHistory,
         lessonSchedule: data.lessonSchedule,
@@ -237,13 +218,7 @@ export async function updateStudent(
         phone: member.phone,
       });
       await prisma.studentGroupMember.create({
-        data: {
-          studentProfileId: studentId,
-          userId: memberUser.id,
-          monthlyValue: member.monthlyValue,
-          dueDay: member.dueDay,
-          bankAccount: member.bankAccount,
-        },
+        data: { studentProfileId: studentId, userId: memberUser.id },
       });
     } catch (err) {
       memberError = err instanceof Error ? err.message : "Erro ao adicionar participante.";
@@ -335,7 +310,6 @@ export async function addStudentGroupMember(
       password: passwordField,
       email: z.string().email("Email inválido").optional().or(z.literal("")),
       phone: z.string().optional(),
-      monthlyValue: z.coerce.number().min(0, "Valor inválido").default(0),
     })
     .safeParse(raw);
 
@@ -354,7 +328,7 @@ export async function addStudentGroupMember(
       phone: data.phone,
     });
     await prisma.studentGroupMember.create({
-      data: { studentProfileId: studentId, userId: user.id, monthlyValue: data.monthlyValue },
+      data: { studentProfileId: studentId, userId: user.id },
     });
 
     await recordAudit({
@@ -390,85 +364,6 @@ export async function removeStudentGroupMember(memberId: string) {
   await hardDeleteUserAccount(member.userId);
   revalidatePath(`/admin/students/${member.studentProfileId}`);
   revalidatePath(`/coordinator/students/${member.studentProfileId}`);
-}
-
-// Updates one group member's own monthly value on the cadastro — no
-// longer read by actual billing (see StudentCharge), kept only as a
-// reference figure on the Membros do grupo card.
-export async function updateGroupMemberValue(
-  memberId: string,
-  _prev: ActionState,
-  formData: FormData
-): Promise<ActionState> {
-  const actor = await requireRole("ADMIN", "COORDINATOR");
-  const raw = Object.fromEntries(formData.entries());
-  const parsed = z
-    .object({
-      monthlyValue: z.coerce.number().min(0, "Valor inválido"),
-    })
-    .safeParse(raw);
-
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
-  }
-  const data = parsed.data;
-
-  const member = await prisma.studentGroupMember.update({
-    where: { id: memberId },
-    data: { monthlyValue: data.monthlyValue },
-  });
-
-  await recordAudit({
-    entityType: "StudentProfile",
-    entityId: member.studentProfileId,
-    action: "UPDATE",
-    actor,
-    changes: { groupMemberValueUpdated: memberId },
-  });
-
-  revalidatePath(`/admin/students/${member.studentProfileId}`);
-  revalidatePath(`/coordinator/students/${member.studentProfileId}`);
-  return { success: "Valor atualizado." };
-}
-
-// Updates the group's own-login participant's monthly value — there's no
-// conceptual "primary" (see removeGroupOwner below), this is just the one
-// participant whose login the StudentProfile row happens to be keyed on
-// right now, edited the same way as any other member's.
-export async function updateGroupOwnerValue(
-  studentId: string,
-  _prev: ActionState,
-  formData: FormData
-): Promise<ActionState> {
-  const actor = await requireRole("ADMIN", "COORDINATOR");
-  const raw = Object.fromEntries(formData.entries());
-  const parsed = z
-    .object({
-      monthlyValue: z.coerce.number().min(0, "Valor inválido"),
-    })
-    .safeParse(raw);
-
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
-  }
-  const data = parsed.data;
-
-  await prisma.studentProfile.update({
-    where: { id: studentId },
-    data: { monthlyValue: data.monthlyValue },
-  });
-
-  await recordAudit({
-    entityType: "StudentProfile",
-    entityId: studentId,
-    action: "UPDATE",
-    actor,
-    changes: { groupOwnerValueUpdated: true },
-  });
-
-  revalidatePath(`/admin/students/${studentId}`);
-  revalidatePath(`/coordinator/students/${studentId}`);
-  return { success: "Valor atualizado." };
 }
 
 // Removes the group's current own-login participant (the one
