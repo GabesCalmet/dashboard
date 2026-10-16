@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatDate, formatCalendarMonthYear } from "@/lib/labels";
+import { formatCurrency, formatCalendarDate, formatCalendarMonthYear } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import type { BankLedgerItem } from "@/server/queries/financial";
 
@@ -57,7 +57,7 @@ function ItemColumn({
             <p className={cn("truncate", item.manual && "text-blue-600 dark:text-blue-400")}>
               {item.label}
             </p>
-            <p className="text-xs text-muted-foreground">{formatDate(new Date(item.date))}</p>
+            <p className="text-xs text-muted-foreground">{formatCalendarDate(item.date)}</p>
           </div>
           <span
             className={cn(
