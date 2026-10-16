@@ -108,6 +108,10 @@ export function CalendarView({
           right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
         }}
         height="auto"
+        // The week/day time-grid views start at midnight by default, which
+        // is mostly empty scroll space — classes never happen before 7am,
+        // so pin the visible range to start there instead.
+        slotMinTime="07:00:00"
         events={(info, success, failure) => {
           const teacherParam = teacherId ? `&teacherId=${teacherId}` : "";
           fetch(`/api/lessons?start=${info.startStr}&end=${info.endStr}${teacherParam}`)
