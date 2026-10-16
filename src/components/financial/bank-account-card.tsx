@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -8,16 +9,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate, formatCalendarMonthYear } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import type { BankLedgerItem } from "@/server/queries/financial";
+
+type MonthGroup = { key: string; label: string; items: BankLedgerItem[]; total: number };
 
 // Buckets an already newest-first list into one group per calendar month
 // (UTC, matching how every item.date was built server-side) — items come
 // in pre-sorted, so this just inserts a boundary wherever the month
 // changes rather than re-sorting anything.
-function groupByMonth(items: BankLedgerItem[]) {
-  const groups: { key: string; label: string; items: BankLedgerItem[]; total: number }[] = [];
+function groupByMonth(items: BankLedgerItem[]): MonthGroup[] {
+  const groups: MonthGroup[] = [];
   for (const item of items) {
     const d = new Date(item.date);
     const key = `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
@@ -32,9 +36,54 @@ function groupByMonth(items: BankLedgerItem[]) {
   return groups;
 }
 
+function ItemColumn({
+  group,
+  tone,
+}: {
+  group: MonthGroup | undefined;
+  tone: "success" | "destructive";
+}) {
+  if (!group || group.items.length === 0) {
+    return <p className="text-sm text-muted-foreground">Nada neste mês.</p>;
+  }
+  return (
+    <div className="columns-1 gap-4 sm:columns-2 xl:columns-3">
+      {group.items.map((item) => (
+        <div
+          key={item.id}
+          className="mb-2 flex items-center justify-between gap-3 break-inside-avoid text-sm"
+        >
+          <div className="min-w-0">
+            <p className={cn("truncate", item.manual && "text-blue-600 dark:text-blue-400")}>
+              {item.label}
+            </p>
+            <p className="text-xs text-muted-foreground">{formatDate(new Date(item.date))}</p>
+          </div>
+          <span
+            className={cn(
+              "shrink-0 font-medium",
+              item.manual
+                ? "text-blue-600 dark:text-blue-400"
+                : tone === "success"
+                  ? "text-success"
+                  : "text-destructive"
+            )}
+          >
+            {formatCurrency(item.amount)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // Click-to-expand version of a "Saldo por conta bancária" box — the card
 // itself still shows just the totals, but opens a dialog listing every
-// individual entrada/saída that adds up to them.
+// individual entrada/saída that adds up to them. Shows one month at a
+// time (prev/next, newest first) with Entradas and Saídas laid out side
+// by side, each flowing into multiple columns, so a typical month's worth
+// of entries fits in view without scrolling — easier to cross-check
+// against an outside spreadsheet than one long mixed, all-months list.
 export function BankAccountCard({
   label,
   balance,
@@ -51,12 +100,33 @@ export function BankAccountCard({
   spentItems: BankLedgerItem[];
 }) {
   const [open, setOpen] = useState(false);
+  const [monthIndex, setMonthIndex] = useState(0);
+
+  const receivedByMonth = useMemo(() => groupByMonth(receivedItems), [receivedItems]);
+  const spentByMonth = useMemo(() => groupByMonth(spentItems), [spentItems]);
+  // Union of every month either list has an entry in, newest first —
+  // either list can have a month the other doesn't.
+  const months = useMemo(() => {
+    const byKey = new Map<string, string>();
+    for (const g of receivedByMonth) byKey.set(g.key, g.label);
+    for (const g of spentByMonth) byKey.set(g.key, g.label);
+    return Array.from(byKey.entries())
+      .map(([key, label]) => ({ key, label }))
+      .sort((a, b) => (a.key < b.key ? 1 : -1));
+  }, [receivedByMonth, spentByMonth]);
+
+  const current = months[monthIndex];
+  const receivedGroup = current ? receivedByMonth.find((g) => g.key === current.key) : undefined;
+  const spentGroup = current ? spentByMonth.find((g) => g.key === current.key) : undefined;
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setMonthIndex(0);
+          setOpen(true);
+        }}
         className="rounded-lg border p-4 text-left transition-colors hover:border-accent/50 hover:bg-secondary/50"
       >
         <p className="text-sm font-medium">{label}</p>
@@ -67,7 +137,7 @@ export function BankAccountCard({
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="flex h-[92vh] max-h-[92vh] w-[95vw] max-w-[1600px] flex-col overflow-hidden sm:max-w-[95vw]">
           <DialogHeader>
             <DialogTitle>{label}</DialogTitle>
             <DialogDescription>
@@ -75,85 +145,63 @@ export function BankAccountCard({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div>
-              <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                Entradas ({receivedItems.length})
-              </p>
-              {receivedItems.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhuma entrada registrada.</p>
-              ) : (
-                <div className="space-y-4">
-                  {groupByMonth(receivedItems).map((group) => (
-                    <div key={group.key}>
-                      <div className="mb-1.5 flex items-center justify-between border-b pb-1">
-                        <p className="text-xs font-semibold capitalize">{group.label}</p>
-                        <p className="text-xs font-semibold text-success">{formatCurrency(group.total)}</p>
-                      </div>
-                      <div className="space-y-1.5">
-                        {group.items.map((item) => (
-                          <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
-                            <div className="min-w-0">
-                              <p
-                                className={cn(
-                                  "truncate",
-                                  item.manual && "text-blue-600 dark:text-blue-400"
-                                )}
-                              >
-                                {item.label}
-                              </p>
-                              <p className="text-xs text-muted-foreground">{formatDate(new Date(item.date))}</p>
-                            </div>
-                            <span
-                              className={cn(
-                                "shrink-0 font-medium",
-                                item.manual ? "text-blue-600 dark:text-blue-400" : "text-success"
-                              )}
-                            >
-                              {formatCurrency(item.amount)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          {months.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma movimentação registrada.</p>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  disabled={monthIndex >= months.length - 1}
+                  onClick={() => setMonthIndex((i) => Math.min(i + 1, months.length - 1))}
+                  aria-label="Mês anterior"
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+                <span className="min-w-40 text-center text-sm font-semibold capitalize">
+                  {current?.label}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  disabled={monthIndex <= 0}
+                  onClick={() => setMonthIndex((i) => Math.max(i - 1, 0))}
+                  aria-label="Próximo mês"
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
 
-            <div>
-              <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                Saídas ({spentItems.length})
-              </p>
-              {spentItems.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhuma saída registrada.</p>
-              ) : (
-                <div className="space-y-4">
-                  {groupByMonth(spentItems).map((group) => (
-                    <div key={group.key}>
-                      <div className="mb-1.5 flex items-center justify-between border-b pb-1">
-                        <p className="text-xs font-semibold capitalize">{group.label}</p>
-                        <p className="text-xs font-semibold text-destructive">{formatCurrency(group.total)}</p>
-                      </div>
-                      <div className="space-y-1.5">
-                        {group.items.map((item) => (
-                          <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
-                            <div className="min-w-0">
-                              <p className="truncate">{item.label}</p>
-                              <p className="text-xs text-muted-foreground">{formatDate(new Date(item.date))}</p>
-                            </div>
-                            <span className="shrink-0 font-medium text-destructive">
-                              {formatCurrency(item.amount)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+              <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 overflow-y-auto lg:grid-cols-2">
+                <div>
+                  <div className="mb-2 flex items-center justify-between border-b pb-1">
+                    <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                      Entradas ({receivedGroup?.items.length ?? 0})
+                    </p>
+                    <p className="text-xs font-semibold text-success">
+                      {formatCurrency(receivedGroup?.total ?? 0)}
+                    </p>
+                  </div>
+                  <ItemColumn group={receivedGroup} tone="success" />
                 </div>
-              )}
-            </div>
-          </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between border-b pb-1">
+                    <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                      Saídas ({spentGroup?.items.length ?? 0})
+                    </p>
+                    <p className="text-xs font-semibold text-destructive">
+                      {formatCurrency(spentGroup?.total ?? 0)}
+                    </p>
+                  </div>
+                  <ItemColumn group={spentGroup} tone="destructive" />
+                </div>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </>
