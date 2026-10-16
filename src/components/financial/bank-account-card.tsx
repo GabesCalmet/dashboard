@@ -177,11 +177,11 @@ export function BankAccountCard({
 
               <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 overflow-y-auto lg:grid-cols-2">
                 <div>
-                  <div className="mb-2 flex items-center justify-between border-b pb-1">
-                    <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  <div className="mb-3 flex items-center justify-between border-b pb-2">
+                    <p className="text-base font-semibold tracking-wide text-muted-foreground uppercase">
                       Entradas ({receivedGroup?.items.length ?? 0})
                     </p>
-                    <p className="text-xs font-semibold text-success">
+                    <p className="text-lg font-bold text-success">
                       {formatCurrency(receivedGroup?.total ?? 0)}
                     </p>
                   </div>
@@ -189,11 +189,11 @@ export function BankAccountCard({
                 </div>
 
                 <div>
-                  <div className="mb-2 flex items-center justify-between border-b pb-1">
-                    <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  <div className="mb-3 flex items-center justify-between border-b pb-2">
+                    <p className="text-base font-semibold tracking-wide text-muted-foreground uppercase">
                       Saídas ({spentGroup?.items.length ?? 0})
                     </p>
-                    <p className="text-xs font-semibold text-destructive">
+                    <p className="text-lg font-bold text-destructive">
                       {formatCurrency(spentGroup?.total ?? 0)}
                     </p>
                   </div>
