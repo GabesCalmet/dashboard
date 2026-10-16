@@ -664,9 +664,8 @@ export async function getFinancialSummary(year?: number, month?: number) {
 // edit adding an earlier month that was missed, same as an ACTIVE
 // student). Only without any endDate at all does a non-ACTIVE student fall
 // back to showing real rows only — there's no safe signal for how far to
-// generate without one, same reasoning as resyncStudentPayments' backfill.
-// Real past rows for a since-paused/canceled student are always included
-// regardless.
+// generate without one. Real past rows for a since-paused/canceled
+// student are always included regardless.
 export async function getStudentPaymentHistory(studentId: string) {
   const student = await prisma.studentProfile.findUniqueOrThrow({
     where: { id: studentId },

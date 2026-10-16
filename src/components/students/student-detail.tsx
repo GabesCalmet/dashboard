@@ -31,7 +31,6 @@ import type { TeacherHistoryEntry } from "@/components/students/teacher-assignme
 import { DeleteStudentButton } from "@/components/students/delete-student-button";
 import { GroupMembersCard } from "@/components/students/group-members-card";
 import { ResyncLessonsButton } from "@/components/students/resync-lessons-button";
-import { ResyncPaymentsButton } from "@/components/students/resync-payments-button";
 import { MonthlyReportButton } from "@/components/students/monthly-report-button";
 import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
 import { SetPasswordButton } from "@/components/shared/set-password-button";
@@ -331,9 +330,6 @@ export function StudentDetailView({
               />
             )}
             {permissions.canEdit && <ResyncLessonsButton studentId={student.id} />}
-            {permissions.canEdit && permissions.showFinancial && (
-              <ResyncPaymentsButton studentId={student.id} />
-            )}
             {permissions.canEdit && <ViewCredentialsButton userId={student.userId} />}
             {permissions.canEdit && <SetPasswordButton userId={student.userId} />}
             {permissions.canDelete && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Pencil, Loader2, Undo2 } from "lucide-react";
+import { Pencil, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,11 +23,12 @@ function toIsoDate(date: Date) {
 }
 
 // A small pencil button that opens a dialog for directly setting this one
-// month's valor/vencimento — a one-time exception (see setPaymentOverride)
-// that never touches the cadastro and never affects any other month. The
-// note is optional, left blank when there's nothing worth writing down.
-// Rendered twice (once by the Valor cell, once by Vencimento)
-// so both are reachable inline, but both open the exact same dialog.
+// month's valor/vencimento (see setPaymentOverride) — this never affects
+// any other month, since each month is already its own independent
+// Payment row. The note is optional, left blank when there's nothing
+// worth writing down. Rendered twice (once by the Valor cell, once by
+// Vencimento) so both are reachable inline, but both open the exact same
+// dialog.
 export function PaymentOverrideButton({
   studentId,
   payerName,
@@ -68,7 +69,7 @@ export function PaymentOverrideButton({
         <DialogHeader>
           <DialogTitle>Ajustar cobrança</DialogTitle>
           <DialogDescription>
-            Define o valor e o vencimento só deste mês, sem alterar o cadastro nem outros meses.
+            Define o valor e o vencimento só deste mês, sem afetar nenhum outro mês.
             {manualOverride && manualOverrideNote && (
               <span className="mt-2 block rounded-md bg-muted p-2 text-xs">
                 Ajuste atual: {manualOverrideNote}
@@ -118,8 +119,8 @@ export function PaymentOverrideButton({
                   }
                 }}
               >
-                {isClearing ? <Loader2 className="animate-spin" /> : <Undo2 />}
-                Reverter para o cadastro
+                {isClearing ? <Loader2 className="animate-spin" /> : <X />}
+                Remover observação
               </Button>
             )}
             <Button type="submit" disabled={isPending}>
