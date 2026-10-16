@@ -246,6 +246,36 @@ export async function setPaymentBankAccountOverride(
   return payment;
 }
 
+// Permanently removes one real cobrança row — for a genuine data-entry
+// mistake (wrong month/payer entered, a duplicate, ...), not for anything
+// that actually happened. Every other action in this system deliberately
+// never deletes a Payment row (editing or deleting its originating
+// StudentCharge only ever affects future generation, see
+// deleteStudentCharge) precisely so real history is never silently lost —
+// this is the one explicit, admin-confirmed exception for when a row
+// shouldn't have existed at all. Has no effect on the charge that may
+// have generated it, if any; if that charge is still active and the
+// deleted month is still inside its range, the usual generation path
+// (the monthly cron, or editing/re-saving the charge) will recreate an
+// equivalent row the next time it runs.
+export async function deletePayment(paymentId: string, studentId: string) {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+
+  await recordAudit({
+    entityType: "Payment",
+    entityId: paymentId,
+    action: "DELETE",
+    actor,
+  });
+
+  await prisma.payment.delete({ where: { id: paymentId } });
+
+  revalidatePath("/admin/financial");
+  revalidatePath("/admin/financial/receita");
+  revalidatePath(`/admin/students/${studentId}`);
+  revalidatePath(`/coordinator/students/${studentId}`);
+}
+
 // Manual fallback for the daily cron (/api/cron/mark-late-payments) — runs
 // the exact same two sweeps (auto-generate this month's missing cobranças,
 // then flip any overdue PENDING to LATE) on demand, for when the scheduled

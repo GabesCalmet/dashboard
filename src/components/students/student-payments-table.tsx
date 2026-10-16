@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import { ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -13,9 +14,21 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { PaymentStatusSelect } from "@/components/financial/payment-status-select";
 import { PaymentOverrideButton } from "@/components/students/payment-override-dialog";
 import { PaymentBankAccountSelect } from "@/components/students/payment-bank-account-select";
+import { deletePayment } from "@/server/actions/payments";
 import {
   formatCurrency,
   formatDate,
@@ -60,6 +73,7 @@ export function StudentPaymentsTable({
   editable?: boolean;
 }) {
   const [year, setYear] = useState(() => new Date().getFullYear());
+  const [isPending, startTransition] = useTransition();
   const filteredPayments = payments.filter(
     (p) => new Date(p.referenceMonth).getUTCFullYear() === year
   );
@@ -94,6 +108,7 @@ export function StudentPaymentsTable({
               <TableHead>Vencimento</TableHead>
               <TableHead>Pago em</TableHead>
               <TableHead>Status</TableHead>
+              {editable && <TableHead className="text-right">Ações</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -173,11 +188,57 @@ export function StudentPaymentsTable({
                     </Badge>
                   )}
                 </TableCell>
+                {editable && (
+                  <TableCell className="text-right">
+                    {/* Only a real row (p.id set) has anything to delete —
+                        a not-yet-generated placeholder is never persisted. */}
+                    {p.id && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-destructive">
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir cobrança</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Remove permanentemente esta cobrança de {formatCalendarMonthYear(p.referenceMonth)}{" "}
+                              ({formatCurrency(p.amount)}). Use isto só para um lançamento feito por engano — não
+                              afeta a definição de cobrança (se ainda existir), nem qualquer outro mês. Não pode
+                              ser desfeito.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              disabled={isPending}
+                              onClick={(ev) => {
+                                ev.preventDefault();
+                                startTransition(async () => {
+                                  try {
+                                    await deletePayment(p.id!, studentId);
+                                    toast.success("Cobrança excluída.");
+                                  } catch (err) {
+                                    toast.error(err instanceof Error ? err.message : "Erro ao excluir.");
+                                  }
+                                });
+                              }}
+                            >
+                              {isPending && <Loader2 className="animate-spin" />}
+                              Confirmar
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </TableCell>
+                )}
               </TableRow>
             ))}
             {filteredPayments.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={editable ? 8 : 7} className="py-10 text-center text-muted-foreground">
                   Nenhum pagamento registrado neste ano.
                 </TableCell>
               </TableRow>
