@@ -121,7 +121,24 @@ function resolveTeacherAssignment(
   if (match && typeof match.rate === "number" && match.rate > 0) {
     return { assigned: true, mode: "HOURLY", rate: match.rate, monthlyAmount: 0, percentage: 0 };
   }
-  if (student.teacherId === teacherId) {
+  // Before falling back to "whoever the student's teacher is right now"
+  // below, check whether some OTHER teacher's history entry already
+  // explicitly claims this month — if the history is complete (e.g.
+  // Teacher A from Jan–Jun, Teacher B from Aug onward), a gap month like
+  // July should still fall through to "current teacher" since nobody
+  // explicitly covers it, but a month a different teacher's entry
+  // genuinely covers (January, in that example) must never also be
+  // credited to the current teacher — that's double-counting the same
+  // student/month across two teachers, not an assignment gap.
+  const coveredByAnotherTeacher = entries.some((e) => {
+    if (e.id === teacherId) return false;
+    const from = e.from ? new Date(e.from) : null;
+    const until = e.until ? new Date(e.until) : null;
+    if (from && from > monthEnd) return false;
+    if (until && until < monthStart) return false;
+    return true;
+  });
+  if (!coveredByAnotherTeacher && student.teacherId === teacherId) {
     if (student.teacherPayMode === "MONTHLY") {
       return {
         assigned: true,
