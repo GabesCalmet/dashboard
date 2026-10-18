@@ -131,18 +131,22 @@ export default async function AdminTeacherPayrollDetailPage({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead rowSpan={2} className="align-bottom">Aluno</TableHead>
-              <TableHead rowSpan={2} className="align-bottom">Valor/hora</TableHead>
+              <TableHead rowSpan={2} className="w-40 align-bottom">Aluno</TableHead>
+              <TableHead rowSpan={2} className="w-24 align-bottom">Valor/hora</TableHead>
+              <TableHead colSpan={3} className="border-l text-center">Contratado</TableHead>
               <TableHead colSpan={3} className="border-l text-center">Previsto</TableHead>
               <TableHead colSpan={3} className="border-l text-center">Atual</TableHead>
             </TableRow>
             <TableRow>
-              <TableHead className="border-l">Aulas</TableHead>
-              <TableHead>Horas</TableHead>
-              <TableHead>Valor</TableHead>
-              <TableHead className="border-l">Aulas</TableHead>
-              <TableHead>Horas</TableHead>
-              <TableHead>Valor</TableHead>
+              <TableHead className="w-14 border-l">Aulas</TableHead>
+              <TableHead className="w-16">Horas</TableHead>
+              <TableHead className="w-20">Valor</TableHead>
+              <TableHead className="w-14 border-l">Aulas</TableHead>
+              <TableHead className="w-16">Horas</TableHead>
+              <TableHead className="w-20">Valor</TableHead>
+              <TableHead className="w-14 border-l">Aulas</TableHead>
+              <TableHead className="w-16">Horas</TableHead>
+              <TableHead className="w-20">Valor</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -163,6 +167,9 @@ export default async function AdminTeacherPayrollDetailPage({
                       ? `${s.percentage}% do valor`
                       : formatCurrency(s.rate)}
                 </TableCell>
+                <TableCell className="border-l">{s.contractedCount}</TableCell>
+                <TableCell>{s.contractedHours.toFixed(1)}h</TableCell>
+                <TableCell>{formatCurrency(s.contratado)}</TableCell>
                 <TableCell className="border-l">{s.count}</TableCell>
                 <TableCell>{s.hours.toFixed(1)}h</TableCell>
                 <TableCell>{formatCurrency(s.previsto)}</TableCell>
@@ -173,7 +180,7 @@ export default async function AdminTeacherPayrollDetailPage({
             ))}
             {detail.students.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={11} className="py-10 text-center text-muted-foreground">
                   Nenhum aluno neste mês.
                 </TableCell>
               </TableRow>

@@ -185,6 +185,22 @@ function avgClassDurationHours(lessonSchedule: unknown): number {
   return minutes.reduce((a, b) => a + b, 0) / minutes.length / 60;
 }
 
+// How many classes/hours a student is actually contracted for in a given
+// month — lessonsPerMonth (resolved against its own history, same as any
+// other cadastro field) × average scheduled class length — independent
+// of how many lessons actually got generated/given. Shared by
+// getTeacherPayrollForMonth's previstoContrato and getTeacherPayrollDetail's
+// per-student "Contratado" breakdown.
+function resolveContractedLoad(
+  student: { lessonsPerMonth: unknown; lessonsPerMonthHistory: unknown; lessonSchedule: unknown },
+  referenceMonth: Date
+): { count: number; hours: number } {
+  const count = resolveHistoricalAmount(student.lessonsPerMonth, student.lessonsPerMonthHistory, referenceMonth, {
+    zeroOnGap: true,
+  });
+  return { count, hours: avgClassDurationHours(student.lessonSchedule) * count };
+}
+
 // For a MONTHLY/PERCENTAGE assignment — which has no hourly rate of its
 // own, since it's priced as a flat monthly figure instead — what that
 // figure works out to per hour, so "Valor/hora" shows something
@@ -399,12 +415,7 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
         previstoContrato += assignment.monthlyAmount;
         flatHandled.add(student.id);
       } else {
-        const contractedHours =
-          avgClassDurationHours(student.lessonSchedule) *
-          resolveHistoricalAmount(student.lessonsPerMonth, student.lessonsPerMonthHistory, monthStart, {
-            zeroOnGap: true,
-          });
-        previstoContrato += contractedHours * assignment.rate;
+        previstoContrato += resolveContractedLoad(student, monthStart).hours * assignment.rate;
       }
     }
 
@@ -584,6 +595,13 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
       rate: number;
       mode: TeacherPayMode;
       percentage: number;
+      // What the cadastro itself says this student is contracted for —
+      // lessonsPerMonth and the hours that works out to, independent of
+      // how many lessons actually got generated/given this month (unlike
+      // count/hours above, which are both calendar-driven).
+      contractedCount: number;
+      contractedHours: number;
+      contratado: number;
     }
   >();
 
@@ -599,6 +617,7 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
       chargeOwnAmounts.get(student.id) ?? 0
     );
     if (assignment.assigned && isFlatAssignment(assignment.mode)) {
+      const { count: contractedCount, hours: contractedHours } = resolveContractedLoad(student, monthStart);
       byStudent.set(student.id, {
         hours: 0,
         previsto: assignment.monthlyAmount,
@@ -615,6 +634,9 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
         ),
         mode: assignment.mode,
         percentage: assignment.percentage,
+        contractedCount,
+        contractedHours,
+        contratado: assignment.monthlyAmount,
       });
     }
   }
@@ -639,6 +661,10 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
       // full regardless of attendance, so their "realized" hours/count
       // just mirror the total — there's no partial-payment concept to
       // track separately here.
+      // student is guaranteed defined here — isFlatAssignment only ever
+      // true above when the ternary at this block's top resolved a real
+      // assignment, which requires a real student.
+      const contractedLoad = resolveContractedLoad(student!, monthStart);
       const entry = byStudent.get(g.studentId) ?? {
         hours: 0,
         previsto: assignment.monthlyAmount,
@@ -646,9 +672,6 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
         count: 0,
         realizedCount: 0,
         realizedHours: 0,
-        // student is guaranteed defined here — isFlatAssignment only ever
-        // true above when the ternary at this block's top resolved a real
-        // assignment, which requires a real student.
         rate: equivalentHourlyRate(
           assignment.monthlyAmount,
           student!.lessonsPerMonth,
@@ -658,6 +681,9 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
         ),
         mode: assignment.mode,
         percentage: assignment.percentage,
+        contractedCount: contractedLoad.count,
+        contractedHours: contractedLoad.hours,
+        contratado: assignment.monthlyAmount,
       };
       entry.hours += hours;
       entry.count += g._count._all;
@@ -672,6 +698,7 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
 
     payByStatus.set(g.status, (payByStatus.get(g.status) ?? 0) + pay);
 
+    const contractedLoad = student ? resolveContractedLoad(student, monthStart) : { count: 0, hours: 0 };
     const entry = byStudent.get(g.studentId) ?? {
       hours: 0,
       previsto: 0,
@@ -682,6 +709,9 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
       rate,
       mode: "HOURLY" as const,
       percentage: 0,
+      contractedCount: contractedLoad.count,
+      contractedHours: contractedLoad.hours,
+      contratado: contractedLoad.hours * rate,
     };
     entry.count += g._count._all;
     // Previsto counts every class regardless of status — it's a forecast
