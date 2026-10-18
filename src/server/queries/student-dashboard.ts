@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth } from "date-fns";
+import { brazilToday } from "@/lib/timezone";
 
 export async function getStudentDashboardData(studentId: string) {
   const student = await prisma.studentProfile.findUniqueOrThrow({
@@ -8,8 +9,11 @@ export async function getStudentDashboardData(studentId: string) {
   });
 
   const now = new Date();
-  const monthStart = startOfMonth(now);
-  const monthEnd = endOfMonth(now);
+  // Brazil's current month, not the server's own UTC month — startOfMonth
+  // on a raw new Date() would silently roll over to next month every
+  // evening after ~21:00 Brazil time.
+  const monthStart = startOfMonth(brazilToday());
+  const monthEnd = endOfMonth(brazilToday());
 
   const [completedTotal, completedThisMonth, nextLesson, recentLessons] = await Promise.all([
     prisma.lesson.count({ where: { studentId, status: "COMPLETED" } }),

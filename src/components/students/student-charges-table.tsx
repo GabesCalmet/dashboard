@@ -28,6 +28,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StudentChargeFormDialog } from "@/components/students/student-charge-form-dialog";
 import { deleteStudentCharge, endStudentCharge } from "@/server/actions/student-charges";
 import { formatCurrency, formatCalendarDate, bankAccountLabel } from "@/lib/labels";
+import { brazilToday } from "@/lib/timezone";
 import type { ExpenseFrequency, BankAccount } from "@prisma/client";
 
 export type StudentChargeRow = {
@@ -84,7 +85,7 @@ export function StudentChargesTable({
             </TableHeader>
             <TableBody>
               {charges.map((c) => {
-                const ended = c.frequency === "RECURRING" && c.endDate && c.endDate <= new Date();
+                const ended = c.frequency === "RECURRING" && c.endDate && c.endDate <= brazilToday();
                 return (
                   <TableRow key={c.id}>
                     <TableCell className="text-sm">{c.payerName ?? studentName}</TableCell>

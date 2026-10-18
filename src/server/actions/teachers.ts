@@ -9,6 +9,7 @@ import {
   setUsernameAccountUsername,
 } from "@/server/accounts";
 import { recordAudit } from "@/server/audit";
+import { brazilToday } from "@/lib/timezone";
 import { teacherFormSchema, blockedSlotsSchema, blockedSlotDetailSchema } from "@/lib/validation/teacher";
 import type { ActionState } from "@/server/actions/students";
 
@@ -56,7 +57,7 @@ export async function createTeacher(
           : [],
         hourlyRate: data.hourlyRate,
         hourlyRateHistory: data.hourlyRateHistory,
-        admissionDate: data.admissionDate ? new Date(data.admissionDate) : new Date(),
+        admissionDate: data.admissionDate ? new Date(data.admissionDate) : brazilToday(),
         endDate: data.endDate ? new Date(data.endDate) : undefined,
         notes: data.notes,
       },

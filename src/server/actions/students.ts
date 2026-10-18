@@ -11,6 +11,7 @@ import {
   setUsernameAccountUsername,
 } from "@/server/accounts";
 import { recordAudit } from "@/server/audit";
+import { brazilToday } from "@/lib/timezone";
 import { studentFormSchema, usernameField, passwordField } from "@/lib/validation/student";
 import { levelOrder } from "@/lib/labels";
 import { syncRecurringLessons } from "@/server/lessons/recurring";
@@ -68,7 +69,7 @@ export async function createStudent(
         lessonsPerMonthHistory: data.lessonsPerMonthHistory,
         lessonSchedule: data.lessonSchedule,
         level: data.level,
-        startDate: data.startDate ? new Date(data.startDate) : new Date(),
+        startDate: data.startDate ? new Date(data.startDate) : brazilToday(),
         billingStartDate: data.billingStartDate ? new Date(data.billingStartDate) : undefined,
         endDate: data.endDate ? new Date(data.endDate) : undefined,
         objective: data.objective,

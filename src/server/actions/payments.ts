@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
+import { brazilToday } from "@/lib/timezone";
 import { getStudentChargeSlotsForMonth, createMissingPaymentsForMonth } from "@/server/student-charges";
 import type { PaymentStatus, BankAccount } from "@prisma/client";
 import type { ActionState } from "@/server/actions/students";
@@ -36,7 +37,7 @@ export async function setCobrancaStatus(
 ) {
   const actor = await requireRole("ADMIN", "COORDINATOR");
   const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
-  const paidAt = status === "PAID" ? (paidAtOverride ?? new Date()) : null;
+  const paidAt = status === "PAID" ? (paidAtOverride ?? brazilToday()) : null;
 
   const existing = await prisma.payment.findFirst({
     where: { studentId, referenceMonth: monthStart, payerName },
@@ -131,7 +132,7 @@ export async function setPaymentOverride(_prev: ActionState, formData: FormData)
         amount,
         dueDate,
         payerName,
-        status: dueDate < new Date() ? "LATE" : "PENDING",
+        status: dueDate < brazilToday() ? "LATE" : "PENDING",
         manualOverride: true,
         manualOverrideNote: note || null,
       },
@@ -224,7 +225,7 @@ export async function setPaymentBankAccountOverride(
         amount: slot.amount,
         dueDate,
         payerName: slot.payerName,
-        status: dueDate < new Date() ? "LATE" : "PENDING",
+        status: dueDate < brazilToday() ? "LATE" : "PENDING",
         bankAccountOverride: bankAccount,
       },
     });
@@ -284,10 +285,10 @@ export async function deletePayment(paymentId: string, studentId: string) {
 export async function runLatePaymentsSweep() {
   const actor = await requireRole("ADMIN");
 
-  const generated = await createMissingPaymentsForMonth(new Date());
+  const generated = await createMissingPaymentsForMonth(brazilToday());
 
   const { count: markedLate } = await prisma.payment.updateMany({
-    where: { status: "PENDING", dueDate: { lt: new Date() } },
+    where: { status: "PENDING", dueDate: { lt: brazilToday() } },
     data: { status: "LATE" },
   });
 

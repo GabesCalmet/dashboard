@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
+import { brazilToday } from "@/lib/timezone";
 
 export async function getStudentStats(studentId: string) {
-  const now = new Date();
+  const now = brazilToday();
   const buckets = Array.from({ length: 6 }).map((_, i) => {
     const d = subMonths(now, 5 - i);
     return { start: startOfMonth(d), end: endOfMonth(d), label: format(d, "MMM") };

@@ -12,10 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { addTeacherPayout } from "@/server/actions/payouts";
 import { PayoutEntry, type PayoutEntryData } from "@/components/financial/payout-entry";
 import { formatCurrency, bankAccountLabel } from "@/lib/labels";
+import { toBrazilDateString } from "@/lib/timezone";
 import type { BankAccount } from "@prisma/client";
 
+// Brazil's calendar day, not whatever UTC day toISOString().slice(0, 10)
+// would read off a raw new Date() — the latter rolls over a few hours
+// early every evening after ~21:00 Brazil time.
 function todayInputValue() {
-  return new Date().toISOString().slice(0, 10);
+  return toBrazilDateString(new Date());
 }
 
 // One teacher's payments for one month — each entry is editable in place

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { toBrazilDateString } from "@/lib/timezone";
 
 export type ValueHistoryEntry = { amount: number; from?: string; until?: string };
 
@@ -18,7 +19,7 @@ type EditorEntry = ValueHistoryEntry & { _id: number };
 // sync with whatever the admin configured as "current" here.
 function resolveCurrentAmount(entries: ValueHistoryEntry[]): number {
   if (entries.length === 0) return 0;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toBrazilDateString(new Date());
   const covering = entries.find((e) => (!e.from || e.from <= today) && (!e.until || e.until >= today));
   return covering ? covering.amount : entries[entries.length - 1].amount;
 }

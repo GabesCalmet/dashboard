@@ -46,3 +46,19 @@ export function toBrazilDateString(date: Date): string {
 export function toBrazilTimeString(date: Date): string {
   return new Date(date.getTime() - BRAZIL_UTC_OFFSET_MS).toISOString().slice(11, 16);
 }
+
+// "What calendar day is it right now, in Brazil?" — as a UTC-midnight
+// Date, the same shape every date-only field in this app already uses
+// (dueDate, referenceMonth, paidAt, ...), so it compares/sorts/groups
+// correctly against them. Use this instead of a bare `new Date()`
+// anywhere a timestamp is being defaulted to "today"/"now" for Brazil
+// business-logic purposes (stamping something as paid, backfilling a
+// status, ...) — the server always runs in UTC (see brazilDateTime's own
+// note), so a plain `new Date()` taken during Brazil's evening (any time
+// after ~21:00 BRT) has already rolled into tomorrow's UTC calendar day,
+// silently filing the record under the wrong day/month everywhere it's
+// later grouped or displayed by date — see the September 2026 teacher
+// payout bug this was built to close off for good.
+export function brazilToday(): Date {
+  return new Date(toBrazilDateString(new Date()));
+}

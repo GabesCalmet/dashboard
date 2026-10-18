@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth } from "date-fns";
-import { brazilDateTime, endOfBrazilDay, toBrazilDateString } from "@/lib/timezone";
+import { brazilDateTime, brazilToday, endOfBrazilDay, toBrazilDateString } from "@/lib/timezone";
 import { resolveHistoricalAmount, pickLatestOverlap } from "@/server/billing";
 import { getOwnChargeAmountsForMonth } from "@/server/student-charges";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
@@ -725,9 +725,11 @@ export async function listTeachers() {
     orderBy: [{ user: { active: "desc" } }, { user: { name: "asc" } }],
   });
 
-  const now = new Date();
-  const monthStart = startOfMonth(now);
-  const monthEnd = endOfMonth(now);
+  // Brazil's current month, not the server's own UTC month — startOfMonth
+  // on a raw new Date() would silently roll over to next month every
+  // evening after ~21:00 Brazil time.
+  const monthStart = startOfMonth(brazilToday());
+  const monthEnd = endOfMonth(brazilToday());
 
   return Promise.all(
     teachers.map(async (t) => {
@@ -768,13 +770,14 @@ export async function getTeacherDetail(teacherId: string) {
   });
   if (!teacher) return null;
 
-  const now = new Date();
-  const monthStart = startOfMonth(now);
-  const monthEnd = endOfMonth(now);
+  // Brazil's current month, not the server's own UTC month — see
+  // listTeachers for why startOfMonth(new Date()) miscounts.
+  const monthStart = startOfMonth(brazilToday());
+  const monthEnd = endOfMonth(brazilToday());
 
   // Brazil calendar day, not the server's own UTC day — see
   // getTeacherDashboardData for why startOfDay/endOfDay(now) miscounts.
-  const todayBrazilStr = toBrazilDateString(now);
+  const todayBrazilStr = toBrazilDateString(new Date());
   const todayLessons = await prisma.lesson.count({
     where: {
       teacherId,

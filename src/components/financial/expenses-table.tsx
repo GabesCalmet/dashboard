@@ -36,6 +36,7 @@ import {
   expenseFrequencyLabel,
   expenseCategoryLabel,
 } from "@/lib/labels";
+import { brazilToday } from "@/lib/timezone";
 import { deleteExpense, endRecurringExpense } from "@/server/actions/expenses";
 import type { Expense, ExpenseCategory, BankAccount, PaymentStatus } from "@prisma/client";
 
@@ -113,7 +114,7 @@ export function ExpensesTable({
         </TableHeader>
         <TableBody>
           {expenses.map((e) => {
-            const ended = e.frequency === "RECURRING" && e.endDate && e.endDate <= new Date();
+            const ended = e.frequency === "RECURRING" && e.endDate && e.endDate <= brazilToday();
             return (
               <TableRow key={e.id}>
                 <TableCell className="font-medium">{e.description}</TableCell>

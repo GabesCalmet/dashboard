@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { brazilToday } from "@/lib/timezone";
 import { createMissingPaymentsForMonth } from "@/server/student-charges";
 
 // Runs daily via Vercel Cron (see vercel.json) — Vercel calls this with GET
@@ -27,10 +28,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const generated = await createMissingPaymentsForMonth(new Date());
+  const generated = await createMissingPaymentsForMonth(brazilToday());
 
   const { count: markedLate } = await prisma.payment.updateMany({
-    where: { status: "PENDING", dueDate: { lt: new Date() } },
+    where: { status: "PENDING", dueDate: { lt: brazilToday() } },
     data: { status: "LATE" },
   });
 

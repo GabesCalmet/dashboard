@@ -7,6 +7,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/labels";
+import { toBrazilDateString } from "@/lib/timezone";
 import {
   Select,
   SelectContent,
@@ -36,7 +37,7 @@ function resolveCurrent(
 ): { id: string; rate: number; mode: TeacherPayMode; monthlyAmount: number; percentage: number } {
   if (entries.length === 0)
     return { id: "", rate: 0, mode: "HOURLY", monthlyAmount: 0, percentage: 0 };
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toBrazilDateString(new Date());
   const covering = entries.find((e) => (!e.from || e.from <= today) && (!e.until || e.until >= today));
   const current = covering ?? entries[entries.length - 1];
   return {

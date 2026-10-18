@@ -1,9 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
+import { brazilToday } from "@/lib/timezone";
 import { getTotalChargeRevenueForMonth } from "@/server/student-charges";
 
 export async function getAdminDashboardData(referenceMonth?: { year: number; month: number }) {
-  const now = new Date();
+  // Brazil's "today", not the server's own UTC instant — defaulting to
+  // new Date() would silently flip this dashboard to next month/year every
+  // evening after ~21:00 Brazil time.
+  const now = brazilToday();
   const viewedMonth = referenceMonth ? new Date(referenceMonth.year, referenceMonth.month, 1) : now;
   const monthStart = startOfMonth(viewedMonth);
   const monthEnd = endOfMonth(viewedMonth);

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
+import { brazilToday } from "@/lib/timezone";
 import { expenseFormSchema } from "@/lib/validation/expense";
 import type { ActionState } from "@/server/actions/students";
 import type { PaymentStatus, BankAccount } from "@prisma/client";
@@ -92,7 +93,7 @@ export async function endRecurringExpense(expenseId: string) {
   const actor = await requireRole("ADMIN");
   await prisma.expense.update({
     where: { id: expenseId },
-    data: { endDate: new Date() },
+    data: { endDate: brazilToday() },
   });
   await recordAudit({
     entityType: "Expense",
@@ -118,7 +119,7 @@ export async function setExpenseOccurrenceStatus(
 ) {
   const actor = await requireRole("ADMIN", "COORDINATOR");
   const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
-  const resolvedPaidAt = status === "PAID" ? (paidAt ?? new Date()) : null;
+  const resolvedPaidAt = status === "PAID" ? (paidAt ?? brazilToday()) : null;
 
   const occurrence = await prisma.expenseOccurrence.upsert({
     where: { expenseId_referenceMonth: { expenseId, referenceMonth: monthStart } },

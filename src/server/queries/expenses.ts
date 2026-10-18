@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { brazilToday } from "@/lib/timezone";
 import { expenseTotalForMonth, expenseRealizedForMonth } from "@/server/queries/financial";
 import { expenseCategoryLabel } from "@/lib/labels";
 import type { ExpenseCategory, PaymentStatus } from "@prisma/client";
@@ -61,7 +62,7 @@ function defaultOccurrenceStatus(effectiveDate: Date, now: Date): PaymentStatus 
 // payment can be confirmed per month instead of for the whole recurring
 // series at once.
 export async function listExpensesForMonth(year: number, month: number) {
-  const now = new Date();
+  const now = brazilToday();
   const monthStart = new Date(year, month, 1);
   const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
   const daysInMonth = monthEnd.getDate();

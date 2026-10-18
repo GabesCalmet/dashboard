@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { bankAccountLabel } from "@/lib/labels";
+import { brazilToday, endOfBrazilDay } from "@/lib/timezone";
 import { resolveSlotStudentName } from "@/server/billing";
 import { getChargeSlotsForMonth, getTotalChargeRevenueForMonth } from "@/server/student-charges";
 import { getTeacherPayrollForMonth, getTeacherFeriasForYear } from "@/server/queries/teachers";
@@ -24,7 +25,7 @@ function groupChargesByStudent(charges: StudentCharge[]) {
 }
 
 export async function getFinancialOverview(year?: number, month?: number) {
-  const now = new Date();
+  const now = brazilToday();
   const viewedMonth = year !== undefined && month !== undefined ? new Date(year, month, 1) : now;
   const monthStart = startOfMonth(viewedMonth);
   const monthEnd = endOfMonth(monthStart);
@@ -308,8 +309,13 @@ export type BankLedgerItem = {
 export async function getBankBalances(asOf?: Date) {
   const nowReal = new Date();
   // A cutoff is only honored if it's actually in the past — otherwise
-  // (the current, still-ongoing month) the balance is as of right now.
-  const now = asOf && asOf < nowReal ? asOf : nowReal;
+  // (the current, still-ongoing month) the balance is as of right now —
+  // "right now" meaning the end of today in Brazil, not the raw UTC
+  // instant: every field compared against this (dueDate/paidAt/date) is a
+  // date-only value, so using the bare server instant would, every
+  // evening after ~21:00 BRT, already have rolled into UTC tomorrow and
+  // wrongly pull tomorrow's (Brazil) due items into today's balance.
+  const now = asOf && asOf < nowReal ? asOf : endOfBrazilDay(brazilToday());
 
   const [paidPayments, charges, expenses, paidExpenseOccurrences, payouts, manualIncomes] = await Promise.all([
     // Counted as of its dueDate, not paidAt — a payment that was really
@@ -478,7 +484,7 @@ export async function getPartnerSplitForMonth(year: number, month: number) {
 // viewed month's year), a monthly chart for that same span, and the bank
 // balances as of that point in time. Defaults to the current month.
 export async function getFinancialSummary(year?: number, month?: number) {
-  const now = new Date();
+  const now = brazilToday();
   const viewedMonth = year !== undefined && month !== undefined ? new Date(year, month, 1) : now;
   const monthStart = startOfMonth(viewedMonth);
   const monthEnd = endOfMonth(viewedMonth);
@@ -660,7 +666,7 @@ export async function getStudentPaymentHistory(studentId: string) {
   ]);
   const chargeList = charges.map((c) => ({ ...c, amount: Number(c.amount) }));
 
-  const now = new Date();
+  const now = brazilToday();
   const end = new Date(now.getFullYear() + 1, 11, 1);
 
   const rows: {

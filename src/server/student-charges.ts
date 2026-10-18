@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { brazilToday } from "@/lib/timezone";
 import { dueDateFor } from "@/server/billing";
 import type { BankAccount, ExpenseFrequency, PaymentStatus } from "@prisma/client";
 
@@ -139,7 +140,7 @@ export async function materializeStudentCharge(
   charge: StudentChargeLike,
   through: Date
 ): Promise<number> {
-  const now = new Date();
+  const now = brazilToday();
   let created = 0;
 
   if (charge.frequency === "ONE_TIME") {
@@ -243,7 +244,7 @@ export async function getTotalChargeRevenueForMonth(referenceMonth: Date): Promi
 // how many rows were created.
 export async function createMissingPaymentsForMonth(referenceMonth: Date) {
   const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
-  const now = new Date();
+  const now = brazilToday();
 
   const charges = await prisma.studentCharge.findMany({
     orderBy: { createdAt: "desc" },

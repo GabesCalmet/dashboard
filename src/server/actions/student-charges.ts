@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
+import { brazilToday } from "@/lib/timezone";
 import { studentChargeFormSchema } from "@/lib/validation/student-charge";
 import { materializeStudentCharge } from "@/server/student-charges";
 import type { ActionState } from "@/server/actions/students";
@@ -59,7 +60,7 @@ export async function createStudentCharge(_prev: ActionState, formData: FormData
       endDate,
       bankAccount: data.bankAccount,
     },
-    new Date()
+    brazilToday()
   );
 
   await recordAudit({
@@ -124,7 +125,7 @@ export async function updateStudentCharge(
       endDate,
       bankAccount: data.bankAccount,
     },
-    new Date()
+    brazilToday()
   );
 
   await recordAudit({
@@ -148,7 +149,7 @@ export async function endStudentCharge(chargeId: string, studentId: string) {
   const actor = await requireRole("ADMIN", "COORDINATOR");
   await prisma.studentCharge.update({
     where: { id: chargeId },
-    data: { endDate: new Date() },
+    data: { endDate: brazilToday() },
   });
   await recordAudit({
     entityType: "StudentCharge",
@@ -195,7 +196,7 @@ export async function deleteStudentCharge(chargeId: string, studentId: string) {
 // adding a charge by hand would).
 export async function migrateStudentBillingToCharges() {
   const actor = await requireRole("ADMIN");
-  const now = new Date();
+  const now = brazilToday();
 
   const students = await prisma.studentProfile.findMany({
     include: { groupMembers: { include: { user: true } } },

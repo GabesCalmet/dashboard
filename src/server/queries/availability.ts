@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { brazilToday, toBrazilDateString } from "@/lib/timezone";
 
 type ScheduleEntry = { weekday: number; start: string; end: string; from?: string; until?: string };
 
@@ -54,7 +55,7 @@ export async function getAvailableTeachers({
   const endMin = timeToMinutes(end);
   if (startMin === null || endMin === null || startMin >= endMin) return [];
 
-  const now = new Date();
+  const now = brazilToday();
   const teachers = await prisma.teacherProfile.findMany({
     // endDate is checked on top of user.active (not just relied on instead
     // of it) since the two can drift apart in practice — a teacher who
@@ -69,7 +70,7 @@ export async function getAvailableTeachers({
     },
   });
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toBrazilDateString(new Date());
   const weekdaysToCheck = weekday !== undefined ? [weekday] : [0, 1, 2, 3, 4, 5, 6];
 
   return teachers

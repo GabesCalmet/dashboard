@@ -15,6 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { resolveHistoricalAmount, dueDateFor, earliestHistoryFrom } from "@/server/billing";
+import { brazilToday, toBrazilDateString } from "@/lib/timezone";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -94,7 +95,7 @@ export function StudentDetailView({
   // instead of showing the flat lessonsPerMonth contract value. Reposições
   // (isMakeup) are extra makeup slots, not part of the regular weekly
   // schedule, so they're excluded here.
-  const refMonthDate = monthNav ? new Date(monthNav.year, monthNav.month, 1) : new Date();
+  const refMonthDate = monthNav ? new Date(monthNav.year, monthNav.month, 1) : brazilToday();
   const monthStart = startOfMonth(refMonthDate);
   const monthEnd = endOfMonth(refMonthDate);
   const lessonsThisMonth = student.lessons.filter(
@@ -658,7 +659,7 @@ function isScheduleEntryCurrentlyActive(e: { from?: string; until?: string }, to
 // schedules (already-ended vigência windows) shouldn't still appear
 // alongside their current one here.
 function formatLessonSchedule(schedule: ScheduleEntry[]) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toBrazilDateString(new Date());
   const current = schedule.filter((e) => isScheduleEntryCurrentlyActive(e, today));
   if (current.length === 0) return "—";
   return current

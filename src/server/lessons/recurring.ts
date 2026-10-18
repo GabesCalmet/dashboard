@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { BRAZIL_UTC_OFFSET_MS, endOfBrazilDay, toBrazilDateString } from "@/lib/timezone";
+import { BRAZIL_UTC_OFFSET_MS, brazilToday, endOfBrazilDay, toBrazilDateString } from "@/lib/timezone";
 import { pickLatestOverlap } from "@/server/billing";
 
 const HORIZON_WEEKS = 12;
@@ -141,7 +141,7 @@ export async function syncRecurringLessons(studentId: string) {
 
   const teacherHistory = parseSelectHistory(student.teacherHistory);
 
-  const now = new Date();
+  const now = brazilToday();
   // The earliest day to schedule from is always the enrollment start date —
   // whether that's in the past (so history gets backfilled up to today) or
   // the future (nothing generated before the student actually starts).

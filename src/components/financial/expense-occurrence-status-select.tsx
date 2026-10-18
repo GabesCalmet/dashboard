@@ -15,10 +15,15 @@ import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { setExpenseOccurrenceStatus } from "@/server/actions/expenses";
 import { paymentStatusLabel } from "@/lib/labels";
+import { toBrazilDateString } from "@/lib/timezone";
 import type { PaymentStatus } from "@prisma/client";
 
-function toIsoDate(date: Date) {
-  return date.toISOString().slice(0, 10);
+// paidAt is already a date-only value (UTC midnight for its calendar
+// day), so it's read back with a plain slice. A missing paidAt falls back
+// to Brazil's today — not a plain new Date().toISOString() slice, which
+// rolls over to tomorrow's UTC day a few hours early every evening.
+function toIsoDate(date: Date | null) {
+  return date ? date.toISOString().slice(0, 10) : toBrazilDateString(new Date());
 }
 
 // Confirms this one month's occurrence of an expense — never the whole
@@ -39,7 +44,7 @@ export function ExpenseOccurrenceStatusSelect({
 }) {
   const [isPending, startTransition] = useTransition();
   const [dateOpen, setDateOpen] = useState(false);
-  const [dateDraft, setDateDraft] = useState(() => toIsoDate(paidAt ?? new Date()));
+  const [dateDraft, setDateDraft] = useState(() => toIsoDate(paidAt));
 
   function updateStatus(value: PaymentStatus, paidAtOverride?: Date) {
     startTransition(async () => {
@@ -76,7 +81,7 @@ export function ExpenseOccurrenceStatusSelect({
           open={dateOpen}
           onOpenChange={(open) => {
             setDateOpen(open);
-            if (open) setDateDraft(toIsoDate(paidAt ?? new Date()));
+            if (open) setDateDraft(toIsoDate(paidAt));
           }}
         >
           <PopoverTrigger asChild>
