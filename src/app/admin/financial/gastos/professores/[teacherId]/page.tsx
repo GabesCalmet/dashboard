@@ -37,6 +37,31 @@ export default async function AdminTeacherPayrollDetailPage({
   ]);
   if (!detail) notFound();
 
+  const studentTotals = detail.students.reduce(
+    (acc, s) => ({
+      contractedCount: acc.contractedCount + s.contractedCount,
+      contractedHours: acc.contractedHours + s.contractedHours,
+      contratado: acc.contratado + s.contratado,
+      count: acc.count + s.count,
+      hours: acc.hours + s.hours,
+      previsto: acc.previsto + s.previsto,
+      realizedCount: acc.realizedCount + s.realizedCount,
+      realizedHours: acc.realizedHours + s.realizedHours,
+      realizado: acc.realizado + s.realizado,
+    }),
+    {
+      contractedCount: 0,
+      contractedHours: 0,
+      contratado: 0,
+      count: 0,
+      hours: 0,
+      previsto: 0,
+      realizedCount: 0,
+      realizedHours: 0,
+      realizado: 0,
+    }
+  );
+
   return (
     <div>
       <Link
@@ -186,6 +211,22 @@ export default async function AdminTeacherPayrollDetailPage({
               </TableRow>
             )}
           </TableBody>
+          {detail.students.length > 0 && (
+            <TableFooter>
+              <TableRow>
+                <TableCell colSpan={2}>Total</TableCell>
+                <TableCell className="border-l">{studentTotals.contractedCount}</TableCell>
+                <TableCell>{studentTotals.contractedHours.toFixed(1)}h</TableCell>
+                <TableCell>{formatCurrency(studentTotals.contratado)}</TableCell>
+                <TableCell className="border-l">{studentTotals.count}</TableCell>
+                <TableCell>{studentTotals.hours.toFixed(1)}h</TableCell>
+                <TableCell>{formatCurrency(studentTotals.previsto)}</TableCell>
+                <TableCell className="border-l">{studentTotals.realizedCount}</TableCell>
+                <TableCell>{studentTotals.realizedHours.toFixed(1)}h</TableCell>
+                <TableCell>{formatCurrency(studentTotals.realizado)}</TableCell>
+              </TableRow>
+            </TableFooter>
+          )}
         </Table>
       </div>
     </div>
