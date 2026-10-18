@@ -161,27 +161,87 @@ function isFlatAssignment(mode: TeacherPayMode): boolean {
   return mode === "MONTHLY" || mode === "PERCENTAGE";
 }
 
-// Average class length from the student's weekly lessonSchedule, in
-// hours — just enough to turn a flat monthly/percentage figure into an
-// equivalent hourly rate below; the full schedule shape (weekday/from/
-// until) isn't needed here. Falls back to 50min (the Lesson model's own
-// default) when there's no usable schedule to read a length from.
-function avgClassDurationHours(lessonSchedule: unknown): number {
+type LessonScheduleEntry = { start: string; end: string; from?: string; until?: string };
+
+function parseLessonScheduleEntries(lessonSchedule: unknown): LessonScheduleEntry[] {
+  if (!Array.isArray(lessonSchedule)) return [];
+  return lessonSchedule
+    .filter((e): e is Record<string, unknown> => typeof e === "object" && e !== null)
+    .map((e) => ({
+      start: typeof e.start === "string" ? e.start : "",
+      end: typeof e.end === "string" ? e.end : "",
+      from: typeof e.from === "string" && e.from ? e.from : undefined,
+      until: typeof e.until === "string" && e.until ? e.until : undefined,
+    }));
+}
+
+function classDurationMinutes(e: { start: string; end: string }): number {
   const DEFAULT_MIN = 50;
-  if (!Array.isArray(lessonSchedule) || lessonSchedule.length === 0) return DEFAULT_MIN / 60;
-  const minutes = lessonSchedule.map((e) => {
-    const start = typeof e === "object" && e !== null && typeof (e as { start?: unknown }).start === "string"
-      ? (e as { start: string }).start
-      : "";
-    const end = typeof e === "object" && e !== null && typeof (e as { end?: unknown }).end === "string"
-      ? (e as { end: string }).end
-      : "";
-    if (!start || !end) return DEFAULT_MIN;
-    const [sh, sm] = start.split(":").map(Number);
-    const [eh, em] = end.split(":").map(Number);
-    const diff = eh * 60 + em - (sh * 60 + sm);
-    return diff > 0 ? diff : DEFAULT_MIN;
-  });
+  if (!e.start || !e.end) return DEFAULT_MIN;
+  const [sh, sm] = e.start.split(":").map(Number);
+  const [eh, em] = e.end.split(":").map(Number);
+  const diff = eh * 60 + em - (sh * 60 + sm);
+  return diff > 0 ? diff : DEFAULT_MIN;
+}
+
+// Average class length, in hours, for the ONE weekly schedule revision
+// actually in effect during referenceMonth — just enough to turn a flat
+// monthly/percentage figure into an equivalent hourly rate, or lessonsPerMonth
+// into contracted hours. Every weekday entry of the same revision shares
+// the same from/until vigência pair, so entries are grouped by that pair
+// first, then only the group overlapping referenceMonth is averaged —
+// NOT every revision the student has ever had on record (which used to
+// drag the figure toward however long an expired, years-old schedule
+// happened to be). Falls back to whichever revision started most
+// recently when none covers the month (nothing newer declared yet, same
+// convention as resolveHistoricalAmount's zeroOnGap), and to 50min (the
+// Lesson model's own default) when there's no usable schedule at all.
+function avgClassDurationHours(lessonSchedule: unknown, referenceMonth: Date): number {
+  const DEFAULT_MIN = 50;
+  const entries = parseLessonScheduleEntries(lessonSchedule);
+  if (entries.length === 0) return DEFAULT_MIN / 60;
+
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+  const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
+
+  const groups = new Map<string, LessonScheduleEntry[]>();
+  for (const e of entries) {
+    const key = `${e.from ?? ""}|${e.until ?? ""}`;
+    const bucket = groups.get(key);
+    if (bucket) bucket.push(e);
+    else groups.set(key, [e]);
+  }
+
+  const overlapsMonth = (e: LessonScheduleEntry) => {
+    const from = e.from ? new Date(e.from) : null;
+    const until = e.until ? new Date(e.until) : null;
+    if (from && from > monthEnd) return false;
+    if (until && until < monthStart) return false;
+    return true;
+  };
+
+  let chosen: LessonScheduleEntry[] | undefined;
+  let chosenFromMs = -Infinity;
+  for (const bucket of groups.values()) {
+    if (!overlapsMonth(bucket[0])) continue;
+    const fromMs = bucket[0].from ? new Date(bucket[0].from).getTime() : -Infinity;
+    if (!chosen || fromMs > chosenFromMs) {
+      chosen = bucket;
+      chosenFromMs = fromMs;
+    }
+  }
+  if (!chosen) {
+    for (const bucket of groups.values()) {
+      const fromMs = bucket[0].from ? new Date(bucket[0].from).getTime() : -Infinity;
+      if (!chosen || fromMs > chosenFromMs) {
+        chosen = bucket;
+        chosenFromMs = fromMs;
+      }
+    }
+  }
+  if (!chosen) return DEFAULT_MIN / 60;
+
+  const minutes = chosen.map(classDurationMinutes);
   return minutes.reduce((a, b) => a + b, 0) / minutes.length / 60;
 }
 
@@ -198,7 +258,7 @@ function resolveContractedLoad(
   const count = resolveHistoricalAmount(student.lessonsPerMonth, student.lessonsPerMonthHistory, referenceMonth, {
     zeroOnGap: true,
   });
-  return { count, hours: avgClassDurationHours(student.lessonSchedule) * count };
+  return { count, hours: avgClassDurationHours(student.lessonSchedule, referenceMonth) * count };
 }
 
 // For a MONTHLY/PERCENTAGE assignment — which has no hourly rate of its
@@ -218,7 +278,7 @@ function equivalentHourlyRate(
   const contractedLessons = resolveHistoricalAmount(lessonsPerMonth, lessonsPerMonthHistory, referenceMonth, {
     zeroOnGap: true,
   });
-  const hoursPerMonth = avgClassDurationHours(lessonSchedule) * contractedLessons;
+  const hoursPerMonth = avgClassDurationHours(lessonSchedule, referenceMonth) * contractedLessons;
   return hoursPerMonth > 0 ? monthlyAmount / hoursPerMonth : 0;
 }
 
