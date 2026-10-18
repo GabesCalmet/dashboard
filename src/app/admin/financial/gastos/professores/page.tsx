@@ -44,7 +44,7 @@ export default async function AdminTeacherPayrollPage({
 
       <PageHeader
         title="Pagamento de professores"
-        description="Previsto por hora (todas as aulas do mês), previsto por contrato (horas contratadas pelo aluno, independente das aulas geradas), acumulado (o que já é devido pelas aulas dadas até hoje) e realizado (o que já foi registrado como pago — use o + para lançar um pagamento, inclusive em partes)."
+        description="Previsto por contrato (horas contratadas pelo aluno, independente das aulas geradas), previsto por hora (todas as aulas do mês), acumulado (o que já é devido pelas aulas dadas até hoje) e realizado (o que já foi registrado como pago — use o + para lançar um pagamento, inclusive em partes)."
       />
 
       <div className="mb-4">
@@ -56,8 +56,8 @@ export default async function AdminTeacherPayrollPage({
           <TableHeader>
             <TableRow>
               <TableHead>Professor</TableHead>
-              <TableHead>Previsto por hora</TableHead>
               <TableHead>Previsto por contrato</TableHead>
+              <TableHead>Previsto por hora</TableHead>
               <TableHead>Acumulado</TableHead>
               <TableHead>Realizado</TableHead>
             </TableRow>
@@ -73,8 +73,8 @@ export default async function AdminTeacherPayrollPage({
                     {r.teacherName}
                   </Link>
                 </TableCell>
-                <TableCell>{formatCurrency(r.previsto)}</TableCell>
                 <TableCell>{formatCurrency(r.previstoContrato)}</TableCell>
+                <TableCell>{formatCurrency(r.previsto)}</TableCell>
                 <TableCell>{formatCurrency(r.realizado)}</TableCell>
                 <TableCell>
                   <TeacherPayoutCell
@@ -105,8 +105,8 @@ export default async function AdminTeacherPayrollPage({
             <TableFooter>
               <TableRow>
                 <TableCell>Total</TableCell>
-                <TableCell>{formatCurrency(totals.previsto)}</TableCell>
                 <TableCell>{formatCurrency(totals.previstoContrato)}</TableCell>
+                <TableCell>{formatCurrency(totals.previsto)}</TableCell>
                 <TableCell>{formatCurrency(totals.realizado)}</TableCell>
                 <TableCell>{formatCurrency(totalRealizado)}</TableCell>
               </TableRow>
