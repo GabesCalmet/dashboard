@@ -231,6 +231,11 @@ const teacherAssignmentSelect = {
   teacherMonthlyAmount: true,
   teacherPercentage: true,
   startDate: true,
+  // Needed to resolve each student's contracted hours (lessonsPerMonth ×
+  // class length) for previstoContrato below.
+  lessonsPerMonth: true,
+  lessonsPerMonthHistory: true,
+  lessonSchedule: true,
 } as const;
 
 // A canceled lesson (CA/CP/CF) whose own reposição was booked into the SAME
@@ -370,6 +375,13 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
     const fallbackHourlyRate = resolveHistoricalAmount(t.hourlyRate, t.hourlyRateHistory, monthStart);
     let previsto = 0;
     let realizado = 0;
+    // What each assigned student's contract itself is worth this month —
+    // lessonsPerMonth × average class length × rate for an HOURLY
+    // assignment, the flat amount for a MONTHLY/PERCENTAGE one — entirely
+    // independent of how many lessons actually got generated/given, unlike
+    // previsto above. Computed for every assigned student regardless of
+    // lesson activity, not just those with lessons this month.
+    let previstoContrato = 0;
     const flatHandled = new Set<string>();
 
     for (const student of students) {
@@ -380,10 +392,19 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
         fallbackHourlyRate,
         chargeOwnAmounts.get(student.id) ?? 0
       );
-      if (assignment.assigned && isFlatAssignment(assignment.mode)) {
+      if (!assignment.assigned) continue;
+      if (isFlatAssignment(assignment.mode)) {
         previsto += assignment.monthlyAmount;
         realizado += assignment.monthlyAmount;
+        previstoContrato += assignment.monthlyAmount;
         flatHandled.add(student.id);
+      } else {
+        const contractedHours =
+          avgClassDurationHours(student.lessonSchedule) *
+          resolveHistoricalAmount(student.lessonsPerMonth, student.lessonsPerMonthHistory, monthStart, {
+            zeroOnGap: true,
+          });
+        previstoContrato += contractedHours * assignment.rate;
       }
     }
 
@@ -403,13 +424,17 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
       previsto += pay;
       if ((REALIZED_STATUSES as readonly string[]).includes(g.status)) realizado += pay;
     }
-    return { teacherId: t.id, teacherName: t.user.name, previsto, realizado };
+    return { teacherId: t.id, teacherName: t.user.name, previsto, realizado, previstoContrato };
   });
 
   rows.sort((a, b) => b.previsto - a.previsto);
   const totals = rows.reduce(
-    (acc, r) => ({ previsto: acc.previsto + r.previsto, realizado: acc.realizado + r.realizado }),
-    { previsto: 0, realizado: 0 }
+    (acc, r) => ({
+      previsto: acc.previsto + r.previsto,
+      realizado: acc.realizado + r.realizado,
+      previstoContrato: acc.previstoContrato + r.previstoContrato,
+    }),
+    { previsto: 0, realizado: 0, previstoContrato: 0 }
   );
 
   return { rows, totals };
