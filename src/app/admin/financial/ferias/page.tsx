@@ -37,9 +37,9 @@ export default async function AdminFeriasPage() {
             <TableRow>
               <TableHead>Professor</TableHead>
               <TableHead>Mensal previsto</TableHead>
-              <TableHead>Mensal realizado</TableHead>
+              <TableHead>Mensal atual</TableHead>
               <TableHead>Anual previsto</TableHead>
-              <TableHead>Anual realizado</TableHead>
+              <TableHead>Anual atual</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
