@@ -68,13 +68,21 @@ export default async function AdminFeriasPage() {
             )}
           </TableBody>
           {teachers.length > 0 && (
-            <TableFooter>
-              <TableRow>
-                <TableCell>Total</TableCell>
-                <TableCell>{formatCurrency(totals.monthlyPrevisto)}</TableCell>
-                <TableCell>{formatCurrency(totals.monthlyRealizado)}</TableCell>
-                <TableCell>{formatCurrency(totals.annualPrevisto)}</TableCell>
-                <TableCell>{formatCurrency(totals.annualRealizado)}</TableCell>
+            <TableFooter className="bg-secondary">
+              <TableRow className="hover:bg-secondary">
+                <TableCell className="text-base font-bold text-secondary-foreground">Total</TableCell>
+                <TableCell className="text-base font-bold text-secondary-foreground">
+                  {formatCurrency(totals.monthlyPrevisto)}
+                </TableCell>
+                <TableCell className="text-base font-bold text-secondary-foreground">
+                  {formatCurrency(totals.monthlyRealizado)}
+                </TableCell>
+                <TableCell className="text-base font-bold text-secondary-foreground">
+                  {formatCurrency(totals.annualPrevisto)}
+                </TableCell>
+                <TableCell className="text-base font-bold text-secondary-foreground">
+                  {formatCurrency(totals.annualRealizado)}
+                </TableCell>
               </TableRow>
             </TableFooter>
           )}
