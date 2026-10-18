@@ -398,6 +398,12 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
     // previsto above. Computed for every assigned student regardless of
     // lesson activity, not just those with lessons this month.
     let previstoContrato = 0;
+    // Same as previstoContrato, but excluding PERCENTAGE-mode assignments
+    // — a teacher paid a cut of the student's charge isn't salaried for
+    // that assignment, so it doesn't contribute to their férias
+    // provision, unlike an HOURLY or flat MONTHLY one. Only this field
+    // feeds getTeacherFeriasForYear; previstoContrato itself is unchanged.
+    let contratadoFerias = 0;
     const flatHandled = new Set<string>();
 
     for (const student of students) {
@@ -413,9 +419,12 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
         previsto += assignment.monthlyAmount;
         realizado += assignment.monthlyAmount;
         previstoContrato += assignment.monthlyAmount;
+        if (assignment.mode === "MONTHLY") contratadoFerias += assignment.monthlyAmount;
         flatHandled.add(student.id);
       } else {
-        previstoContrato += resolveContractedLoad(student, monthStart).hours * assignment.rate;
+        const contratoValue = resolveContractedLoad(student, monthStart).hours * assignment.rate;
+        previstoContrato += contratoValue;
+        contratadoFerias += contratoValue;
       }
     }
 
@@ -435,7 +444,7 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
       previsto += pay;
       if ((REALIZED_STATUSES as readonly string[]).includes(g.status)) realizado += pay;
     }
-    return { teacherId: t.id, teacherName: t.user.name, previsto, realizado, previstoContrato };
+    return { teacherId: t.id, teacherName: t.user.name, previsto, realizado, previstoContrato, contratadoFerias };
   });
 
   rows.sort((a, b) => b.previsto - a.previsto);
@@ -444,55 +453,44 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
       previsto: acc.previsto + r.previsto,
       realizado: acc.realizado + r.realizado,
       previstoContrato: acc.previstoContrato + r.previstoContrato,
+      contratadoFerias: acc.contratadoFerias + r.contratadoFerias,
     }),
-    { previsto: 0, realizado: 0, previstoContrato: 0 }
+    { previsto: 0, realizado: 0, previstoContrato: 0, contratadoFerias: 0 }
   );
 
   return { rows, totals };
 }
 
-// Férias provision — 8,3% (≈1/12) of what each teacher earned, per month,
-// in both flavors: previsto (assumes every class that month is given,
-// same "forecast, unaffected by cancellations" convention as payroll
-// previsto) and realizado (only classes actually given so far). "Mensal"
-// is just the current month's own provision; "Anual" sums a real
-// getTeacherPayrollForMonth call for every month from January through the
-// current one — not the current month's rate projected backward — so a
-// payroll that was smaller or larger in an earlier month is reflected
-// accurately instead of assumed constant. Currently-inactive teachers who
-// taught earlier in the year are missed here, same limitation as
-// getTeacherPayrollForMonth itself (both only ever look at today's active
-// roster).
+// Férias provision — 8,3% (≈1/12) of each teacher's Contratado total
+// (lessonsPerMonth × class length × rate for HOURLY, the flat amount for
+// MONTHLY — see contratadoFerias on getTeacherPayrollForMonth), which
+// doesn't depend on whether classes were actually given, so there's no
+// separate previsto/realizado split here anymore: one figure per month,
+// the same regardless of attendance. PERCENTAGE-mode assignments are
+// excluded entirely (a cut of the student's charge isn't a salaried
+// assignment, so it doesn't accrue férias). "Mensal" is just the current
+// month's own provision; "Anual" sums a real getTeacherPayrollForMonth
+// call for every month from January through the current one — not the
+// current month's rate projected backward — so a payroll that was
+// smaller or larger in an earlier month is reflected accurately instead
+// of assumed constant. Currently-inactive teachers who taught earlier in
+// the year are missed here, same limitation as getTeacherPayrollForMonth
+// itself (both only ever look at today's active roster).
 export async function getTeacherFeriasForYear(year: number, throughMonth: number) {
   const months = Array.from({ length: throughMonth + 1 }, (_, m) => m);
   const monthlyPayrolls = await Promise.all(months.map((m) => getTeacherPayrollForMonth(year, m)));
 
-  const byTeacher = new Map<
-    string,
-    {
-      teacherName: string;
-      monthlyPrevisto: number;
-      monthlyRealizado: number;
-      annualPrevisto: number;
-      annualRealizado: number;
-    }
-  >();
+  const byTeacher = new Map<string, { teacherName: string; monthlyBase: number; annualBase: number }>();
   monthlyPayrolls.forEach((payroll, i) => {
     const isCurrentMonth = i === throughMonth;
     for (const row of payroll.rows) {
       const entry = byTeacher.get(row.teacherId) ?? {
         teacherName: row.teacherName,
-        monthlyPrevisto: 0,
-        monthlyRealizado: 0,
-        annualPrevisto: 0,
-        annualRealizado: 0,
+        monthlyBase: 0,
+        annualBase: 0,
       };
-      entry.annualPrevisto += row.previsto;
-      entry.annualRealizado += row.realizado;
-      if (isCurrentMonth) {
-        entry.monthlyPrevisto = row.previsto;
-        entry.monthlyRealizado = row.realizado;
-      }
+      entry.annualBase += row.contratadoFerias;
+      if (isCurrentMonth) entry.monthlyBase = row.contratadoFerias;
       byTeacher.set(row.teacherId, entry);
     }
   });
@@ -501,21 +499,17 @@ export async function getTeacherFeriasForYear(year: number, throughMonth: number
     .map(([teacherId, t]) => ({
       teacherId,
       teacherName: t.teacherName,
-      monthlyProvisionPrevisto: t.monthlyPrevisto * 0.083,
-      monthlyProvisionRealizado: t.monthlyRealizado * 0.083,
-      annualProvisionPrevisto: t.annualPrevisto * 0.083,
-      annualProvisionRealizado: t.annualRealizado * 0.083,
+      monthlyProvision: t.monthlyBase * 0.083,
+      annualProvision: t.annualBase * 0.083,
     }))
-    .sort((a, b) => b.annualProvisionRealizado - a.annualProvisionRealizado);
+    .sort((a, b) => b.annualProvision - a.annualProvision);
 
   const totals = teachers.reduce(
     (acc, t) => ({
-      monthlyPrevisto: acc.monthlyPrevisto + t.monthlyProvisionPrevisto,
-      monthlyRealizado: acc.monthlyRealizado + t.monthlyProvisionRealizado,
-      annualPrevisto: acc.annualPrevisto + t.annualProvisionPrevisto,
-      annualRealizado: acc.annualRealizado + t.annualProvisionRealizado,
+      monthly: acc.monthly + t.monthlyProvision,
+      annual: acc.annual + t.annualProvision,
     }),
-    { monthlyPrevisto: 0, monthlyRealizado: 0, annualPrevisto: 0, annualRealizado: 0 }
+    { monthly: 0, annual: 0 }
   );
 
   return { teachers, totals };

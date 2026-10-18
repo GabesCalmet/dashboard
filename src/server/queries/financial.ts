@@ -556,11 +556,13 @@ export async function getFinancialSummary(year?: number, month?: number) {
   const expenseRealized = manualExpenseRealized + paidTeacherTotal + partnerSplit.realizado.partnersTotal;
   const expensePrevisto = manualExpensePrevisto + teacherPayroll.totals.previsto + partnerSplit.previsto.partnersTotal;
 
-  // Provisão de férias dos professores: 8,3% do que cada um ganhou —
-  // previsto (mês inteiro, supondo que toda aula marcada aconteça) e
-  // realizado (só o que já foi dado) — mensal (só o mês visualizado) e
-  // anual (soma mês a mês desde janeiro até o mês visualizado, com o
-  // payroll real de cada mês). Ver getTeacherFeriasForYear.
+  // Provisão de férias dos professores: 8,3% do que cada um tem
+  // contratado (não depende de aula dada ou não, nem de assignments pagos
+  // por porcentagem — ver contratadoFerias/getTeacherFeriasForYear) —
+  // mensal (só o mês visualizado) e anual (soma mês a mês desde janeiro
+  // até o mês visualizado, com o contrato real de cada mês). Previsto e
+  // realizado são sempre o mesmo valor agora — mantidos como dois campos
+  // só para não precisar reescrever o card Resumo/StatCards abaixo.
   const ferias = await getTeacherFeriasForYear(viewedMonth.getFullYear(), viewedMonth.getMonth());
 
   const monthsInYear = Array.from({ length: viewedMonth.getMonth() + 1 }, (_, m) => {
@@ -624,10 +626,10 @@ export async function getFinancialSummary(year?: number, month?: number) {
     // above) so the Resumo card can show the Professores line on its own.
     teacherPayrollRealizado: paidTeacherTotal,
     teacherPayrollPrevisto: teacherPayroll.totals.previsto,
-    feriasMonthlyPrevisto: ferias.totals.monthlyPrevisto,
-    feriasMonthlyRealizado: ferias.totals.monthlyRealizado,
-    feriasAnnualPrevisto: ferias.totals.annualPrevisto,
-    feriasAnnualRealizado: ferias.totals.annualRealizado,
+    feriasMonthlyPrevisto: ferias.totals.monthly,
+    feriasMonthlyRealizado: ferias.totals.monthly,
+    feriasAnnualPrevisto: ferias.totals.annual,
+    feriasAnnualRealizado: ferias.totals.annual,
     ytdGrossRevenue,
     ytdExpenses,
     ytdProfit: ytdGrossRevenue - ytdExpenses,

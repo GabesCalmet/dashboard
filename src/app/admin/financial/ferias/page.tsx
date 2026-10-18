@@ -35,7 +35,7 @@ export default async function AdminFeriasPage({
 
       <PageHeader
         title="Férias (provisão)"
-        description="8,3% do que cada professor ganha, mês a mês — previsto supõe que toda aula marcada aconteça, realizado é só o que já foi dado."
+        description="8,3% do que cada professor tem contratado, mês a mês (lessonsPerMonth × duração da aula × valor/hora, ou o valor mensal fixo) — não depende de aula dada ou não. Assignments pagos por porcentagem não entram nessa conta."
       />
 
       <div className="mb-4">
@@ -47,10 +47,8 @@ export default async function AdminFeriasPage({
           <TableHeader className="bg-secondary">
             <TableRow className="hover:bg-secondary">
               <TableHead className="text-base font-bold text-secondary-foreground">Professor</TableHead>
-              <TableHead className="text-base font-bold text-secondary-foreground">Mensal previsto</TableHead>
-              <TableHead className="text-base font-bold text-secondary-foreground">Mensal atual</TableHead>
-              <TableHead className="text-base font-bold text-secondary-foreground">Anual previsto</TableHead>
-              <TableHead className="text-base font-bold text-secondary-foreground">Anual atual</TableHead>
+              <TableHead className="text-base font-bold text-secondary-foreground">Mensal</TableHead>
+              <TableHead className="text-base font-bold text-secondary-foreground">Anual</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -64,15 +62,13 @@ export default async function AdminFeriasPage({
                     {t.teacherName}
                   </Link>
                 </TableCell>
-                <TableCell>{formatCurrency(t.monthlyProvisionPrevisto)}</TableCell>
-                <TableCell>{formatCurrency(t.monthlyProvisionRealizado)}</TableCell>
-                <TableCell>{formatCurrency(t.annualProvisionPrevisto)}</TableCell>
-                <TableCell>{formatCurrency(t.annualProvisionRealizado)}</TableCell>
+                <TableCell>{formatCurrency(t.monthlyProvision)}</TableCell>
+                <TableCell>{formatCurrency(t.annualProvision)}</TableCell>
               </TableRow>
             ))}
             {teachers.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={3} className="py-10 text-center text-muted-foreground">
                   Nenhum professor ativo.
                 </TableCell>
               </TableRow>
@@ -83,16 +79,10 @@ export default async function AdminFeriasPage({
               <TableRow className="hover:bg-secondary">
                 <TableCell className="text-base font-bold text-secondary-foreground">Total</TableCell>
                 <TableCell className="text-base font-bold text-secondary-foreground">
-                  {formatCurrency(totals.monthlyPrevisto)}
+                  {formatCurrency(totals.monthly)}
                 </TableCell>
                 <TableCell className="text-base font-bold text-secondary-foreground">
-                  {formatCurrency(totals.monthlyRealizado)}
-                </TableCell>
-                <TableCell className="text-base font-bold text-secondary-foreground">
-                  {formatCurrency(totals.annualPrevisto)}
-                </TableCell>
-                <TableCell className="text-base font-bold text-secondary-foreground">
-                  {formatCurrency(totals.annualRealizado)}
+                  {formatCurrency(totals.annual)}
                 </TableCell>
               </TableRow>
             </TableFooter>
