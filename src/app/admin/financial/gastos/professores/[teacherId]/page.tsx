@@ -131,22 +131,22 @@ export default async function AdminTeacherPayrollDetailPage({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead rowSpan={2} className="w-40 align-bottom">Aluno</TableHead>
-              <TableHead rowSpan={2} className="w-24 align-bottom">Valor/hora</TableHead>
-              <TableHead colSpan={3} className="border-l text-center">Contratado</TableHead>
-              <TableHead colSpan={3} className="border-l text-center">Previsto</TableHead>
-              <TableHead colSpan={3} className="border-l text-center">Atual</TableHead>
+              <TableHead rowSpan={2} className="w-40 align-bottom text-base font-bold">Aluno</TableHead>
+              <TableHead rowSpan={2} className="w-24 align-bottom text-base font-bold">Valor/hora</TableHead>
+              <TableHead colSpan={3} className="border-l text-center text-base font-bold">Contratado</TableHead>
+              <TableHead colSpan={3} className="border-l text-center text-base font-bold">Previsto</TableHead>
+              <TableHead colSpan={3} className="border-l text-center text-base font-bold">Atual</TableHead>
             </TableRow>
             <TableRow>
-              <TableHead className="w-14 border-l">Aulas</TableHead>
-              <TableHead className="w-16">Horas</TableHead>
-              <TableHead className="w-20">Valor</TableHead>
-              <TableHead className="w-14 border-l">Aulas</TableHead>
-              <TableHead className="w-16">Horas</TableHead>
-              <TableHead className="w-20">Valor</TableHead>
-              <TableHead className="w-14 border-l">Aulas</TableHead>
-              <TableHead className="w-16">Horas</TableHead>
-              <TableHead className="w-20">Valor</TableHead>
+              <TableHead className="w-14 border-l text-base font-bold">Aulas</TableHead>
+              <TableHead className="w-16 text-base font-bold">Horas</TableHead>
+              <TableHead className="w-20 text-base font-bold">Valor</TableHead>
+              <TableHead className="w-14 border-l text-base font-bold">Aulas</TableHead>
+              <TableHead className="w-16 text-base font-bold">Horas</TableHead>
+              <TableHead className="w-20 text-base font-bold">Valor</TableHead>
+              <TableHead className="w-14 border-l text-base font-bold">Aulas</TableHead>
+              <TableHead className="w-16 text-base font-bold">Horas</TableHead>
+              <TableHead className="w-20 text-base font-bold">Valor</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
