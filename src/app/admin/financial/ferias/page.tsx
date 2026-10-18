@@ -33,13 +33,13 @@ export default async function AdminFeriasPage() {
 
       <div className="overflow-hidden rounded-xl border">
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Professor</TableHead>
-              <TableHead>Mensal previsto</TableHead>
-              <TableHead>Mensal atual</TableHead>
-              <TableHead>Anual previsto</TableHead>
-              <TableHead>Anual atual</TableHead>
+          <TableHeader className="bg-secondary">
+            <TableRow className="hover:bg-secondary">
+              <TableHead className="text-base font-bold text-secondary-foreground">Professor</TableHead>
+              <TableHead className="text-base font-bold text-secondary-foreground">Mensal previsto</TableHead>
+              <TableHead className="text-base font-bold text-secondary-foreground">Mensal atual</TableHead>
+              <TableHead className="text-base font-bold text-secondary-foreground">Anual previsto</TableHead>
+              <TableHead className="text-base font-bold text-secondary-foreground">Anual atual</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
