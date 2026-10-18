@@ -10,12 +10,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { MonthNav } from "@/components/financial/month-nav";
 import { getTeacherFeriasForYear } from "@/server/queries/teachers";
+import { parseMonthParam } from "@/lib/month-param";
 import { formatCurrency } from "@/lib/labels";
 
-export default async function AdminFeriasPage() {
-  const now = new Date();
-  const { teachers, totals } = await getTeacherFeriasForYear(now.getFullYear(), now.getMonth());
+export default async function AdminFeriasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
+  const { month: monthParamValue } = await searchParams;
+  const { year, month } = parseMonthParam(monthParamValue);
+  const { teachers, totals } = await getTeacherFeriasForYear(year, month);
 
   return (
     <div>
@@ -30,6 +37,10 @@ export default async function AdminFeriasPage() {
         title="Férias (provisão)"
         description="8,3% do que cada professor ganha, mês a mês — previsto supõe que toda aula marcada aconteça, realizado é só o que já foi dado."
       />
+
+      <div className="mb-4">
+        <MonthNav basePath="/admin/financial/ferias" year={year} month={month} />
+      </div>
 
       <div className="overflow-hidden rounded-xl border">
         <Table>

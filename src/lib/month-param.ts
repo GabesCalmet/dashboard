@@ -1,3 +1,5 @@
+import { brazilToday } from "@/lib/timezone";
+
 // Shared ?month=YYYY-MM handling for the Financeiro pages (Receita, Gastos)
 // that let a specific past/future month be viewed and backfilled.
 export function parseMonthParam(month?: string) {
@@ -5,7 +7,10 @@ export function parseMonthParam(month?: string) {
     const [y, m] = month.split("-").map(Number);
     if (y && m && m >= 1 && m <= 12) return { year: y, month: m - 1 };
   }
-  const now = new Date();
+  // Brazil's current month, not the server's own UTC month — defaulting
+  // to new Date() would silently show next month every evening after
+  // ~21:00 Brazil time.
+  const now = brazilToday();
   return { year: now.getFullYear(), month: now.getMonth() };
 }
 
