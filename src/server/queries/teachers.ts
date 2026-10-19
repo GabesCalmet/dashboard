@@ -677,9 +677,15 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
     }
   >();
 
-  // Flat-fee assignments first — count fully as previsto/realizado
-  // regardless of how many lessons this teacher+student pair had this
-  // month (including zero).
+  // Every assigned student gets seeded up front — flat-fee ones priced in
+  // full immediately (regardless of lessons, as before), and now HOURLY
+  // ones too, with their Contratado figures resolved right away but
+  // previsto/realizado left at 0 to be filled in by real lessons below.
+  // Without seeding HOURLY here, a student genuinely assigned this month
+  // (per teacherHistory/cadastro) but with no lesson actually generated
+  // for it — a scheduling gap, enrolled partway through, etc. — was
+  // completely invisible on this page, even though getTeacherPayrollForMonth's
+  // teacher-level Contratado/Férias total already counted them.
   for (const student of assignedStudents) {
     const assignment = resolveTeacherAssignment(
       student,
@@ -688,8 +694,9 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
       fallbackHourlyRate,
       chargeOwnAmounts.get(student.id) ?? 0
     );
-    if (assignment.assigned && isFlatAssignment(assignment.mode)) {
-      const { count: contractedCount, hours: contractedHours } = resolveContractedLoad(student, monthStart);
+    if (!assignment.assigned) continue;
+    const { count: contractedCount, hours: contractedHours } = resolveContractedLoad(student, monthStart);
+    if (isFlatAssignment(assignment.mode)) {
       byStudent.set(student.id, {
         hours: 0,
         previsto: assignment.monthlyAmount,
@@ -709,6 +716,21 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
         contractedCount,
         contractedHours,
         contratado: assignment.monthlyAmount,
+      });
+    } else {
+      byStudent.set(student.id, {
+        hours: 0,
+        previsto: 0,
+        realizado: 0,
+        count: 0,
+        realizedCount: 0,
+        realizedHours: 0,
+        rate: assignment.rate,
+        mode: "HOURLY",
+        percentage: 0,
+        contractedCount,
+        contractedHours,
+        contratado: contractedHours * assignment.rate,
       });
     }
   }
