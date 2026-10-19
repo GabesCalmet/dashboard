@@ -4,6 +4,7 @@ import { brazilDateTime, brazilToday, endOfBrazilDay, toBrazilDateString } from 
 import { resolveHistoricalAmount, pickLatestOverlap } from "@/server/billing";
 import { getOwnChargeAmountsForMonth } from "@/server/student-charges";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
+import { teacherOrderIndex } from "@/lib/teacher-order";
 import type { TeacherPayMode, LessonStatus } from "@prisma/client";
 
 type TeacherHistoryEntry = {
@@ -524,7 +525,7 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
     return { teacherId: t.id, teacherName: t.user.name, previsto, realizado, previstoContrato, contratadoFerias };
   });
 
-  rows.sort((a, b) => b.previsto - a.previsto);
+  rows.sort((a, b) => teacherOrderIndex(a.teacherName) - teacherOrderIndex(b.teacherName));
   const totals = rows.reduce(
     (acc, r) => ({
       previsto: acc.previsto + r.previsto,
@@ -579,7 +580,7 @@ export async function getTeacherFeriasForYear(year: number, throughMonth: number
       monthlyProvision: t.monthlyBase * 0.083,
       annualProvision: t.annualBase * 0.083,
     }))
-    .sort((a, b) => b.annualProvision - a.annualProvision);
+    .sort((a, b) => teacherOrderIndex(a.teacherName) - teacherOrderIndex(b.teacherName));
 
   const totals = teachers.reduce(
     (acc, t) => ({
@@ -848,8 +849,15 @@ export async function listTeachers() {
   // reactivate them from the same list instead of only via Usuários.
   const teachers = await prisma.teacherProfile.findMany({
     include: { user: true, students: true },
-    orderBy: [{ user: { active: "desc" } }, { user: { name: "asc" } }],
   });
+  // Active teachers first (in the fixed display order), inactive/canceled
+  // ones pushed to the back (also in that order among themselves, so a
+  // reactivated teacher doesn't jump to a random spot).
+  teachers.sort(
+    (a, b) =>
+      Number(b.user.active) - Number(a.user.active) ||
+      teacherOrderIndex(a.user.name) - teacherOrderIndex(b.user.name)
+  );
 
   // Brazil's current month, not the server's own UTC month — startOfMonth
   // on a raw new Date() would silently roll over to next month every
