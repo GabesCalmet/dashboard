@@ -57,7 +57,7 @@ export default async function AdminFeriasPage({
               <TableRow key={t.teacherId}>
                 <TableCell className="p-0">
                   <Link
-                    href={`/admin/financial/gastos/professores/${t.teacherId}?month=${monthQuery}`}
+                    href={`/admin/financial/ferias/${t.teacherId}?month=${monthQuery}`}
                     className="block px-3 py-2.5 hover:underline"
                   >
                     {t.teacherName}
