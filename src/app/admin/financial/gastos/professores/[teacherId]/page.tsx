@@ -37,6 +37,16 @@ export default async function AdminTeacherPayrollDetailPage({
   ]);
   if (!detail) notFound();
 
+  // What actually feeds this teacher's Férias provision — same
+  // Contratado total as below, but excluding PERCENTAGE-mode assignments
+  // (a cut of the student's charge isn't a salaried assignment, so it
+  // doesn't accrue férias — see getTeacherPayrollForMonth/
+  // getTeacherFeriasForYear). Shown separately so it's traceable against
+  // the number on the Férias page for this same teacher/month.
+  const feriasBase = detail.students
+    .filter((s) => s.mode !== "PERCENTAGE")
+    .reduce((sum, s) => sum + s.contratado, 0);
+
   const studentTotals = detail.students.reduce(
     (acc, s) => ({
       contractedCount: acc.contractedCount + s.contractedCount,
@@ -151,7 +161,13 @@ export default async function AdminTeacherPayrollDetailPage({
         </Table>
       </div>
 
-      <h2 className="mt-6 mb-3 text-sm font-semibold">Por aluno</h2>
+      <div className="mt-6 mb-3 flex items-baseline justify-between">
+        <h2 className="text-sm font-semibold">Por aluno</h2>
+        <p className="text-sm text-muted-foreground">
+          Base Férias (exclui porcentagem): <span className="font-semibold text-foreground">{formatCurrency(feriasBase)}</span>
+          {" — "}provisão (8,3%): <span className="font-semibold text-foreground">{formatCurrency(feriasBase * 0.083)}</span>
+        </p>
+      </div>
       <div className="overflow-hidden rounded-xl border">
         <Table>
           <TableHeader>
@@ -194,7 +210,16 @@ export default async function AdminTeacherPayrollDetailPage({
                 </TableCell>
                 <TableCell className="border-l">{s.contractedCount}</TableCell>
                 <TableCell>{s.contractedHours.toFixed(1)}h</TableCell>
-                <TableCell>{formatCurrency(s.contratado)}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1.5">
+                    {formatCurrency(s.contratado)}
+                    {s.mode === "PERCENTAGE" && (
+                      <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                        não conta p/ Férias
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="border-l">{s.count}</TableCell>
                 <TableCell>{s.hours.toFixed(1)}h</TableCell>
                 <TableCell>{formatCurrency(s.previsto)}</TableCell>
