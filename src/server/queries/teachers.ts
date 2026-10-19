@@ -770,7 +770,16 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
 
     payByStatus.set(g.status, (payByStatus.get(g.status) ?? 0) + pay);
 
-    const contractedLoad = student ? resolveContractedLoad(student, monthStart) : { count: 0, hours: 0 };
+    // Contratado only counts when this teacher is actually the one
+    // assigned for the month (same gate getTeacherPayrollForMonth's
+    // contratadoFerias applies) — a real lesson taught this month doesn't
+    // by itself mean the student's contract "belongs" to this teacher,
+    // e.g. a one-off substitute class while the student's real teacher
+    // that month was someone else per teacherHistory. Previsto/realizado
+    // below are unaffected — those are driven by the real lesson, not by
+    // this assignment check.
+    const contractedLoad =
+      student && assignment.assigned ? resolveContractedLoad(student, monthStart) : { count: 0, hours: 0 };
     const entry = byStudent.get(g.studentId) ?? {
       hours: 0,
       previsto: 0,
