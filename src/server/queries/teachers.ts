@@ -80,15 +80,6 @@ function resolveTeacherAssignment(
 ): TeacherAssignment {
   const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
   const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
-  // A student can't have had a teacher assignment before they even
-  // enrolled. Without this, the "currently assigned" fallback below
-  // (used whenever no teacherHistory entry explicitly covers this month)
-  // would otherwise credit a currently-active student's live pay terms
-  // to any month at all, including ones years before they existed.
-  const startOfEnrollmentMonth = new Date(student.startDate.getFullYear(), student.startDate.getMonth(), 1);
-  if (monthEnd < startOfEnrollmentMonth) {
-    return { assigned: false, mode: "HOURLY", rate: fallbackHourlyRate, monthlyAmount: 0, percentage: 0 };
-  }
 
   const entries = parseTeacherHistory(student.teacherHistory);
   const match = pickLatestOverlap(entries, (e) => {
@@ -139,7 +130,19 @@ function resolveTeacherAssignment(
     if (until && until < monthStart) return false;
     return true;
   });
-  if (!coveredByAnotherTeacher && student.teacherId === teacherId) {
+  // A student can't have had a teacher assignment before they even
+  // enrolled — but only for this "current teacher, nothing explicit on
+  // record" fallback. An EXPLICIT history entry (handled above, via
+  // match) is real, dated fact regardless of what startDate currently
+  // says — e.g. a returning student whose startDate was moved to their
+  // most recent restart, but who genuinely has an earlier, separately-
+  // dated teacherHistory entry from before that (confirmed by real
+  // lessons generated back then) must still resolve correctly for that
+  // earlier period, not get silently zeroed out by a startDate that no
+  // longer reflects when they first enrolled.
+  const startOfEnrollmentMonth = new Date(student.startDate.getFullYear(), student.startDate.getMonth(), 1);
+  const enrolledByThisMonth = monthEnd >= startOfEnrollmentMonth;
+  if (!coveredByAnotherTeacher && enrolledByThisMonth && student.teacherId === teacherId) {
     if (student.teacherPayMode === "MONTHLY") {
       return {
         assigned: true,
