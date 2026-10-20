@@ -266,19 +266,72 @@ function avgClassDurationHours(lessonSchedule: unknown, referenceMonth: Date): n
   return minutes.reduce((a, b) => a + b, 0) / minutes.length / 60;
 }
 
+type LessonsPerMonthEntry = { amount: number; from?: string; until?: string };
+
+function parseLessonsPerMonthHistory(value: unknown): LessonsPerMonthEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (e): e is Record<string, unknown> =>
+        typeof e === "object" && e !== null && typeof (e as Record<string, unknown>).amount === "number"
+    )
+    .map((e) => ({
+      amount: e.amount as number,
+      from: typeof e.from === "string" && e.from ? e.from : undefined,
+      until: typeof e.until === "string" && e.until ? e.until : undefined,
+    }));
+}
+
+// Day-weighted contracted lesson count for the month — a student whose
+// contract only covers part of the month (lessonsPerMonthHistory's own
+// vigência ends on the 15th of a 30-day month, say) contributes half
+// their normal lessonsPerMonth to that month, not the full amount —
+// unlike resolveHistoricalAmount, which just picks whichever single entry
+// is "in effect" with no regard for how much of the month it actually
+// spans. Sums every entry that touches the month, each weighted by the
+// fraction of the month's days its own vigência covers, so a value that
+// changes mid-month blends correctly too instead of one entry "winning"
+// outright. Same current-value/zero fallback as resolveHistoricalAmount's
+// zeroOnGap for a month no entry covers at all.
+function resolveProratedLessonsPerMonth(current: unknown, history: unknown, referenceMonth: Date): number {
+  const entries = parseLessonsPerMonthHistory(history);
+  if (entries.length === 0) return Number(current);
+
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+  const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
+  const daysInMonth = monthEnd.getDate();
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  let total = 0;
+  let anyOverlap = false;
+  for (const e of entries) {
+    const from = e.from ? new Date(e.from) : null;
+    const until = e.until ? new Date(e.until) : null;
+    if (from && from > monthEnd) continue;
+    if (until && until < monthStart) continue;
+    anyOverlap = true;
+    const effectiveFrom = from && from > monthStart ? from : monthStart;
+    const effectiveUntil = until && until < monthEnd ? until : monthEnd;
+    const daysCovered = Math.round((effectiveUntil.getTime() - effectiveFrom.getTime()) / DAY_MS) + 1;
+    total += e.amount * (daysCovered / daysInMonth);
+  }
+  if (anyOverlap) return total;
+
+  const hasEntryStartingAfter = entries.some((e) => e.from && new Date(e.from) > monthEnd);
+  return hasEntryStartingAfter ? 0 : Number(current);
+}
+
 // How many classes/hours a student is actually contracted for in a given
-// month — lessonsPerMonth (resolved against its own history, same as any
-// other cadastro field) × average scheduled class length — independent
-// of how many lessons actually got generated/given. Shared by
-// getTeacherPayrollForMonth's previstoContrato and getTeacherPayrollDetail's
-// per-student "Contratado" breakdown.
+// month — lessonsPerMonth (day-prorated against its own history) ×
+// average scheduled class length — independent of how many lessons
+// actually got generated/given. Shared by getTeacherPayrollForMonth's
+// previstoContrato and getTeacherPayrollDetail's per-student "Contratado"
+// breakdown.
 function resolveContractedLoad(
   student: { lessonsPerMonth: unknown; lessonsPerMonthHistory: unknown; lessonSchedule: unknown },
   referenceMonth: Date
 ): { count: number; hours: number } {
-  const count = resolveHistoricalAmount(student.lessonsPerMonth, student.lessonsPerMonthHistory, referenceMonth, {
-    zeroOnGap: true,
-  });
+  const count = resolveProratedLessonsPerMonth(student.lessonsPerMonth, student.lessonsPerMonthHistory, referenceMonth);
   return { count, hours: avgClassDurationHours(student.lessonSchedule, referenceMonth) * count };
 }
 
@@ -287,8 +340,8 @@ function resolveContractedLoad(
 // figure works out to per hour, so "Valor/hora" shows something
 // meaningful instead of R$ 0,00. Hours/month is the student's average
 // scheduled class length × how many classes they're contracted for
-// (lessonsPerMonth), both resolved for the same reference month as the
-// flat amount itself.
+// (lessonsPerMonth, day-prorated), both resolved for the same reference
+// month as the flat amount itself.
 function equivalentHourlyRate(
   monthlyAmount: number,
   lessonsPerMonth: unknown,
@@ -296,9 +349,7 @@ function equivalentHourlyRate(
   lessonSchedule: unknown,
   referenceMonth: Date
 ): number {
-  const contractedLessons = resolveHistoricalAmount(lessonsPerMonth, lessonsPerMonthHistory, referenceMonth, {
-    zeroOnGap: true,
-  });
+  const contractedLessons = resolveProratedLessonsPerMonth(lessonsPerMonth, lessonsPerMonthHistory, referenceMonth);
   const hoursPerMonth = avgClassDurationHours(lessonSchedule, referenceMonth) * contractedLessons;
   return hoursPerMonth > 0 ? monthlyAmount / hoursPerMonth : 0;
 }
