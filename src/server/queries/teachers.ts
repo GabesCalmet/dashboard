@@ -130,6 +130,18 @@ function resolveTeacherAssignment(
     if (until && until < monthStart) return false;
     return true;
   });
+  // The "current teacher" fallback below only makes sense when this
+  // teacher's relationship with the student has NEVER had any history
+  // logged at all — "a still-current assignment that's never had a
+  // change recorded" per its own original intent. If even one entry
+  // names this teacherId, their relationship IS tracked explicitly, so a
+  // month none of those entries cover means exactly what the history
+  // says: not yet started, or — just as often — already ended (an
+  // entry with an "until" in the past, the student's raw teacherId
+  // column just never got cleared when they were canceled/reassigned).
+  // Either way that's a real "not assigned," not a silent gap to paper
+  // over by trusting a stale current-teacher field.
+  const hasHistoryForThisTeacher = entries.some((e) => e.id === teacherId);
   // A student can't have had a teacher assignment before they even
   // enrolled — but only for this "current teacher, nothing explicit on
   // record" fallback. An EXPLICIT history entry (handled above, via
@@ -142,7 +154,12 @@ function resolveTeacherAssignment(
   // longer reflects when they first enrolled.
   const startOfEnrollmentMonth = new Date(student.startDate.getFullYear(), student.startDate.getMonth(), 1);
   const enrolledByThisMonth = monthEnd >= startOfEnrollmentMonth;
-  if (!coveredByAnotherTeacher && enrolledByThisMonth && student.teacherId === teacherId) {
+  if (
+    !coveredByAnotherTeacher &&
+    !hasHistoryForThisTeacher &&
+    enrolledByThisMonth &&
+    student.teacherId === teacherId
+  ) {
     if (student.teacherPayMode === "MONTHLY") {
       return {
         assigned: true,
