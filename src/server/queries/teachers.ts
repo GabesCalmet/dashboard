@@ -693,10 +693,18 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
         rescheduledTo: { select: { scheduledAt: true } },
       },
     }),
-    // Every student currently assigned to this teacher — on top of the
-    // lesson-driven roster below, so a MONTHLY-fixed assignment still
-    // shows up (and gets paid) even in a month with no generated lessons.
-    prisma.studentProfile.findMany({ where: { teacherId }, include: { user: true } }),
+    // Every active student, not just ones currently assigned to this
+    // teacher — resolveTeacherAssignment below (same check
+    // getTeacherPayrollForMonth already does against this same global
+    // pool) is what actually decides who belongs to this teacher for the
+    // month. A student whose CURRENT teacher is someone else, but whose
+    // teacherHistory genuinely assigns them to this teacher for the
+    // viewed month, would otherwise never be found here at all — neither
+    // by current teacherId (it's someone else's) nor by a real lesson
+    // (if one was never generated correctly under this teacher's id) —
+    // even though the teacher-level Férias/payroll total already counts
+    // them correctly via this same broader pool.
+    prisma.studentProfile.findMany({ where: { status: "ACTIVE" }, include: { user: true } }),
   ]);
   const countedLessons = lessons.filter((l) => !isAbsorbedCancellation(l, monthStart, monthEnd));
   const statusBreakdown = aggregateByStatus(countedLessons);
