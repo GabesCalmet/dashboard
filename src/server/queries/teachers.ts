@@ -47,6 +47,15 @@ type TeacherAssignment = {
   // percentage itself, for display; monthlyAmount already carries the
   // resolved R$ figure it works out to for this month.
   percentage: number;
+  // The matched teacherHistory entry's own vigência bounds, if any —
+  // narrower than the calendar month when a student switched teachers
+  // mid-month. Undefined means this assignment isn't bounded by an
+  // explicit history entry (the "current teacher, nothing on record"
+  // fallback) — open-ended for resolveContractedLoad's purposes. Used so
+  // a teacher's Contratado figure only counts real schedule occurrences
+  // within their OWN slice of the month, not the whole month's worth.
+  windowFrom?: Date;
+  windowUntil?: Date;
 };
 
 // Resolves how a teacher is paid for a specific student/group in a given
@@ -91,6 +100,11 @@ function resolveTeacherAssignment(
     return true;
   });
 
+  // The matched entry's own vigência bounds, if any — see windowFrom/
+  // windowUntil on TeacherAssignment above.
+  const windowFrom = match?.from ? new Date(match.from) : undefined;
+  const windowUntil = match?.until ? new Date(match.until) : undefined;
+
   if (match?.mode === "MONTHLY") {
     return {
       assigned: true,
@@ -98,6 +112,8 @@ function resolveTeacherAssignment(
       rate: 0,
       monthlyAmount: match.monthlyAmount ?? 0,
       percentage: 0,
+      windowFrom,
+      windowUntil,
     };
   }
   if (match?.mode === "PERCENTAGE") {
@@ -108,10 +124,20 @@ function resolveTeacherAssignment(
       rate: 0,
       monthlyAmount: (chargeOwnAmount * percentage) / 100,
       percentage,
+      windowFrom,
+      windowUntil,
     };
   }
   if (match && typeof match.rate === "number" && match.rate > 0) {
-    return { assigned: true, mode: "HOURLY", rate: match.rate, monthlyAmount: 0, percentage: 0 };
+    return {
+      assigned: true,
+      mode: "HOURLY",
+      rate: match.rate,
+      monthlyAmount: 0,
+      percentage: 0,
+      windowFrom,
+      windowUntil,
+    };
   }
   // Before falling back to "whoever the student's teacher is right now"
   // below, check whether some OTHER teacher's history entry already
@@ -186,7 +212,15 @@ function resolveTeacherAssignment(
   // rate/mode of its own — still a real assignment, just priced at
   // fallback, same as the pre-MONTHLY-mode behavior.
   if (match) {
-    return { assigned: true, mode: "HOURLY", rate: fallbackHourlyRate, monthlyAmount: 0, percentage: 0 };
+    return {
+      assigned: true,
+      mode: "HOURLY",
+      rate: fallbackHourlyRate,
+      monthlyAmount: 0,
+      percentage: 0,
+      windowFrom,
+      windowUntil,
+    };
   }
   return { assigned: false, mode: "HOURLY", rate: fallbackHourlyRate, monthlyAmount: 0, percentage: 0 };
 }
@@ -199,13 +233,14 @@ function isFlatAssignment(mode: TeacherPayMode): boolean {
   return mode === "MONTHLY" || mode === "PERCENTAGE";
 }
 
-type LessonScheduleEntry = { start: string; end: string; from?: string; until?: string };
+type LessonScheduleEntry = { weekday?: number; start: string; end: string; from?: string; until?: string };
 
 function parseLessonScheduleEntries(lessonSchedule: unknown): LessonScheduleEntry[] {
   if (!Array.isArray(lessonSchedule)) return [];
   return lessonSchedule
     .filter((e): e is Record<string, unknown> => typeof e === "object" && e !== null)
     .map((e) => ({
+      weekday: typeof e.weekday === "number" ? e.weekday : undefined,
       start: typeof e.start === "string" ? e.start : "",
       end: typeof e.end === "string" ? e.end : "",
       from: typeof e.from === "string" && e.from ? e.from : undefined,
@@ -222,153 +257,81 @@ function classDurationMinutes(e: { start: string; end: string }): number {
   return diff > 0 ? diff : DEFAULT_MIN;
 }
 
-// Average class length, in hours, for the ONE weekly schedule revision
-// actually in effect during referenceMonth — just enough to turn a flat
-// monthly/percentage figure into an equivalent hourly rate, or lessonsPerMonth
-// into contracted hours. Every weekday entry of the same revision shares
-// the same from/until vigência pair, so entries are grouped by that pair
-// first, then only the group overlapping referenceMonth is averaged —
-// NOT every revision the student has ever had on record (which used to
-// drag the figure toward however long an expired, years-old schedule
-// happened to be). Falls back to whichever revision started most
-// recently when none covers the month (nothing newer declared yet, same
-// convention as resolveHistoricalAmount's zeroOnGap), and to 50min (the
-// Lesson model's own default) when there's no usable schedule at all.
-function avgClassDurationHours(lessonSchedule: unknown, referenceMonth: Date): number {
-  const DEFAULT_MIN = 50;
-  const entries = parseLessonScheduleEntries(lessonSchedule);
-  if (entries.length === 0) return DEFAULT_MIN / 60;
-
-  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
-  const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
-
-  const groups = new Map<string, LessonScheduleEntry[]>();
-  for (const e of entries) {
-    const key = `${e.from ?? ""}|${e.until ?? ""}`;
-    const bucket = groups.get(key);
-    if (bucket) bucket.push(e);
-    else groups.set(key, [e]);
-  }
-
-  const overlapsMonth = (e: LessonScheduleEntry) => {
-    const from = e.from ? new Date(e.from) : null;
-    const until = e.until ? new Date(e.until) : null;
-    if (from && from > monthEnd) return false;
-    if (until && until < monthStart) return false;
-    return true;
-  };
-
-  let chosen: LessonScheduleEntry[] | undefined;
-  let chosenFromMs = -Infinity;
-  for (const bucket of groups.values()) {
-    if (!overlapsMonth(bucket[0])) continue;
-    const fromMs = bucket[0].from ? new Date(bucket[0].from).getTime() : -Infinity;
-    if (!chosen || fromMs > chosenFromMs) {
-      chosen = bucket;
-      chosenFromMs = fromMs;
-    }
-  }
-  if (!chosen) {
-    for (const bucket of groups.values()) {
-      const fromMs = bucket[0].from ? new Date(bucket[0].from).getTime() : -Infinity;
-      if (!chosen || fromMs > chosenFromMs) {
-        chosen = bucket;
-        chosenFromMs = fromMs;
-      }
-    }
-  }
-  if (!chosen) return DEFAULT_MIN / 60;
-
-  const minutes = chosen.map(classDurationMinutes);
-  return minutes.reduce((a, b) => a + b, 0) / minutes.length / 60;
+function maxDate(...dates: (Date | null | undefined)[]): Date {
+  return dates.filter((d): d is Date => !!d).reduce((a, b) => (b > a ? b : a));
 }
 
-type LessonsPerMonthEntry = { amount: number; from?: string; until?: string };
-
-function parseLessonsPerMonthHistory(value: unknown): LessonsPerMonthEntry[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter(
-      (e): e is Record<string, unknown> =>
-        typeof e === "object" && e !== null && typeof (e as Record<string, unknown>).amount === "number"
-    )
-    .map((e) => ({
-      amount: e.amount as number,
-      from: typeof e.from === "string" && e.from ? e.from : undefined,
-      until: typeof e.until === "string" && e.until ? e.until : undefined,
-    }));
+function minDate(...dates: (Date | null | undefined)[]): Date {
+  return dates.filter((d): d is Date => !!d).reduce((a, b) => (b < a ? b : a));
 }
 
-// Day-weighted contracted lesson count for the month — a student whose
-// contract only covers part of the month (lessonsPerMonthHistory's own
-// vigência ends on the 15th of a 30-day month, say) contributes half
-// their normal lessonsPerMonth to that month, not the full amount —
-// unlike resolveHistoricalAmount, which just picks whichever single entry
-// is "in effect" with no regard for how much of the month it actually
-// spans. Sums every entry that touches the month, each weighted by the
-// fraction of the month's days its own vigência covers, so a value that
-// changes mid-month blends correctly too instead of one entry "winning"
-// outright. Same current-value/zero fallback as resolveHistoricalAmount's
-// zeroOnGap for a month no entry covers at all.
-function resolveProratedLessonsPerMonth(current: unknown, history: unknown, referenceMonth: Date): number {
-  const entries = parseLessonsPerMonthHistory(history);
-  if (entries.length === 0) return Number(current);
-
-  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
-  const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
-  const daysInMonth = monthEnd.getDate();
+// How many times a given weekday (0=Sun..6=Sat) falls within [from, until],
+// both inclusive — mirrors the exact cursor-stepping logic
+// syncRecurringLessons uses to generate real lessons from a weekly
+// schedule, just computed directly instead of looping week by week.
+function countWeekdayOccurrences(from: Date, until: Date, weekday: number): number {
+  if (from > until) return 0;
+  const cursor = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  const daysUntilTarget = (weekday - cursor.getDay() + 7) % 7;
+  cursor.setDate(cursor.getDate() + daysUntilTarget);
+  if (cursor > until) return 0;
   const DAY_MS = 24 * 60 * 60 * 1000;
-
-  let total = 0;
-  let anyOverlap = false;
-  for (const e of entries) {
-    const from = e.from ? new Date(e.from) : null;
-    const until = e.until ? new Date(e.until) : null;
-    if (from && from > monthEnd) continue;
-    if (until && until < monthStart) continue;
-    anyOverlap = true;
-    const effectiveFrom = from && from > monthStart ? from : monthStart;
-    const effectiveUntil = until && until < monthEnd ? until : monthEnd;
-    const daysCovered = Math.round((effectiveUntil.getTime() - effectiveFrom.getTime()) / DAY_MS) + 1;
-    total += e.amount * (daysCovered / daysInMonth);
-  }
-  if (anyOverlap) return total;
-
-  const hasEntryStartingAfter = entries.some((e) => e.from && new Date(e.from) > monthEnd);
-  return hasEntryStartingAfter ? 0 : Number(current);
+  const diffDays = Math.floor((until.getTime() - cursor.getTime()) / DAY_MS);
+  return Math.floor(diffDays / 7) + 1;
 }
 
 // How many classes/hours a student is actually contracted for in a given
-// month — lessonsPerMonth (day-prorated against its own history) ×
-// average scheduled class length — independent of how many lessons
-// actually got generated/given. Shared by getTeacherPayrollForMonth's
-// previstoContrato and getTeacherPayrollDetail's per-student "Contratado"
-// breakdown.
+// month — counted directly from the real weekly schedule (lessonSchedule),
+// not approximated from lessonsPerMonth. Each schedule entry contributes
+// one occurrence per real weekday it falls on, within the intersection of
+// the calendar month, the teacher's OWN assignment window (narrower than
+// the whole month when a student switched teachers mid-month — see
+// TeacherAssignment's windowFrom/windowUntil), and the entry's own
+// vigência — so a teacher is only credited with the classes that
+// genuinely fall within their own slice of the month, priced at each
+// entry's own class length (not a single averaged duration). Independent
+// of how many lessons actually got generated/given. Shared by
+// getTeacherPayrollForMonth's previstoContrato and
+// getTeacherPayrollDetail's per-student "Contratado" breakdown.
 function resolveContractedLoad(
-  student: { lessonsPerMonth: unknown; lessonsPerMonthHistory: unknown; lessonSchedule: unknown },
-  referenceMonth: Date
+  student: { lessonSchedule: unknown },
+  referenceMonth: Date,
+  window: { from?: Date; until?: Date } = {}
 ): { count: number; hours: number } {
-  const count = resolveProratedLessonsPerMonth(student.lessonsPerMonth, student.lessonsPerMonthHistory, referenceMonth);
-  return { count, hours: avgClassDurationHours(student.lessonSchedule, referenceMonth) * count };
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+  const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
+  const entries = parseLessonScheduleEntries(student.lessonSchedule);
+
+  let count = 0;
+  let hours = 0;
+  for (const e of entries) {
+    if (e.weekday === undefined || !e.start) continue;
+    const entryFrom = e.from ? new Date(e.from) : null;
+    const entryUntil = e.until ? new Date(e.until) : null;
+    const rangeStart = maxDate(monthStart, window.from, entryFrom);
+    const rangeEnd = minDate(monthEnd, window.until, entryUntil);
+    if (rangeStart > rangeEnd) continue;
+    const occurrences = countWeekdayOccurrences(rangeStart, rangeEnd, e.weekday);
+    if (occurrences <= 0) continue;
+    count += occurrences;
+    hours += occurrences * (classDurationMinutes(e) / 60);
+  }
+  return { count, hours };
 }
 
 // For a MONTHLY/PERCENTAGE assignment — which has no hourly rate of its
 // own, since it's priced as a flat monthly figure instead — what that
 // figure works out to per hour, so "Valor/hora" shows something
-// meaningful instead of R$ 0,00. Hours/month is the student's average
-// scheduled class length × how many classes they're contracted for
-// (lessonsPerMonth, day-prorated), both resolved for the same reference
-// month as the flat amount itself.
+// meaningful instead of R$ 0,00. Hours/month comes from the same real
+// weekly-schedule counting resolveContractedLoad does.
 function equivalentHourlyRate(
   monthlyAmount: number,
-  lessonsPerMonth: unknown,
-  lessonsPerMonthHistory: unknown,
   lessonSchedule: unknown,
-  referenceMonth: Date
+  referenceMonth: Date,
+  window: { from?: Date; until?: Date } = {}
 ): number {
-  const contractedLessons = resolveProratedLessonsPerMonth(lessonsPerMonth, lessonsPerMonthHistory, referenceMonth);
-  const hoursPerMonth = avgClassDurationHours(lessonSchedule, referenceMonth) * contractedLessons;
-  return hoursPerMonth > 0 ? monthlyAmount / hoursPerMonth : 0;
+  const { hours } = resolveContractedLoad({ lessonSchedule }, referenceMonth, window);
+  return hours > 0 ? monthlyAmount / hours : 0;
 }
 
 // A class "happened" in some recorded sense if it's OK (dada), NC (não
@@ -396,10 +359,8 @@ const teacherAssignmentSelect = {
   teacherMonthlyAmount: true,
   teacherPercentage: true,
   startDate: true,
-  // Needed to resolve each student's contracted hours (lessonsPerMonth ×
-  // class length) for previstoContrato below.
-  lessonsPerMonth: true,
-  lessonsPerMonthHistory: true,
+  // Needed to resolve each student's contracted hours (real weekly
+  // schedule occurrences × class length) for previstoContrato below.
   lessonSchedule: true,
 } as const;
 
@@ -541,11 +502,12 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
     let previsto = 0;
     let realizado = 0;
     // What each assigned student's contract itself is worth this month —
-    // lessonsPerMonth × average class length × rate for an HOURLY
-    // assignment, the flat amount for a MONTHLY/PERCENTAGE one — entirely
-    // independent of how many lessons actually got generated/given, unlike
-    // previsto above. Computed for every assigned student regardless of
-    // lesson activity, not just those with lessons this month.
+    // real weekly-schedule occurrences × class length × rate for an
+    // HOURLY assignment, the flat amount for a MONTHLY/PERCENTAGE one —
+    // entirely independent of how many lessons actually got
+    // generated/given, unlike previsto above. Computed for every assigned
+    // student regardless of lesson activity, not just those with lessons
+    // this month.
     let previstoContrato = 0;
     // Same as previstoContrato, but excluding PERCENTAGE-mode assignments
     // — a teacher paid a cut of the student's charge isn't salaried for
@@ -571,7 +533,11 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
         if (assignment.mode === "MONTHLY") contratadoFerias += assignment.monthlyAmount;
         flatHandled.add(student.id);
       } else {
-        const contratoValue = resolveContractedLoad(student, monthStart).hours * assignment.rate;
+        const contratoValue =
+          resolveContractedLoad(student, monthStart, {
+            from: assignment.windowFrom,
+            until: assignment.windowUntil,
+          }).hours * assignment.rate;
         previstoContrato += contratoValue;
         contratadoFerias += contratoValue;
       }
@@ -611,8 +577,9 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
 }
 
 // Férias provision — 8,3% (≈1/12) of each teacher's Contratado total
-// (lessonsPerMonth × class length × rate for HOURLY, the flat amount for
-// MONTHLY — see contratadoFerias on getTeacherPayrollForMonth), which
+// (real weekly-schedule occurrences × class length × rate for HOURLY, the
+// flat amount for MONTHLY — see contratadoFerias on
+// getTeacherPayrollForMonth), which
 // doesn't depend on whether classes were actually given, so there's no
 // separate previsto/realizado split here anymore: one figure per month,
 // the same regardless of attendance. PERCENTAGE-mode assignments are
@@ -746,10 +713,11 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
       rate: number;
       mode: TeacherPayMode;
       percentage: number;
-      // What the cadastro itself says this student is contracted for —
-      // lessonsPerMonth and the hours that works out to, independent of
-      // how many lessons actually got generated/given this month (unlike
-      // count/hours above, which are both calendar-driven).
+      // What the real weekly schedule says this student is contracted
+      // for — real occurrences this month (within this teacher's own
+      // assignment window) and the hours that works out to, independent
+      // of how many lessons actually got generated/given this month
+      // (unlike count/hours above, which are both calendar-driven).
       contractedCount: number;
       contractedHours: number;
       contratado: number;
@@ -774,7 +742,12 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
       chargeOwnAmounts.get(student.id) ?? 0
     );
     if (!assignment.assigned) continue;
-    const { count: contractedCount, hours: contractedHours } = resolveContractedLoad(student, monthStart);
+    const assignmentWindow = { from: assignment.windowFrom, until: assignment.windowUntil };
+    const { count: contractedCount, hours: contractedHours } = resolveContractedLoad(
+      student,
+      monthStart,
+      assignmentWindow
+    );
     if (isFlatAssignment(assignment.mode)) {
       byStudent.set(student.id, {
         hours: 0,
@@ -785,10 +758,9 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
         realizedHours: 0,
         rate: equivalentHourlyRate(
           assignment.monthlyAmount,
-          student.lessonsPerMonth,
-          student.lessonsPerMonthHistory,
           student.lessonSchedule,
-          monthStart
+          monthStart,
+          assignmentWindow
         ),
         mode: assignment.mode,
         percentage: assignment.percentage,
@@ -827,6 +799,7 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
       : { assigned: false, mode: "HOURLY" as const, rate: fallbackHourlyRate, monthlyAmount: 0, percentage: 0 };
     const hours = (g._sum.durationMin ?? 0) / 60;
     const isRealized = (REALIZED_STATUSES as readonly string[]).includes(g.status);
+    const assignmentWindow = { from: assignment.windowFrom, until: assignment.windowUntil };
 
     if (isFlatAssignment(assignment.mode)) {
       // Already counted as a flat fee above — only track hours/count here,
@@ -837,7 +810,7 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
       // student is guaranteed defined here — isFlatAssignment only ever
       // true above when the ternary at this block's top resolved a real
       // assignment, which requires a real student.
-      const contractedLoad = resolveContractedLoad(student!, monthStart);
+      const contractedLoad = resolveContractedLoad(student!, monthStart, assignmentWindow);
       const entry = byStudent.get(g.studentId) ?? {
         hours: 0,
         previsto: assignment.monthlyAmount,
@@ -847,10 +820,9 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
         realizedHours: 0,
         rate: equivalentHourlyRate(
           assignment.monthlyAmount,
-          student!.lessonsPerMonth,
-          student!.lessonsPerMonthHistory,
           student!.lessonSchedule,
-          monthStart
+          monthStart,
+          assignmentWindow
         ),
         mode: assignment.mode,
         percentage: assignment.percentage,
@@ -880,7 +852,9 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
     // below are unaffected — those are driven by the real lesson, not by
     // this assignment check.
     const contractedLoad =
-      student && assignment.assigned ? resolveContractedLoad(student, monthStart) : { count: 0, hours: 0 };
+      student && assignment.assigned
+        ? resolveContractedLoad(student, monthStart, assignmentWindow)
+        : { count: 0, hours: 0 };
     const entry = byStudent.get(g.studentId) ?? {
       hours: 0,
       previsto: 0,
