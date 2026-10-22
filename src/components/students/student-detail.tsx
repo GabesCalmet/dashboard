@@ -27,6 +27,7 @@ import { StudentPaymentsTable, type PaymentHistoryRow } from "@/components/stude
 import { StudentChargesTable, type StudentChargeRow } from "@/components/students/student-charges-table";
 import { StudentFormDialog } from "@/components/students/student-form-dialog";
 import { StudentClassConfigCard } from "@/components/students/student-class-config-card";
+import { StudentNewClassPeriodDialog } from "@/components/students/student-new-class-period-dialog";
 import type { ScheduleEntry } from "@/components/students/lesson-schedule-editor";
 import type { ValueHistoryEntry } from "@/components/students/monthly-value-history-editor";
 import type { SelectHistoryEntry } from "@/components/students/select-history-editor";
@@ -417,6 +418,11 @@ export function StudentDetailView({
             )}
 
             <TabsContent value="lessons" className="mt-4">
+              {editOptions && permissions.canEdit && (
+                <div className="mb-3 flex justify-end">
+                  <StudentNewClassPeriodDialog studentId={student.id} teachers={editOptions.teachers} />
+                </div>
+              )}
               {editOptions && (
                 <StudentClassConfigCard
                   studentId={student.id}

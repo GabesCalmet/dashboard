@@ -222,6 +222,51 @@ export const studentClassConfigSchema = z.object({
 
 export type StudentClassConfigValues = z.infer<typeof studentClassConfigSchema>;
 
+// A clean new "mini-contract" — new teacher, new schedule, new aulas/mês,
+// all sharing ONE vigência (periodFrom/periodUntil) — submitted from the
+// separate "Adicionar aula" button (distinct from "Editar", which just
+// opens the full history as-is for manual correction). Deliberately
+// simpler than studentClassConfigSchema: exactly one new teacher
+// assignment, no per-entry vigência on the schedule (every day/time shares
+// the same period-level one) — addStudentClassPeriod does the bookkeeping
+// of closing out whatever was still open before appending these.
+export const studentClassPeriodSchema = z.object({
+  periodFrom: z.string().min(1, "Informe a data de início"),
+  periodUntil: z.string().optional(),
+  meetLink: z.string().url("Link inválido").optional().or(z.literal("")),
+  teacherId: z.string().min(1, "Selecione um professor"),
+  teacherPayMode: z.enum(["HOURLY", "MONTHLY", "PERCENTAGE"]).default("HOURLY"),
+  teacherPayRate: z.coerce.number().min(0, "Valor inválido").default(0),
+  teacherMonthlyAmount: z.coerce.number().min(0, "Valor inválido").default(0),
+  teacherPercentage: z.coerce.number().min(0).max(100, "Valor inválido").default(0),
+  lessonsPerMonth: z.coerce.number().int().min(0, "Valor inválido").default(0),
+  // Submitted by WeekdayTimeGridEditor as a JSON string, e.g.
+  // '[{"weekday":2,"start":"19:00","end":"19:50"}]' — no from/until per
+  // entry, since every entry in this one submission shares periodFrom/
+  // periodUntil (set server-side in addStudentClassPeriod).
+  schedule: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val) return [];
+      try {
+        const parsed = JSON.parse(val);
+        if (!Array.isArray(parsed)) return [];
+        return parsed
+          .filter((e) => e && typeof e.weekday === "number" && e.weekday >= 0 && e.weekday <= 6)
+          .map((e) => ({
+            weekday: e.weekday,
+            start: typeof e.start === "string" ? e.start : "",
+            end: typeof e.end === "string" ? e.end : "",
+          }));
+      } catch {
+        return [];
+      }
+    }),
+});
+
+export type StudentClassPeriodValues = z.infer<typeof studentClassPeriodSchema>;
+
 export const studentFormSchema = z.object({
   name: z.string().min(2, "Informe o nome completo"),
   username: usernameField,
