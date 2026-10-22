@@ -582,7 +582,19 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
       );
       const pay = (g.durationMin / 60) * assignment.rate;
       previsto += pay;
-      if ((REALIZED_STATUSES as readonly string[]).includes(g.status)) realizado += pay;
+      if ((REALIZED_STATUSES as readonly string[]).includes(g.status)) {
+        realizado += pay;
+        // A class this teacher actually gave for a student they have no
+        // cadastro claim to at all (!assignment.assigned — a one-off
+        // substitute covering for whoever the contract actually names) —
+        // the Contratado loop above only ever credits the cadastro-named
+        // teacher, which would otherwise leave a substitute's real covered
+        // hours completely uncounted toward their own férias. Only for a
+        // genuine substitution: a teacher's OWN cadastro-assigned students
+        // are already fully counted above, so adding this too would
+        // double-count the exact same hours for them.
+        if (!assignment.assigned) contratadoFerias += pay;
+      }
     }
     return { teacherId: t.id, teacherName: t.user.name, previsto, realizado, previstoContrato, contratadoFerias };
   });
@@ -868,14 +880,15 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
 
     payByStatus.set(g.status, (payByStatus.get(g.status) ?? 0) + pay);
 
-    // Contratado only counts when this teacher is actually the one
-    // assigned for the month (same gate getTeacherPayrollForMonth's
-    // contratadoFerias applies) — a real lesson taught this month doesn't
-    // by itself mean the student's contract "belongs" to this teacher,
-    // e.g. a one-off substitute class while the student's real teacher
-    // that month was someone else per teacherHistory. Previsto/realizado
-    // below are unaffected — those are driven by the real lesson, not by
-    // this assignment check.
+    // The schedule-based Contratado (contractedCount/contractedHours,
+    // shown separately on this row) only ever counts when this teacher is
+    // actually the one assigned for the month (same gate
+    // getTeacherPayrollForMonth's contratadoFerias applies) — a real lesson
+    // taught this month doesn't by itself mean the student's contract
+    // "belongs" to this teacher. "contratado" (the R$ figure Férias is
+    // computed from) starts from that same schedule-based value, but below
+    // also picks up a real one-off substitute's actually-covered classes —
+    // see the isRealized block.
     const contractedLoad =
       student && assignment.assigned
         ? resolveContractedLoad(student, monthStart, assignmentWindow)
@@ -905,6 +918,23 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
       entry.realizado += pay;
       entry.realizedCount += g._count._all;
       entry.realizedHours += hours;
+      // A class this teacher actually gave for a student they have no
+      // cadastro claim to at all (!assignment.assigned — a one-off
+      // substitute) — on top of the pay they already get above, this now
+      // also feeds "contratado" (and so the Férias page, which is just
+      // contratado × 8,3%) and contractedCount/contractedHours, so a
+      // substitute's actually-covered hours count toward their own férias
+      // instead of only the cadastro-named teacher's, and the "Aulas"/
+      // "Horas" shown alongside it stay honest about where that money
+      // comes from instead of reading 0 classes next to a real R$ figure.
+      // A teacher's OWN cadastro-assigned students are already fully
+      // counted via contractedLoad above, so this never double-counts the
+      // same hours for them.
+      if (!assignment.assigned) {
+        entry.contratado += pay;
+        entry.contractedCount += g._count._all;
+        entry.contractedHours += hours;
+      }
     }
     byStudent.set(g.studentId, entry);
   }
