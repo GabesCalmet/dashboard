@@ -290,19 +290,70 @@ function minDate(...dates: (Date | null | undefined)[]): Date {
   return dates.filter((d): d is Date => !!d).reduce((a, b) => (b < a ? b : a));
 }
 
-// How many times a given weekday (0=Sun..6=Sat) falls within [from, until],
+// Plain "YYYY-MM-DD" key for a calendar-date Date (one of our own
+// server-constructed new Date(y,m,d) values, not a real timestamped
+// instant) — read with local getters, which on this server (always UTC)
+// are exactly the intended calendar day, same convention monthStart/
+// monthEnd already use throughout this file. NOT for a real Lesson's
+// scheduledAt (an actual UTC instant) — that needs toBrazilDateString
+// instead, to correctly read back which Brazil calendar day it falls on.
+function dateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Every date a given weekday (0=Sun..6=Sat) falls on within [from, until],
 // both inclusive — mirrors the exact cursor-stepping logic
 // syncRecurringLessons uses to generate real lessons from a weekly
-// schedule, just computed directly instead of looping week by week.
-function countWeekdayOccurrences(from: Date, until: Date, weekday: number): number {
-  if (from > until) return 0;
+// schedule, just enumerated directly instead of looping week by week.
+function weekdayOccurrenceDates(from: Date, until: Date, weekday: number): Date[] {
+  if (from > until) return [];
   const cursor = new Date(from.getFullYear(), from.getMonth(), from.getDate());
   const daysUntilTarget = (weekday - cursor.getDay() + 7) % 7;
   cursor.setDate(cursor.getDate() + daysUntilTarget);
-  if (cursor > until) return 0;
-  const DAY_MS = 24 * 60 * 60 * 1000;
-  const diffDays = Math.floor((until.getTime() - cursor.getTime()) / DAY_MS);
-  return Math.floor(diffDays / 7) + 1;
+  const dates: Date[] = [];
+  while (cursor <= until) {
+    dates.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 7);
+  }
+  return dates;
+}
+
+// For crediting a contracted occurrence to whoever actually covered it —
+// not always the cadastro-nominal teacher. Maps each student to their own
+// studentId -> dateKey -> teacherId of every REALIZED lesson that month
+// (any teacher, not scoped to one), built once from the month's full
+// lesson list so a nominal teacher's own resolveContractedLoad can skip
+// any occurrence someone else is definitively known to have covered (the
+// credit for that date instead flows to the real covering teacher via the
+// lesson-driven loops in getTeacherPayrollForMonth/Detail). A date with no
+// entry here — not yet generated, still SCHEDULED, or canceled with no
+// realized outcome — stays with the nominal teacher as a forecast,
+// unaffected by attendance, same as always.
+function buildRealizedTeacherByDate(
+  lessons: { studentId: string; teacherId: string; status: LessonStatus; scheduledAt: Date }[]
+): Map<string, Map<string, string>> {
+  const byStudent = new Map<string, Map<string, string>>();
+  for (const l of lessons) {
+    if (!(REALIZED_STATUSES as readonly string[]).includes(l.status)) continue;
+    const studentMap = byStudent.get(l.studentId) ?? new Map<string, string>();
+    studentMap.set(toBrazilDateString(l.scheduledAt), l.teacherId);
+    byStudent.set(l.studentId, studentMap);
+  }
+  return byStudent;
+}
+
+// resolveContractedLoad's isCoveredByOtherTeacher predicate, built from
+// buildRealizedTeacherByDate's map — true for a date a real, realized
+// lesson shows was actually covered by someone OTHER than teacherId.
+function coveredBySomeoneElse(
+  realizedTeacherByDate: Map<string, Map<string, string>>,
+  studentId: string,
+  teacherId: string
+): (date: Date) => boolean {
+  return (date) => {
+    const coveringTeacherId = realizedTeacherByDate.get(studentId)?.get(dateKey(date));
+    return coveringTeacherId !== undefined && coveringTeacherId !== teacherId;
+  };
 }
 
 // How many classes/hours a student is actually contracted for in a given
@@ -321,7 +372,13 @@ function countWeekdayOccurrences(from: Date, until: Date, weekday: number): numb
 function resolveContractedLoad(
   student: { lessonSchedule: unknown },
   referenceMonth: Date,
-  window: { from?: Date; until?: Date } = {}
+  window: { from?: Date; until?: Date } = {},
+  // Optional — when given, an occurrence date this returns true for is
+  // skipped entirely (not credited here at all). Used to exclude a date
+  // someone else is definitively known to have covered — see
+  // buildRealizedTeacherByDate. Omitted wherever a pure, attendance-
+  // independent forecast is wanted instead (previstoContrato).
+  isCoveredByOtherTeacher?: (date: Date) => boolean
 ): { count: number; hours: number } {
   const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
   const monthEnd = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth() + 1, 0);
@@ -336,10 +393,11 @@ function resolveContractedLoad(
     const rangeStart = maxDate(monthStart, window.from, entryFrom);
     const rangeEnd = minDate(monthEnd, window.until, entryUntil);
     if (rangeStart > rangeEnd) continue;
-    const occurrences = countWeekdayOccurrences(rangeStart, rangeEnd, e.weekday);
-    if (occurrences <= 0) continue;
-    count += occurrences;
-    hours += occurrences * (classDurationMinutes(e) / 60);
+    for (const date of weekdayOccurrenceDates(rangeStart, rangeEnd, e.weekday)) {
+      if (isCoveredByOtherTeacher?.(date)) continue;
+      count += 1;
+      hours += classDurationMinutes(e) / 60;
+    }
   }
   return { count, hours };
 }
@@ -494,6 +552,7 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
         studentId: true,
         status: true,
         durationMin: true,
+        scheduledAt: true,
         rescheduledTo: { select: { scheduledAt: true } },
       },
     }),
@@ -521,6 +580,7 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
   const students = [...assignedStudents, ...extraStudents];
   const studentById = new Map(students.map((s) => [s.id, s]));
   const chargeOwnAmounts = await getOwnChargeAmountsForMonth(students.map((s) => s.id), monthStart);
+  const realizedTeacherByDate = buildRealizedTeacherByDate(lessons);
 
   const rows = teachers.map((t) => {
     const fallbackHourlyRate = resolveHistoricalAmount(t.hourlyRate, t.hourlyRateHistory, monthStart);
@@ -558,13 +618,24 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
         if (assignment.mode === "MONTHLY") contratadoFerias += assignment.monthlyAmount;
         flatHandled.add(student.id);
       } else {
-        const contratoValue =
-          resolveContractedLoad(student, monthStart, {
-            from: assignment.windowFrom,
-            until: assignment.windowUntil,
-          }).hours * assignment.rate;
-        previstoContrato += contratoValue;
-        contratadoFerias += contratoValue;
+        const assignmentWindow = { from: assignment.windowFrom, until: assignment.windowUntil };
+        // previstoContrato stays the pure, attendance-independent forecast
+        // it's always been — every contracted occurrence counts regardless
+        // of who ends up teaching it. contratadoFerias instead skips any
+        // occurrence someone else is definitively known to have covered
+        // (a real, realized lesson that date under a different teacher) —
+        // that date's credit flows to the covering teacher's own férias
+        // instead (see the lesson-driven loop below), so the same class
+        // doesn't provision férias twice.
+        previstoContrato +=
+          resolveContractedLoad(student, monthStart, assignmentWindow).hours * assignment.rate;
+        contratadoFerias +=
+          resolveContractedLoad(
+            student,
+            monthStart,
+            assignmentWindow,
+            coveredBySomeoneElse(realizedTeacherByDate, student.id, t.id)
+          ).hours * assignment.rate;
       }
     }
 
@@ -731,6 +802,15 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
   const students = [...assignedStudents, ...extraStudents];
   const studentById = new Map(students.map((s) => [s.id, s]));
   const chargeOwnAmounts = await getOwnChargeAmountsForMonth(students.map((s) => s.id), monthStart);
+  // Every REAL lesson these candidate students had this month, under ANY
+  // teacher — not just this one (unlike `lessons` above) — purely to know
+  // which dates someone else is definitively known to have covered. See
+  // coveredBySomeoneElse/buildRealizedTeacherByDate.
+  const allLessonsForStudents = await prisma.lesson.findMany({
+    where: { studentId: { in: students.map((s) => s.id) }, scheduledAt: { gte: monthStart, lte: monthEnd } },
+    select: { studentId: true, teacherId: true, status: true, scheduledAt: true },
+  });
+  const realizedTeacherByDate = buildRealizedTeacherByDate(allLessonsForStudents);
 
   const payByStatus = new Map<string, number>();
   const byStudent = new Map<
@@ -780,10 +860,16 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
     );
     if (!assignment.assigned) continue;
     const assignmentWindow = { from: assignment.windowFrom, until: assignment.windowUntil };
+    // Excludes any date a real, realized lesson shows someone else
+    // actually covered — see buildRealizedTeacherByDate. That credit
+    // (and the "Aulas"/"Horas" alongside it) flows to the covering
+    // teacher's own row instead, via the studentBreakdown loop below, so
+    // the same class isn't counted toward two teachers' férias at once.
     const { count: contractedCount, hours: contractedHours } = resolveContractedLoad(
       student,
       monthStart,
-      assignmentWindow
+      assignmentWindow,
+      coveredBySomeoneElse(realizedTeacherByDate, student.id, teacherId)
     );
     if (isFlatAssignment(assignment.mode)) {
       byStudent.set(student.id, {
@@ -847,7 +933,12 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
       // student is guaranteed defined here — isFlatAssignment only ever
       // true above when the ternary at this block's top resolved a real
       // assignment, which requires a real student.
-      const contractedLoad = resolveContractedLoad(student!, monthStart, assignmentWindow);
+      const contractedLoad = resolveContractedLoad(
+        student!,
+        monthStart,
+        assignmentWindow,
+        coveredBySomeoneElse(realizedTeacherByDate, student!.id, teacherId)
+      );
       const entry = byStudent.get(g.studentId) ?? {
         hours: 0,
         previsto: assignment.monthlyAmount,
@@ -891,7 +982,12 @@ export async function getTeacherPayrollDetail(teacherId: string, year: number, m
     // see the isRealized block.
     const contractedLoad =
       student && assignment.assigned
-        ? resolveContractedLoad(student, monthStart, assignmentWindow)
+        ? resolveContractedLoad(
+            student,
+            monthStart,
+            assignmentWindow,
+            coveredBySomeoneElse(realizedTeacherByDate, student.id, teacherId)
+          )
         : { count: 0, hours: 0 };
     const entry = byStudent.get(g.studentId) ?? {
       hours: 0,
