@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -82,6 +82,14 @@ export function StudentClassConfigCard({
   );
   useActionToast(state, () => setOpen(false));
 
+  // Whether there's already something configured — the dialog below opens
+  // fully pre-filled either way (it's always the full editable
+  // teacher/schedule/aulas-mês history, never a blank "add" form), this
+  // only decides what the trigger button is labeled, so it actually reads
+  // as an edit affordance once something exists instead of looking like
+  // it only ever adds.
+  const hasConfig = Boolean(teacherId) || lessonSchedule.length > 0 || lessonsPerMonth > 0;
+
   const today = toBrazilDateString(new Date());
   const teacherName = teachers.find((t) => t.id === teacherId)?.label ?? null;
   const currentHistoryEntry = teacherHistory.find((e) => e.id === teacherId && !e.until);
@@ -105,13 +113,14 @@ export function StudentClassConfigCard({
         {editable && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus /> Adicionar aula
+              <Button size="sm" variant={hasConfig ? "outline" : "default"}>
+                {hasConfig ? <Pencil /> : <Plus />}
+                {hasConfig ? "Editar" : "Adicionar aula"}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Adicionar aula</DialogTitle>
+                <DialogTitle>{hasConfig ? "Editar aulas contratadas" : "Adicionar aula"}</DialogTitle>
                 <DialogDescription>
                   Professor, horário, aulas/mês e link desta turma — separado do resto do cadastro.
                 </DialogDescription>
