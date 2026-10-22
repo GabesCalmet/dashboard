@@ -153,13 +153,11 @@ export async function syncRecurringLessons(studentId: string) {
     rawHorizonEnd.getDate() <= 15
       ? new Date(rawHorizonEnd.getFullYear(), rawHorizonEnd.getMonth(), 15, 23, 59, 59, 999)
       : new Date(rawHorizonEnd.getFullYear(), rawHorizonEnd.getMonth() + 1, 15, 23, 59, 59, 999);
-  // A student with a course end date gets every class generated through
-  // that exact date — overriding the rolling ~12-week/15th window entirely,
-  // since the whole point of setting it is to define that course's real
-  // generation window (which may run shorter or longer than the default).
-  // endOfBrazilDay so a class later that same day in Brazil time (which,
-  // after the timezone fix, lands after UTC midnight) isn't excluded.
-  const horizonEnd = student.endDate ? endOfBrazilDay(student.endDate) : snappedHorizonEnd;
+  // No separate course end date anymore — a course that's actually ending
+  // belongs on the relevant schedule entry's own vigência "until" instead
+  // (already honored below, per entry, independent of this rolling
+  // default), same as "from" replaced the old enrollment start date.
+  const horizonEnd = snappedHorizonEnd;
 
   const claimed = new Set<string>();
   const toCreate: {

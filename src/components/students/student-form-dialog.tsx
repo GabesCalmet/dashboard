@@ -52,13 +52,11 @@ type StudentDefaults = {
   cpf?: string | null;
   phone?: string | null;
   birthDate?: string;
-  address?: string | null;
   courseId?: string | null;
   courseHistory?: SelectHistoryEntry[];
   planId?: string | null;
   planHistory?: SelectHistoryEntry[];
   level: CourseLevel;
-  endDate?: string;
   objective?: string | null;
   notes?: string | null;
   status: StudentStatus;
@@ -210,16 +208,6 @@ export function StudentFormDialog({
           {isEdit && student?.isGroup && (
             <GroupMemberFieldsEditor members={student.groupMembers ?? []} />
           )}
-
-          <div className="space-y-1.5">
-            <Label htmlFor="endDate">Data de término (opcional)</Label>
-            <DateInput id="endDate" name="endDate" defaultValue={student?.endDate} />
-          </div>
-
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="address">Endereço</Label>
-            <Input id="address" name="address" defaultValue={student?.address ?? ""} />
-          </div>
 
           <SelectHistoryEditor
             label="Curso"

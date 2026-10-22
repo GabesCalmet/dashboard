@@ -236,7 +236,6 @@ export const studentFormSchema = z.object({
   cpf: z.string().optional(),
   phone: z.string().optional(),
   birthDate: z.string().optional(),
-  address: z.string().optional(),
   courseId: z.string().optional(),
   courseHistory: selectHistoryField,
   planId: z.string().optional(),
@@ -254,7 +253,13 @@ export const studentFormSchema = z.object({
   // page, when no history entry anywhere has an explicit "from" to use
   // instead) but are no longer admin-editable; startDate just keeps its
   // DB default (creation day) going forward.
-  endDate: z.string().optional(),
+  //
+  // No "Data de término" field either — a course that's actually ending
+  // belongs on the relevant lessonSchedule entry's own vigência "until"
+  // instead (see syncRecurringLessons), same idea. StudentProfile.endDate
+  // still exists (untouched, no longer admin-editable) and still backs
+  // one legacy one-time migration helper (migrateStudentBillingToCharges)
+  // that reads whatever was already there.
   objective: z.string().optional(),
   notes: z.string().optional(),
   status: z.enum(["ACTIVE", "PAUSED", "CANCELED"]).default("ACTIVE"),

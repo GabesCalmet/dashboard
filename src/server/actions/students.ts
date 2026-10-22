@@ -51,7 +51,6 @@ export async function createStudent(
         groupName: data.groupMembers.length > 0 ? data.groupName || undefined : undefined,
         cpf: data.cpf || undefined,
         birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
-        address: data.address,
         courseId: data.courseId || undefined,
         courseHistory: data.courseHistory,
         planId: data.planId || undefined,
@@ -67,11 +66,11 @@ export async function createStudent(
         // once this student actually exists — see updateStudentClassConfig.
         monthlyValue: 0,
         level: data.level,
-        // startDate/billingStartDate are no longer admin-entered at all —
-        // startDate just keeps its own DB default (today), and
-        // billingStartDate stays null. See the comment on
-        // studentFormSchema for where these dates actually live now.
-        endDate: data.endDate ? new Date(data.endDate) : undefined,
+        // startDate/billingStartDate/address/endDate are no longer
+        // admin-entered at all — startDate just keeps its own DB default
+        // (today), and the rest stay null/unset. See the comments on
+        // studentFormSchema for where endDate's role actually lives now
+        // (a schedule entry's own vigência "until").
         objective: data.objective,
         notes: data.notes,
         status: data.status,
@@ -167,7 +166,6 @@ export async function updateStudent(
         groupName: data.groupName || null,
         cpf: data.cpf || undefined,
         birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
-        address: data.address,
         courseId: data.courseId || null,
         courseHistory: data.courseHistory,
         planId: data.planId || null,
@@ -180,10 +178,10 @@ export async function updateStudent(
         // for meetLink/teacher*/lessonsPerMonth*/lessonSchedule — moved
         // out to "Adicionar aula" on the Histórico de aulas tab, so this
         // form no longer touches them either — see
-        // updateStudentClassConfig. And for startDate/billingStartDate —
-        // no longer admin-editable at all, so left untouched too.
+        // updateStudentClassConfig. And for
+        // startDate/billingStartDate/address/endDate — no longer
+        // admin-editable at all, so left untouched too.
         level: data.level,
-        endDate: data.endDate ? new Date(data.endDate) : null,
         objective: data.objective,
         notes: data.notes,
         status: data.status,
