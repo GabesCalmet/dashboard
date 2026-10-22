@@ -202,23 +202,25 @@ export function TeacherAssignmentEditor({
       {entries.map((entry) => {
         const mode = entry.mode ?? "HOURLY";
         return (
-          <div key={entry._id} className="flex flex-wrap items-end gap-2 rounded-lg border p-3">
-            <div className="min-w-40 flex-1 space-y-1.5">
-              <Label className="text-xs font-normal text-muted-foreground">Professor</Label>
-              <Select value={entry.id} onValueChange={(v) => updateEntry(entry._id, "id", v)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {options.map((o) => (
-                    <SelectItem key={o.id} value={o.id}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div key={entry._id} className="space-y-2 rounded-lg border p-3">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="w-40 space-y-1.5">
+                <Label className="text-xs font-normal text-muted-foreground">Professor</Label>
+                <Select value={entry.id} onValueChange={(v) => updateEntry(entry._id, "id", v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <div className="flex gap-2 pt-1">
+              <div className="flex gap-1.5">
                 <Button
                   type="button"
                   variant={mode === "HOURLY" ? "default" : "outline"}
@@ -246,10 +248,8 @@ export function TeacherAssignmentEditor({
               </div>
 
               {mode === "HOURLY" && (
-                <>
-                  <Label className="text-xs font-normal text-muted-foreground">
-                    Valor pago ao professor (R$/hora)
-                  </Label>
+                <div className="w-24 space-y-1.5">
+                  <Label className="text-xs font-normal text-muted-foreground">R$/hora</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -257,89 +257,83 @@ export function TeacherAssignmentEditor({
                     value={entry.rate ?? 0}
                     onChange={(e) => updateRate(entry._id, e.target.value)}
                   />
-                </>
+                </div>
               )}
 
               {mode === "MONTHLY" && (
-                <>
-                  <Label className="text-xs font-normal text-muted-foreground">
-                    Valor mensal fixo pago ao professor (R$)
-                  </Label>
-                  <div className="flex items-center gap-3">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      className="w-32"
-                      value={entry.monthlyAmount ?? 0}
-                      onChange={(e) => updateMonthlyAmount(entry._id, e.target.value)}
-                    />
-                    <span className="text-sm text-muted-foreground">
-                      {(() => {
-                        const value = perAula(entry.monthlyAmount ?? 0, lessonsPerMonth);
-                        return value === null
-                          ? "Defina Aulas/mês para calcular o valor por aula"
-                          : `≈ ${formatCurrency(value)} por aula`;
-                      })()}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    O professor recebe este valor cheio todo mês, independente da quantidade de aulas
-                    dadas.
-                  </p>
-                </>
+                <div className="w-24 space-y-1.5">
+                  <Label className="text-xs font-normal text-muted-foreground">R$/mês</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    value={entry.monthlyAmount ?? 0}
+                    onChange={(e) => updateMonthlyAmount(entry._id, e.target.value)}
+                  />
+                </div>
               )}
 
               {mode === "PERCENTAGE" && (
-                <>
-                  <Label className="text-xs font-normal text-muted-foreground">
-                    Percentual do valor pago pelo aluno (%)
-                  </Label>
-                  <div className="flex items-center gap-3">
-                    <Input
-                      type="number"
-                      step="0.1"
-                      min={0}
-                      max={100}
-                      className="w-32"
-                      value={entry.percentage ?? 0}
-                      onChange={(e) => updatePercentage(entry._id, e.target.value)}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    O professor recebe este percentual do valor cobrado do aluno naquele mês
-                    (ver cobranças, na aba Financeiro), independente da quantidade de aulas dadas.
-                  </p>
-                </>
+                <div className="w-20 space-y-1.5">
+                  <Label className="text-xs font-normal text-muted-foreground">%</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min={0}
+                    max={100}
+                    value={entry.percentage ?? 0}
+                    onChange={(e) => updatePercentage(entry._id, e.target.value)}
+                  />
+                </div>
               )}
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-normal text-muted-foreground">Vigência</Label>
-              <div className="flex items-center gap-2">
-                <DateInput
-                  value={entry.from ?? ""}
-                  onChange={(iso) => updateEntry(entry._id, "from", iso)}
-                  aria-label="Vigente desde"
-                />
-                <span className="shrink-0 text-xs text-muted-foreground">até</span>
-                <DateInput
-                  value={entry.until ?? ""}
-                  onChange={(iso) => updateEntry(entry._id, "until", iso)}
-                  placeholder="Atual"
-                  aria-label="Vigente até"
-                />
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-normal text-muted-foreground">Vigência</Label>
+                <div className="flex items-center gap-1.5">
+                  <DateInput
+                    value={entry.from ?? ""}
+                    onChange={(iso) => updateEntry(entry._id, "from", iso)}
+                    aria-label="Vigente desde"
+                    className="h-8"
+                  />
+                  <span className="shrink-0 text-xs text-muted-foreground">até</span>
+                  <DateInput
+                    value={entry.until ?? ""}
+                    onChange={(iso) => updateEntry(entry._id, "until", iso)}
+                    placeholder="Atual"
+                    aria-label="Vigente até"
+                    className="h-8"
+                  />
+                </div>
               </div>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="shrink-0 text-muted-foreground hover:text-destructive"
+                onClick={() => removeEntry(entry._id)}
+                aria-label="Remover professor"
+              >
+                <X className="size-4" />
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="shrink-0 text-muted-foreground hover:text-destructive"
-              onClick={() => removeEntry(entry._id)}
-              aria-label="Remover professor"
-            >
-              <X className="size-4" />
-            </Button>
+
+            {mode === "MONTHLY" && (
+              <p className="text-xs text-muted-foreground">
+                {(() => {
+                  const value = perAula(entry.monthlyAmount ?? 0, lessonsPerMonth);
+                  return value === null
+                    ? "Valor cheio todo mês, independente das aulas dadas."
+                    : `Valor cheio todo mês · ≈ ${formatCurrency(value)} por aula`;
+                })()}
+              </p>
+            )}
+            {mode === "PERCENTAGE" && (
+              <p className="text-xs text-muted-foreground">
+                % do valor cobrado do aluno naquele mês, independente das aulas dadas.
+              </p>
+            )}
           </div>
         );
       })}

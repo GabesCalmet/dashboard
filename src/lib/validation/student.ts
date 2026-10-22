@@ -153,21 +153,14 @@ const groupMemberUpdatesField = z
     }
   });
 
-export const studentFormSchema = z.object({
-  name: z.string().min(2, "Informe o nome completo"),
-  username: usernameField,
-  password: passwordField,
-  // Only meaningful for a "grupo" cadastro — a name for the group itself,
-  // so it (and each participant) can be found later by it.
-  groupName: z.string().optional(),
-  groupMembers: groupMembersField,
-  groupMemberUpdates: groupMemberUpdatesField,
-  // Contact email — optional, not used for login, can repeat across profiles.
-  email: z.string().email("Email inválido").optional().or(z.literal("")),
-  cpf: z.string().optional(),
-  phone: z.string().optional(),
-  birthDate: z.string().optional(),
-  address: z.string().optional(),
+// Everything about a student's actual CLASSES — who teaches them, how
+// they're paid, the weekly schedule, how many/month, the Meet link — lives
+// on its own, separate from the rest of the cadastro (see
+// studentFormSchema below). Submitted from the "Adicionar aula" dialog on
+// the Histórico de aulas tab, via updateStudentClassConfig, instead of the
+// main "Editar aluno" form — a brand-new student has none of this set
+// until an admin configures it there for the first time.
+export const studentClassConfigSchema = z.object({
   meetLink: z.string().url("Link inválido").optional().or(z.literal("")),
   teacherId: z.string().optional(),
   teacherHistory: teacherHistoryField,
@@ -184,10 +177,6 @@ export const studentFormSchema = z.object({
   // Percentage (0-100) of monthlyValue paid to the teacher each month —
   // only used when teacherPayMode is PERCENTAGE.
   teacherPercentage: z.coerce.number().min(0).max(100, "Valor inválido").default(0),
-  courseId: z.string().optional(),
-  courseHistory: selectHistoryField,
-  planId: z.string().optional(),
-  planHistory: selectHistoryField,
   // Flat number of classes this student is actually contracted for per
   // month (e.g. 8 for "2x por semana") — admin-entered, independent of how
   // many weekdays a given calendar month happens to have. Mirrors whichever
@@ -229,6 +218,29 @@ export const studentFormSchema = z.object({
         return [];
       }
     }),
+});
+
+export type StudentClassConfigValues = z.infer<typeof studentClassConfigSchema>;
+
+export const studentFormSchema = z.object({
+  name: z.string().min(2, "Informe o nome completo"),
+  username: usernameField,
+  password: passwordField,
+  // Only meaningful for a "grupo" cadastro — a name for the group itself,
+  // so it (and each participant) can be found later by it.
+  groupName: z.string().optional(),
+  groupMembers: groupMembersField,
+  groupMemberUpdates: groupMemberUpdatesField,
+  // Contact email — optional, not used for login, can repeat across profiles.
+  email: z.string().email("Email inválido").optional().or(z.literal("")),
+  cpf: z.string().optional(),
+  phone: z.string().optional(),
+  birthDate: z.string().optional(),
+  address: z.string().optional(),
+  courseId: z.string().optional(),
+  courseHistory: selectHistoryField,
+  planId: z.string().optional(),
+  planHistory: selectHistoryField,
   level: z.enum(["A1", "A2", "B1", "B2", "C1", "C2"]),
   startDate: z.string().optional(),
   // No longer drives actual billing (see StudentCharge, which has its own

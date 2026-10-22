@@ -26,6 +26,7 @@ import { LessonHistoryTable } from "@/components/students/lesson-history-table";
 import { StudentPaymentsTable, type PaymentHistoryRow } from "@/components/students/student-payments-table";
 import { StudentChargesTable, type StudentChargeRow } from "@/components/students/student-charges-table";
 import { StudentFormDialog } from "@/components/students/student-form-dialog";
+import { StudentClassConfigCard } from "@/components/students/student-class-config-card";
 import type { ScheduleEntry } from "@/components/students/lesson-schedule-editor";
 import type { ValueHistoryEntry } from "@/components/students/monthly-value-history-editor";
 import type { SelectHistoryEntry } from "@/components/students/select-history-editor";
@@ -76,8 +77,15 @@ export function StudentDetailView({
     showFinancial: boolean;
     showAudit: boolean;
     // Lets status/reagendamento/resumo be changed directly from this page
-    // (admin), instead of only from the teacher's own Relatórios/Agenda.
+    // (admin or the lesson's own teacher), instead of only from the
+    // teacher's own Relatórios/Agenda.
     canEditLessons?: boolean;
+    // Admin-only, strictly narrower than canEditLessons above — turns on
+    // "Adicionar aula" (teacher/schedule/aulas-mês/link) and the Professor/
+    // Data/Duração editing on the lesson table. A teacher editing their own
+    // lesson's status should never get these: it would let them reassign
+    // who gets paid for a class or rewrite its date/duration.
+    canEditLessonDetails?: boolean;
     // Teachers only need the lesson history day-to-day, not cadastro data
     // (CPF, address, billing info) — defaults to shown for admin/coordinator.
     showOverview?: boolean;
@@ -270,7 +278,6 @@ export function StudentDetailView({
           <div className="flex items-center gap-2">
             {permissions.canEdit && editOptions && (
               <StudentFormDialog
-                teachers={editOptions.teachers}
                 courses={editOptions.courses}
                 plans={editOptions.plans}
                 student={{
@@ -291,20 +298,10 @@ export function StudentDetailView({
                   phone: student.user.phone,
                   birthDate: student.birthDate?.toISOString().slice(0, 10),
                   address: student.address,
-                  meetLink: student.meetLink,
-                  teacherId: student.teacherId,
-                  teacherHistory: parseTeacherHistory(student.teacherHistory),
-                  teacherPayRate: Number(student.teacherPayRate),
-                  teacherPayMode: student.teacherPayMode,
-                  teacherMonthlyAmount: Number(student.teacherMonthlyAmount),
-                  teacherPercentage: Number(student.teacherPercentage),
                   courseId: student.courseId,
                   courseHistory: parseSelectHistory(student.courseHistory),
                   planId: student.planId,
                   planHistory: parseSelectHistory(student.planHistory),
-                  lessonsPerMonth: student.lessonsPerMonth,
-                  lessonsPerMonthHistory: parseValueHistory(student.lessonsPerMonthHistory),
-                  lessonSchedule: parseLessonSchedule(student.lessonSchedule),
                   level: student.level,
                   startDate: student.startDate.toISOString().slice(0, 10),
                   billingStartDate: student.billingStartDate?.toISOString().slice(0, 10),
@@ -433,10 +430,30 @@ export function StudentDetailView({
             )}
 
             <TabsContent value="lessons" className="mt-4">
+              {editOptions && (
+                <StudentClassConfigCard
+                  studentId={student.id}
+                  teachers={editOptions.teachers}
+                  meetLink={student.meetLink}
+                  teacherId={student.teacherId}
+                  teacherHistory={parseTeacherHistory(student.teacherHistory)}
+                  teacherPayRate={Number(student.teacherPayRate)}
+                  teacherPayMode={student.teacherPayMode}
+                  teacherMonthlyAmount={Number(student.teacherMonthlyAmount)}
+                  teacherPercentage={Number(student.teacherPercentage)}
+                  lessonsPerMonth={student.lessonsPerMonth}
+                  lessonsPerMonthHistory={parseValueHistory(student.lessonsPerMonthHistory)}
+                  lessonSchedule={parseLessonSchedule(student.lessonSchedule)}
+                  editable={permissions.canEdit}
+                />
+              )}
               <LessonHistoryTable
                 lessons={student.lessons}
                 editable={permissions.canEditLessons}
                 canDelete={permissions.canDelete}
+                teacherOptions={
+                  permissions.canEditLessonDetails && editOptions ? editOptions.teachers : undefined
+                }
               />
             </TabsContent>
 

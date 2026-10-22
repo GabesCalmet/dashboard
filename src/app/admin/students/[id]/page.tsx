@@ -58,6 +58,7 @@ export default async function AdminStudentDetailPage({
         showFinancial: true,
         showAudit: true,
         canEditLessons: true,
+        canEditLessonDetails: true,
       }}
       editOptions={{
         teachers: teachers.map((t) => ({ id: t.id, label: t.user.name })),

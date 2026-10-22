@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireRole, requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -261,6 +262,86 @@ export async function updateLessonObservations(lessonId: string, values: { obser
   revalidatePath(`/coordinator/students/${lesson.studentId}`);
   revalidatePath(`/teacher/students/${lesson.studentId}`);
   revalidatePath("/student/history");
+}
+
+// Reassigns which teacher a single lesson is attributed to — admin-only,
+// since this directly changes who gets paid for it (payroll groups real
+// lessons by their own teacherId, not by the student's cadastro — see
+// resolveTeacherAssignment/getTeacherPayrollDetail in queries/teachers.ts).
+// Exists for the case where a lesson was generated/reported under the
+// "wrong" teacher (a substitute, a reassignment the cadastro's own history
+// doesn't cleanly cover) — this fixes that one row directly instead of
+// fighting the cadastro's teacherHistory resolution for it.
+export async function updateLessonTeacher(lessonId: string, teacherId: string) {
+  const actor = await requireRole("ADMIN");
+  const lesson = await prisma.lesson.findUniqueOrThrow({ where: { id: lessonId } });
+  const teacher = await prisma.teacherProfile.findUniqueOrThrow({ where: { id: teacherId } });
+
+  await prisma.lesson.update({ where: { id: lessonId }, data: { teacherId: teacher.id } });
+
+  await recordAudit({
+    entityType: "Lesson",
+    entityId: lessonId,
+    action: "UPDATE",
+    actor,
+    changes: { teacherId: { from: lesson.teacherId, to: teacher.id } },
+  });
+
+  revalidateReportPaths(lesson.studentId);
+  revalidatePath("/admin/financial/gastos/professores");
+  revalidatePath("/admin/financial/ferias");
+}
+
+// Moves a lesson's own date/time — admin-only, for correcting a
+// mis-entered row directly instead of deleting and recreating it (which
+// would lose any report/status already on it).
+export async function updateLessonDateTime(lessonId: string, values: { date: string; time: string }) {
+  const actor = await requireRole("ADMIN");
+  const parsed = z.object({ date: z.string().min(1), time: z.string().min(1) }).safeParse(values);
+  if (!parsed.success) {
+    throw new Error("Data/horário inválidos.");
+  }
+  const lesson = await prisma.lesson.findUniqueOrThrow({ where: { id: lessonId } });
+  const scheduledAt = brazilDateTime(parsed.data.date, parsed.data.time);
+
+  await prisma.lesson.update({ where: { id: lessonId }, data: { scheduledAt } });
+
+  await recordAudit({
+    entityType: "Lesson",
+    entityId: lessonId,
+    action: "UPDATE",
+    actor,
+    changes: { scheduledAt: scheduledAt.toISOString() },
+  });
+
+  revalidateReportPaths(lesson.studentId);
+}
+
+// Changes a lesson's own duration directly — admin-only, same correction
+// use-case as updateLessonDateTime. Feeds straight into payroll (hours ×
+// rate) and the student's own hour totals, so this is a real figure to
+// change carefully, not cosmetic.
+export async function updateLessonDuration(lessonId: string, durationMin: number) {
+  const actor = await requireRole("ADMIN");
+  const parsed = z.coerce.number().int().min(1).max(600).safeParse(durationMin);
+  if (!parsed.success) {
+    throw new Error("Duração inválida.");
+  }
+  const lesson = await prisma.lesson.findUniqueOrThrow({ where: { id: lessonId } });
+
+  await prisma.lesson.update({ where: { id: lessonId }, data: { durationMin: parsed.data } });
+
+  await recordAudit({
+    entityType: "Lesson",
+    entityId: lessonId,
+    action: "UPDATE",
+    actor,
+    changes: { durationMin: { from: lesson.durationMin, to: parsed.data } },
+  });
+
+  revalidateReportPaths(lesson.studentId);
+  revalidatePath("/admin/financial/gastos/professores");
+  revalidatePath("/admin/financial/ferias");
 }
 
 // Past classes' Resumo/Observações for the same student+teacher, for the

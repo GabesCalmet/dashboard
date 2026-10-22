@@ -25,20 +25,10 @@ import {
 } from "@/components/ui/select";
 import { createStudent, updateStudent } from "@/server/actions/students";
 import { useActionToast } from "@/hooks/use-action-toast";
-import { LessonScheduleEditor, type ScheduleEntry } from "@/components/students/lesson-schedule-editor";
-import {
-  MonthlyValueHistoryEditor,
-  type ValueHistoryEntry,
-} from "@/components/students/monthly-value-history-editor";
 import {
   SelectHistoryEditor,
   type SelectHistoryEntry,
 } from "@/components/students/select-history-editor";
-import {
-  TeacherAssignmentEditor,
-  type TeacherHistoryEntry,
-  type TeacherPayMode,
-} from "@/components/students/teacher-assignment-editor";
 import { GroupMembersEditor } from "@/components/students/group-members-editor";
 import {
   GroupMemberFieldsEditor,
@@ -63,20 +53,10 @@ type StudentDefaults = {
   phone?: string | null;
   birthDate?: string;
   address?: string | null;
-  meetLink?: string | null;
-  teacherId?: string | null;
-  teacherHistory?: TeacherHistoryEntry[];
-  teacherPayRate?: number;
-  teacherPayMode?: TeacherPayMode;
-  teacherMonthlyAmount?: number;
-  teacherPercentage?: number;
   courseId?: string | null;
   courseHistory?: SelectHistoryEntry[];
   planId?: string | null;
   planHistory?: SelectHistoryEntry[];
-  lessonsPerMonth?: number;
-  lessonsPerMonthHistory?: ValueHistoryEntry[];
-  lessonSchedule?: ScheduleEntry[];
   level: CourseLevel;
   startDate?: string;
   billingStartDate?: string;
@@ -87,12 +67,10 @@ type StudentDefaults = {
 };
 
 export function StudentFormDialog({
-  teachers,
   courses,
   plans,
   student,
 }: {
-  teachers: Option[];
   courses: Option[];
   plans: Option[];
   student?: StudentDefaults;
@@ -104,10 +82,6 @@ export function StudentFormDialog({
   const [studentType, setStudentType] = useState<"individual" | "grupo">(
     student?.isGroup ? "grupo" : "individual"
   );
-  // Lifted out of the Aulas/mês editor purely so TeacherAssignmentEditor
-  // can show a live "≈ R$/aula" preview beside the Mensal fixo input — not
-  // otherwise used here, since each editor still submits its own fields.
-  const [lessonsPerMonth, setLessonsPerMonth] = useState(student?.lessonsPerMonth ?? 4);
   useActionToast(state, () => setOpen(false));
 
   return (
@@ -179,6 +153,7 @@ export function StudentFormDialog({
               <Input id="name" name="name" defaultValue={student?.name} required />
             </div>
 
+
             {isEdit ? (
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="username">Nome de usuário (login)</Label>
@@ -231,25 +206,6 @@ export function StudentFormDialog({
               <Label htmlFor="birthDate">Data de nascimento</Label>
               <DateInput id="birthDate" name="birthDate" defaultValue={student?.birthDate} />
             </div>
-
-            {/* Independent from billing on purpose — this tracks its own
-                vigência (e.g. 8 aulas/mês split across two days a week,
-                later consolidated into 4/mês on one day), and only the
-                monthly PDF report resolves it historically; the rest of
-                the app (dashboard remaining count, teacher load) only
-                ever cares about today's value, read from the same
-                lessonsPerMonth mirror either way. */}
-            <MonthlyValueHistoryEditor
-              label="Aulas contratadas por mês"
-              amountLabel="Aulas/mês"
-              amountFieldName="lessonsPerMonth"
-              historyFieldName="lessonsPerMonthHistory"
-              defaultAmount={student?.lessonsPerMonth ?? 4}
-              defaultHistory={student?.lessonsPerMonthHistory ?? []}
-              step="1"
-              min={0}
-              onChange={(amount) => setLessonsPerMonth(amount)}
-            />
           </div>
 
           {studentType === "grupo" && !student?.isGroup && <GroupMembersEditor />}
@@ -285,34 +241,6 @@ export function StudentFormDialog({
             <Input id="address" name="address" defaultValue={student?.address ?? ""} />
           </div>
 
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="meetLink">Link do Google Meet (opcional)</Label>
-            <Input
-              id="meetLink"
-              name="meetLink"
-              type="url"
-              placeholder="https://meet.google.com/..."
-              defaultValue={student?.meetLink ?? ""}
-            />
-          </div>
-
-          <TeacherAssignmentEditor
-            valueFieldName="teacherId"
-            historyFieldName="teacherHistory"
-            rateFieldName="teacherPayRate"
-            modeFieldName="teacherPayMode"
-            monthlyAmountFieldName="teacherMonthlyAmount"
-            percentageFieldName="teacherPercentage"
-            options={teachers}
-            defaultValue={student?.teacherId}
-            defaultHistory={student?.teacherHistory ?? []}
-            defaultRate={student?.teacherPayRate ?? 0}
-            defaultMode={student?.teacherPayMode ?? "HOURLY"}
-            defaultMonthlyAmount={student?.teacherMonthlyAmount ?? 0}
-            defaultPercentage={student?.teacherPercentage ?? 0}
-            lessonsPerMonth={lessonsPerMonth}
-          />
-
           <SelectHistoryEditor
             label="Curso"
             valueFieldName="courseId"
@@ -330,11 +258,6 @@ export function StudentFormDialog({
             defaultValue={student?.planId}
             defaultHistory={student?.planHistory ?? []}
           />
-
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Dia(s) e horário(s) da(s) aula(s)</Label>
-            <LessonScheduleEditor name="lessonSchedule" defaultValue={student?.lessonSchedule ?? []} />
-          </div>
 
           <div className="space-y-1.5">
             <Label>Nível</Label>

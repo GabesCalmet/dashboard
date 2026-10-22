@@ -12,7 +12,12 @@ import {
 } from "@/server/accounts";
 import { recordAudit } from "@/server/audit";
 import { brazilToday } from "@/lib/timezone";
-import { studentFormSchema, usernameField, passwordField } from "@/lib/validation/student";
+import {
+  studentFormSchema,
+  studentClassConfigSchema,
+  usernameField,
+  passwordField,
+} from "@/lib/validation/student";
 import { levelOrder } from "@/lib/labels";
 import { syncRecurringLessons } from "@/server/lessons/recurring";
 
@@ -48,13 +53,6 @@ export async function createStudent(
         cpf: data.cpf || undefined,
         birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
         address: data.address,
-        meetLink: data.meetLink || undefined,
-        teacherId: data.teacherId || undefined,
-        teacherHistory: data.teacherHistory,
-        teacherPayRate: data.teacherPayRate,
-        teacherPayMode: data.teacherPayMode,
-        teacherMonthlyAmount: data.teacherMonthlyAmount,
-        teacherPercentage: data.teacherPercentage,
         courseId: data.courseId || undefined,
         courseHistory: data.courseHistory,
         planId: data.planId || undefined,
@@ -63,11 +61,12 @@ export async function createStudent(
         // tab) — monthlyValue has no DB default (NOT NULL), so it still
         // needs an explicit value here; dueDay/bankAccount/thirdParty* all
         // have their own DB defaults (or are nullable) and are simply
-        // left unset.
+        // left unset. Same for meetLink/teacher*/lessonsPerMonth*/
+        // lessonSchedule — all left unset (DB defaults: no teacher, 4
+        // lessons/month, empty schedule) since class setup now happens
+        // separately via "Adicionar aula" on the Histórico de aulas tab,
+        // once this student actually exists — see updateStudentClassConfig.
         monthlyValue: 0,
-        lessonsPerMonth: data.lessonsPerMonth,
-        lessonsPerMonthHistory: data.lessonsPerMonthHistory,
-        lessonSchedule: data.lessonSchedule,
         level: data.level,
         startDate: data.startDate ? new Date(data.startDate) : brazilToday(),
         billingStartDate: data.billingStartDate ? new Date(data.billingStartDate) : undefined,
@@ -105,12 +104,8 @@ export async function createStudent(
       });
     }
 
-    await syncRecurringLessons(student.id);
-
     revalidatePath("/admin/students");
     revalidatePath("/coordinator/students");
-    revalidatePath("/admin/agenda");
-    revalidatePath("/coordinator/agenda");
     return { success: "Aluno cadastrado com sucesso." };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Erro ao cadastrar aluno." };
@@ -172,13 +167,6 @@ export async function updateStudent(
         cpf: data.cpf || undefined,
         birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
         address: data.address,
-        meetLink: data.meetLink || null,
-        teacherId: data.teacherId || null,
-        teacherHistory: data.teacherHistory,
-        teacherPayRate: data.teacherPayRate,
-        teacherPayMode: data.teacherPayMode,
-        teacherMonthlyAmount: data.teacherMonthlyAmount,
-        teacherPercentage: data.teacherPercentage,
         courseId: data.courseId || null,
         courseHistory: data.courseHistory,
         planId: data.planId || null,
@@ -187,10 +175,11 @@ export async function updateStudent(
         // longer part of this form at all — deliberately omitted here so
         // whatever's already in those columns stays untouched, exactly
         // like monthlyValueHistory/dueDayHistory/bankAccountHistory
-        // before it. See StudentCharge/the Financeiro tab instead.
-        lessonsPerMonth: data.lessonsPerMonth,
-        lessonsPerMonthHistory: data.lessonsPerMonthHistory,
-        lessonSchedule: data.lessonSchedule,
+        // before it. See StudentCharge/the Financeiro tab instead. Same
+        // for meetLink/teacher*/lessonsPerMonth*/lessonSchedule — moved
+        // out to "Adicionar aula" on the Histórico de aulas tab, so this
+        // form no longer touches them either — see
+        // updateStudentClassConfig.
         level: data.level,
         startDate: data.startDate ? new Date(data.startDate) : undefined,
         billingStartDate: data.billingStartDate ? new Date(data.billingStartDate) : null,
@@ -237,20 +226,73 @@ export async function updateStudent(
     },
   });
 
-  await syncRecurringLessons(studentId);
-
   revalidatePath("/admin/students");
   revalidatePath("/coordinator/students");
   revalidatePath(`/admin/students/${studentId}`);
   revalidatePath(`/coordinator/students/${studentId}`);
-  revalidatePath("/admin/agenda");
-  revalidatePath("/coordinator/agenda");
-  revalidatePath("/teacher/agenda");
 
   if (memberError) {
     return { error: `Aluno atualizado, mas houve um erro ao adicionar participante: ${memberError}` };
   }
   return { success: "Aluno atualizado." };
+}
+
+// Updates everything about a student's actual CLASSES — teacher
+// assignment/pay, weekly schedule, lessons/month, Meet link — separate from
+// the rest of the cadastro (see updateStudent above), submitted from the
+// "Adicionar aula" dialog on the Histórico de aulas tab instead of "Editar
+// aluno". Regenerates recurring lessons afterward since a teacher or
+// schedule change here is exactly what that depends on.
+export async function updateStudentClassConfig(
+  studentId: string,
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = studentClassConfigSchema.safeParse(raw);
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  const data = parsed.data;
+
+  await prisma.studentProfile.update({
+    where: { id: studentId },
+    data: {
+      meetLink: data.meetLink || null,
+      teacherId: data.teacherId || null,
+      teacherHistory: data.teacherHistory,
+      teacherPayRate: data.teacherPayRate,
+      teacherPayMode: data.teacherPayMode,
+      teacherMonthlyAmount: data.teacherMonthlyAmount,
+      teacherPercentage: data.teacherPercentage,
+      lessonsPerMonth: data.lessonsPerMonth,
+      lessonsPerMonthHistory: data.lessonsPerMonthHistory,
+      lessonSchedule: data.lessonSchedule,
+    },
+  });
+
+  await recordAudit({
+    entityType: "StudentProfile",
+    entityId: studentId,
+    action: "UPDATE",
+    actor,
+    changes: { classConfig: true },
+  });
+
+  await syncRecurringLessons(studentId);
+
+  revalidatePath(`/admin/students/${studentId}`);
+  revalidatePath(`/coordinator/students/${studentId}`);
+  revalidatePath(`/teacher/students/${studentId}`);
+  revalidatePath("/admin/agenda");
+  revalidatePath("/coordinator/agenda");
+  revalidatePath("/teacher/agenda");
+  revalidatePath("/admin/financial/gastos/professores");
+  revalidatePath("/admin/financial/ferias");
+
+  return { success: "Configuração de aulas atualizada." };
 }
 
 // Manually re-runs recurring lesson generation for a student — lets an

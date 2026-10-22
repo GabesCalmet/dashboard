@@ -29,6 +29,9 @@ import { MakeupOutcomeSelect } from "@/components/lessons/makeup-outcome-select"
 import { MakeupRescheduleButton } from "@/components/lessons/makeup-reschedule-button";
 import { LessonSummaryEditor } from "@/components/lessons/lesson-summary-editor";
 import { LessonObservationsEditor } from "@/components/lessons/lesson-observations-editor";
+import { LessonTeacherSelect } from "@/components/lessons/lesson-teacher-select";
+import { LessonDateTimeEditor } from "@/components/lessons/lesson-datetime-editor";
+import { LessonDurationEditor } from "@/components/lessons/lesson-duration-editor";
 import { DeleteLessonButton } from "@/components/lessons/delete-lesson-button";
 import type { Lesson } from "@prisma/client";
 
@@ -42,20 +45,23 @@ function monthValueOf(d: Date) {
 
 export function LessonHistoryTable({
   lessons,
-  showTeacher = false,
-  teacherNames = {},
   editable = false,
   canDelete = false,
+  teacherOptions,
 }: {
   lessons: HistoryLesson[];
-  showTeacher?: boolean;
-  teacherNames?: Record<string, string>;
-  // Lets an admin change status/reagendamento/resumo directly from the
-  // student's page, not just from the teacher's own Relatórios/Agenda.
+  // Lets an admin or the lesson's own teacher change status/reagendamento/
+  // resumo/observações directly from this table.
   editable?: boolean;
   // Admin-only: lets a mistaken or test lesson row (e.g. an orphaned
   // reposição left behind by a reset reagendamento) be removed outright.
   canDelete?: boolean;
+  // Admin-only — presence of this (non-empty) list is what turns on the
+  // Professor column plus editable Data/Duração, separate from `editable`
+  // above since a teacher editing their own lesson's status should never
+  // get to reassign which teacher gets paid for it or rewrite its
+  // date/duration. Passed only from the admin student page.
+  teacherOptions?: { id: string; label: string }[];
 }) {
   const [monthValue, setMonthValue] = useState(() => monthValueOf(new Date()));
   const [year, month] = monthValue.split("-").map(Number);
@@ -97,9 +103,9 @@ export function LessonHistoryTable({
             <TableRow>
               <TableHead>Data</TableHead>
               <TableHead>Dia</TableHead>
-              {showTeacher && <TableHead>Professor</TableHead>}
               <TableHead>Duração</TableHead>
               <TableHead>Status</TableHead>
+              {teacherOptions && <TableHead>Professor</TableHead>}
               <TableHead>Reagendamento</TableHead>
               <TableHead>Resumo</TableHead>
               <TableHead>Observações</TableHead>
@@ -108,12 +114,23 @@ export function LessonHistoryTable({
           <TableBody>
             {filteredLessons.map((l) => (
               <TableRow key={l.id}>
-                <TableCell>{formatDateTime(l.scheduledAt)}</TableCell>
+                <TableCell>
+                  {teacherOptions ? (
+                    <LessonDateTimeEditor lessonId={l.id} scheduledAt={l.scheduledAt} />
+                  ) : (
+                    formatDateTime(l.scheduledAt)
+                  )}
+                </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {formatWeekday(l.scheduledAt)}
                 </TableCell>
-                {showTeacher && <TableCell>{teacherNames[l.teacherId] ?? "—"}</TableCell>}
-                <TableCell>{l.durationMin} min</TableCell>
+                <TableCell>
+                  {teacherOptions ? (
+                    <LessonDurationEditor lessonId={l.id} durationMin={l.durationMin} />
+                  ) : (
+                    `${l.durationMin} min`
+                  )}
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
                     {l.isMakeup ? (
@@ -134,6 +151,11 @@ export function LessonHistoryTable({
                     {canDelete && <DeleteLessonButton lessonId={l.id} />}
                   </div>
                 </TableCell>
+                {teacherOptions && (
+                  <TableCell>
+                    <LessonTeacherSelect lessonId={l.id} teacherId={l.teacherId} teachers={teacherOptions} />
+                  </TableCell>
+                )}
                 <TableCell>
                   {l.isMakeup ? (
                     l.status === "MAKEUP" ? (
@@ -193,7 +215,7 @@ export function LessonHistoryTable({
             {filteredLessons.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={showTeacher ? 8 : 7}
+                  colSpan={teacherOptions ? 8 : 7}
                   className="py-10 text-center text-muted-foreground"
                 >
                   Nenhuma aula registrada neste mês.

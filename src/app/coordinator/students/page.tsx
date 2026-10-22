@@ -1,17 +1,11 @@
 import { PageHeader } from "@/components/shared/page-header";
 import { StudentsTable } from "@/components/students/students-table";
 import { StudentFormDialog } from "@/components/students/student-form-dialog";
-import {
-  listStudents,
-  listActiveTeachersForSelect,
-  listCoursesForSelect,
-  listPlansForSelect,
-} from "@/server/queries/students";
+import { listStudents, listCoursesForSelect, listPlansForSelect } from "@/server/queries/students";
 
 export default async function CoordinatorStudentsPage() {
-  const [students, teachers, courses, plans] = await Promise.all([
+  const [students, courses, plans] = await Promise.all([
     listStudents(),
-    listActiveTeachersForSelect(),
     listCoursesForSelect(),
     listPlansForSelect(),
   ]);
@@ -39,7 +33,6 @@ export default async function CoordinatorStudentsPage() {
         description={`${students.length} alunos cadastrados`}
         actions={
           <StudentFormDialog
-            teachers={teachers.map((t) => ({ id: t.id, label: t.user.name }))}
             courses={courses.map((c) => ({ id: c.id, label: c.name }))}
             plans={plans.map((p) => ({ id: p.id, label: p.name }))}
           />
