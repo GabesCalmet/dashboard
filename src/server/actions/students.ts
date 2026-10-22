@@ -11,7 +11,6 @@ import {
   setUsernameAccountUsername,
 } from "@/server/accounts";
 import { recordAudit } from "@/server/audit";
-import { brazilToday } from "@/lib/timezone";
 import {
   studentFormSchema,
   studentClassConfigSchema,
@@ -68,8 +67,10 @@ export async function createStudent(
         // once this student actually exists — see updateStudentClassConfig.
         monthlyValue: 0,
         level: data.level,
-        startDate: data.startDate ? new Date(data.startDate) : brazilToday(),
-        billingStartDate: data.billingStartDate ? new Date(data.billingStartDate) : undefined,
+        // startDate/billingStartDate are no longer admin-entered at all —
+        // startDate just keeps its own DB default (today), and
+        // billingStartDate stays null. See the comment on
+        // studentFormSchema for where these dates actually live now.
         endDate: data.endDate ? new Date(data.endDate) : undefined,
         objective: data.objective,
         notes: data.notes,
@@ -179,10 +180,9 @@ export async function updateStudent(
         // for meetLink/teacher*/lessonsPerMonth*/lessonSchedule — moved
         // out to "Adicionar aula" on the Histórico de aulas tab, so this
         // form no longer touches them either — see
-        // updateStudentClassConfig.
+        // updateStudentClassConfig. And for startDate/billingStartDate —
+        // no longer admin-editable at all, so left untouched too.
         level: data.level,
-        startDate: data.startDate ? new Date(data.startDate) : undefined,
-        billingStartDate: data.billingStartDate ? new Date(data.billingStartDate) : null,
         endDate: data.endDate ? new Date(data.endDate) : null,
         objective: data.objective,
         notes: data.notes,

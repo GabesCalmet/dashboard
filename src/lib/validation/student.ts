@@ -242,12 +242,18 @@ export const studentFormSchema = z.object({
   planId: z.string().optional(),
   planHistory: selectHistoryField,
   level: z.enum(["A1", "A2", "B1", "B2", "C1", "C2"]),
-  startDate: z.string().optional(),
-  // No longer drives actual billing (see StudentCharge, which has its own
-  // independent start date) — still used as the floor for the lesson-
-  // cycle math on the student's own page ("Total de aulas contratadas"),
-  // separate from startDate (when their classes start).
-  billingStartDate: z.string().min(1, "Informe a data de início da cobrança"),
+  // No "Data de início das aulas"/"Início da cobrança" fields anymore —
+  // those dates now live where they're actually meaningful: a schedule
+  // entry's own vigência (Adicionar aula) for when classes start/generate
+  // from (see recurring.ts), teacherHistory/lessonSchedule's own earliest
+  // "from" for the payroll enrollment floor (see resolveTeacherAssignment
+  // in queries/teachers.ts), and each StudentCharge's own date for when
+  // billing starts. The underlying StudentProfile.startDate/
+  // billingStartDate columns still exist and still back one last-resort
+  // fallback (the "Total de aulas contratadas" cycle math on the student
+  // page, when no history entry anywhere has an explicit "from" to use
+  // instead) but are no longer admin-editable; startDate just keeps its
+  // DB default (creation day) going forward.
   endDate: z.string().optional(),
   objective: z.string().optional(),
   notes: z.string().optional(),

@@ -58,8 +58,6 @@ type StudentDefaults = {
   planId?: string | null;
   planHistory?: SelectHistoryEntry[];
   level: CourseLevel;
-  startDate?: string;
-  billingStartDate?: string;
   endDate?: string;
   objective?: string | null;
   notes?: string | null;
@@ -213,24 +211,6 @@ export function StudentFormDialog({
             <GroupMemberFieldsEditor members={student.groupMembers ?? []} />
           )}
 
-          <div className="space-y-1.5">
-            <Label htmlFor="startDate">Data de início das aulas</Label>
-            <DateInput id="startDate" name="startDate" defaultValue={student?.startDate} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="billingStartDate">Início da cobrança</Label>
-            <DateInput
-              id="billingStartDate"
-              name="billingStartDate"
-              defaultValue={student?.billingStartDate ?? student?.startDate}
-              required
-            />
-            <p className="text-xs text-muted-foreground">
-              Usada para contar os ciclos de aulas contratadas (&quot;Total de aulas
-              contratadas&quot;) — informe o dia exato em que a cobrança começou/começa, mesmo
-              que seja diferente do início das aulas. As cobranças em si ficam em Financeiro.
-            </p>
-          </div>
           <div className="space-y-1.5">
             <Label htmlFor="endDate">Data de término (opcional)</Label>
             <DateInput id="endDate" name="endDate" defaultValue={student?.endDate} />

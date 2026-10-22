@@ -73,10 +73,11 @@ function resolveTeacherId(defaultTeacherId: string, history: SelectHistoryEntry[
   return match ? match.id : defaultTeacherId;
 }
 
-// Regenerates a student's recurring lessons (from their enrollment start
-// date through the last class on/before the 15th of the month closing out
-// the next ~HORIZON_WEEKS, or their course end date if that comes sooner)
-// to match their current weekly schedule.
+// Regenerates a student's recurring lessons (from each schedule entry's own
+// vigência "from" — or today, for an entry with none — through the last
+// class on/before the 15th of the month closing out the next
+// ~HORIZON_WEEKS, or their course end date if that comes sooner) to match
+// their current weekly schedule.
 //
 // Matches by CALENDAR DATE, not exact instant: if a schedule entry's time
 // changed but a lesson already exists on the same date (whatever its
@@ -142,13 +143,7 @@ export async function syncRecurringLessons(studentId: string) {
   const teacherHistory = parseSelectHistory(student.teacherHistory);
 
   const now = brazilToday();
-  // The earliest day to schedule from is always the enrollment start date —
-  // whether that's in the past (so history gets backfilled up to today) or
-  // the future (nothing generated before the student actually starts).
-  const anchor = student.startDate;
-  const rawHorizonEnd = new Date(
-    Math.max(now.getTime(), anchor.getTime()) + HORIZON_WEEKS * 7 * 24 * 60 * 60 * 1000
-  );
+  const rawHorizonEnd = new Date(now.getTime() + HORIZON_WEEKS * 7 * 24 * 60 * 60 * 1000);
   // Snapped forward to the 15th of whichever month the raw ~12-week horizon
   // lands in (or the next month's 15th, if it already fell past the 15th) —
   // so the visible window always ends on the last class on/before a 15th
@@ -182,17 +177,19 @@ export async function syncRecurringLessons(studentId: string) {
     if (Number.isNaN(hour) || Number.isNaN(minute)) continue;
 
     // An entry's own explicit "from" is always honored as-is, even when
-    // it's earlier than the student's enrollment startDate — the cadastro
-    // is the source of truth, so an entry deliberately backdated (e.g. to
-    // record a real earlier period) isn't silently clamped away. anchor
-    // is only the fallback for an entry with no "from" of its own at all.
+    // it's in the past — the cadastro is the source of truth, so an entry
+    // deliberately backdated (e.g. to record a real earlier period) isn't
+    // silently clamped away. An entry with no "from" of its own at all
+    // just starts generating from today — there's no separate enrollment
+    // date to fall back to anymore; a deliberately earlier/later start
+    // belongs on the entry's own vigência instead.
     const entryFrom = entry.from ? new Date(entry.from) : null;
     // endOfBrazilDay — otherwise a class later that same day in Brazil time
     // (which lands after UTC midnight, post timezone fix) gets excluded by
     // an "until" set to that exact day, as happened for a Saturday 08:00
     // class landing at 11:00 UTC against an "until" of UTC midnight.
     const entryUntil = entry.until ? endOfBrazilDay(new Date(entry.until)) : null;
-    const rangeStart = entryFrom ?? anchor;
+    const rangeStart = entryFrom ?? now;
     const rangeEnd = entryUntil && entryUntil < horizonEnd ? entryUntil : horizonEnd;
     if (rangeStart > rangeEnd) continue;
 

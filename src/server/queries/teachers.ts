@@ -72,6 +72,24 @@ type TeacherAssignment = {
 // student's own active-charge amount for this month (payerName: null;
 // see getOwnChargeAmountsForMonth), pre-resolved by the caller since this
 // function stays synchronous — 0 when there's no active charge that month.
+// The earliest dated "from" across any of the given already-parsed entry
+// lists (teacherHistory, lessonSchedule, ...) — null when nothing in any
+// of them carries an explicit "from" at all. Used as the enrollment floor
+// below, now that there's no single dedicated startDate field to read
+// instead — a student's real start is whatever the earliest thing actually
+// on record about them says it is.
+function earliestFromDate(...lists: { from?: string }[][]): Date | null {
+  let earliest: Date | null = null;
+  for (const list of lists) {
+    for (const e of list) {
+      if (!e.from) continue;
+      const from = new Date(e.from);
+      if (!earliest || from < earliest) earliest = from;
+    }
+  }
+  return earliest;
+}
+
 function resolveTeacherAssignment(
   student: {
     teacherId: string | null;
@@ -80,7 +98,7 @@ function resolveTeacherAssignment(
     teacherPayMode: TeacherPayMode;
     teacherMonthlyAmount: unknown;
     teacherPercentage: unknown;
-    startDate: Date;
+    lessonSchedule: unknown;
   },
   teacherId: string,
   referenceMonth: Date,
@@ -171,15 +189,22 @@ function resolveTeacherAssignment(
   // A student can't have had a teacher assignment before they even
   // enrolled — but only for this "current teacher, nothing explicit on
   // record" fallback. An EXPLICIT history entry (handled above, via
-  // match) is real, dated fact regardless of what startDate currently
-  // says — e.g. a returning student whose startDate was moved to their
-  // most recent restart, but who genuinely has an earlier, separately-
-  // dated teacherHistory entry from before that (confirmed by real
-  // lessons generated back then) must still resolve correctly for that
-  // earlier period, not get silently zeroed out by a startDate that no
-  // longer reflects when they first enrolled.
-  const startOfEnrollmentMonth = new Date(student.startDate.getFullYear(), student.startDate.getMonth(), 1);
-  const enrolledByThisMonth = monthEnd >= startOfEnrollmentMonth;
+  // match) is real, dated fact regardless of this, so it's never gated by
+  // it — e.g. a returning student with an earlier, separately-dated
+  // teacherHistory entry (confirmed by real lessons generated back then)
+  // must still resolve correctly for that earlier period. There's no
+  // dedicated "enrollment date" field anymore, so the floor is whatever
+  // the earliest dated thing on this student's own record says — any
+  // teacherHistory entry's own "from" (any teacher, not just this one —
+  // a student's very first teacher assignment is as good an enrollment
+  // signal as any) or the schedule's own earliest "from". No dated signal
+  // at all means nothing to gate against, so the fallback applies to
+  // every month.
+  const scheduleEntries = parseLessonScheduleEntries(student.lessonSchedule);
+  const earliestKnownFrom = earliestFromDate(entries, scheduleEntries);
+  const enrolledByThisMonth =
+    !earliestKnownFrom ||
+    monthEnd >= new Date(earliestKnownFrom.getFullYear(), earliestKnownFrom.getMonth(), 1);
   if (
     !coveredByAnotherTeacher &&
     !hasHistoryForThisTeacher &&
@@ -358,9 +383,9 @@ const teacherAssignmentSelect = {
   teacherPayMode: true,
   teacherMonthlyAmount: true,
   teacherPercentage: true,
-  startDate: true,
   // Needed to resolve each student's contracted hours (real weekly
-  // schedule occurrences × class length) for previstoContrato below.
+  // schedule occurrences × class length) for previstoContrato below, and
+  // as one of the enrollment-floor signals in resolveTeacherAssignment.
   lessonSchedule: true,
 } as const;
 
