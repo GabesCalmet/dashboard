@@ -165,7 +165,12 @@ export default async function AdminFinancialPage({
                     href={`/admin/financial/gastos/categoria/${c.category.toLowerCase()}?month=${monthQuery}`}
                   />
                 ))}
-                <SummaryRow label="Férias" value={data.feriasMonthlyRealizado} tone="destructive" />
+                <SummaryRow
+                  label="Férias"
+                  value={data.feriasMonthlyRealizado}
+                  tone="destructive"
+                  href={`/admin/financial/ferias?month=${monthQuery}`}
+                />
                 <SummaryRow label="Lucro final" value={lucroFinalRealizado} tone="accent" />
               </div>
             </div>
@@ -197,7 +202,12 @@ export default async function AdminFinancialPage({
                     href={`/admin/financial/gastos/categoria/${c.category.toLowerCase()}?month=${monthQuery}`}
                   />
                 ))}
-                <SummaryRow label="Férias" value={data.feriasMonthlyPrevisto} tone="destructive" />
+                <SummaryRow
+                  label="Férias"
+                  value={data.feriasMonthlyPrevisto}
+                  tone="destructive"
+                  href={`/admin/financial/ferias?month=${monthQuery}`}
+                />
                 <SummaryRow label="Lucro final" value={lucroFinalPrevisto} tone="accent" />
               </div>
             </div>
@@ -211,27 +221,27 @@ export default async function AdminFinancialPage({
           label="Mensal — previsto"
           value={formatCurrency(data.feriasMonthlyPrevisto)}
           icon={PiggyBank}
-          href="/admin/financial/ferias"
+          href={`/admin/financial/ferias?month=${monthQuery}`}
         />
         <StatCard
           label="Mensal — atual"
           value={formatCurrency(data.feriasMonthlyRealizado)}
           icon={PiggyBank}
           accent
-          href="/admin/financial/ferias"
+          href={`/admin/financial/ferias?month=${monthQuery}`}
         />
         <StatCard
           label="Anual — previsto"
           value={formatCurrency(data.feriasAnnualPrevisto)}
           icon={PiggyBank}
-          href="/admin/financial/ferias"
+          href={`/admin/financial/ferias?month=${monthQuery}`}
         />
         <StatCard
           label="Anual — atual"
           value={formatCurrency(data.feriasAnnualRealizado)}
           icon={PiggyBank}
           accent
-          href="/admin/financial/ferias"
+          href={`/admin/financial/ferias?month=${monthQuery}`}
         />
       </div>
 
