@@ -19,8 +19,9 @@ import { BankAccountCard } from "@/components/financial/bank-account-card";
 import { YearlyGrowthChart } from "@/components/financial/yearly-growth-chart";
 import { getFinancialSummary, getBankBalances } from "@/server/queries/financial";
 import { getExpenseCategoryTotals } from "@/server/queries/expenses";
-import { parseMonthParam } from "@/lib/month-param";
+import { parseMonthParam, monthParam } from "@/lib/month-param";
 import { formatCurrency } from "@/lib/labels";
+import { cn } from "@/lib/utils";
 
 export default async function AdminFinancialPage({
   searchParams,
@@ -29,6 +30,7 @@ export default async function AdminFinancialPage({
 }) {
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
+  const monthQuery = monthParam(year, month);
   const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(
     new Date(year, month, 1)
   );
@@ -141,7 +143,12 @@ export default async function AdminFinancialPage({
               </p>
               <div className="space-y-3">
                 <SummaryRow label="Receita recebida" value={data.revenueRealized} tone="accent" />
-                <SummaryRow label="Professores" value={data.teacherPayrollRealizado} tone="destructive" />
+                <SummaryRow
+                  label="Professores"
+                  value={data.teacherPayrollRealizado}
+                  tone="destructive"
+                  href={`/admin/financial/gastos/professores?month=${monthQuery}`}
+                />
                 <SummaryRow label="Parceiros — Joe" value={data.partnerSplit.realizado.joe} tone="strong" />
                 <SummaryRow
                   label="Parceiros — Gabriel"
@@ -150,7 +157,13 @@ export default async function AdminFinancialPage({
                 />
                 <SummaryRow label="Para a escola" value={data.partnerSplit.realizado.school} tone="strong" />
                 {manualCategories.map((c) => (
-                  <SummaryRow key={c.category} label={c.label} value={c.realizado} tone="destructive" />
+                  <SummaryRow
+                    key={c.category}
+                    label={c.label}
+                    value={c.realizado}
+                    tone="destructive"
+                    href={`/admin/financial/gastos/categoria/${c.category.toLowerCase()}?month=${monthQuery}`}
+                  />
                 ))}
                 <SummaryRow label="Férias" value={data.feriasMonthlyRealizado} tone="destructive" />
                 <SummaryRow label="Lucro final" value={lucroFinalRealizado} tone="accent" />
@@ -162,7 +175,12 @@ export default async function AdminFinancialPage({
               </p>
               <div className="space-y-3">
                 <SummaryRow label="Receita prevista" value={data.revenuePrevisto} tone="accent" />
-                <SummaryRow label="Professores" value={data.teacherPayrollPrevisto} tone="destructive" />
+                <SummaryRow
+                  label="Professores"
+                  value={data.teacherPayrollPrevisto}
+                  tone="destructive"
+                  href={`/admin/financial/gastos/professores?month=${monthQuery}`}
+                />
                 <SummaryRow label="Parceiros — Joe" value={data.partnerSplit.previsto.joe} tone="strong" />
                 <SummaryRow
                   label="Parceiros — Gabriel"
@@ -171,7 +189,13 @@ export default async function AdminFinancialPage({
                 />
                 <SummaryRow label="Para a escola" value={data.partnerSplit.previsto.school} tone="strong" />
                 {manualCategories.map((c) => (
-                  <SummaryRow key={c.category} label={c.label} value={c.previsto} tone="destructive" />
+                  <SummaryRow
+                    key={c.category}
+                    label={c.label}
+                    value={c.previsto}
+                    tone="destructive"
+                    href={`/admin/financial/gastos/categoria/${c.category.toLowerCase()}?month=${monthQuery}`}
+                  />
                 ))}
                 <SummaryRow label="Férias" value={data.feriasMonthlyPrevisto} tone="destructive" />
                 <SummaryRow label="Lucro final" value={lucroFinalPrevisto} tone="accent" />
@@ -249,25 +273,34 @@ function SummaryRow({
   label,
   value,
   tone,
+  href,
 }: {
   label: string;
   value: number;
   tone: "accent" | "destructive" | "strong";
+  // When set, the value links to that category/teacher's own detail page
+  // for this exact same month (not just a generic link to the section) —
+  // e.g. "Professores" goes straight to Gastos > Professores already
+  // filtered to the month this Resumo card is showing.
+  href?: string;
 }) {
+  const valueClassName =
+    tone === "accent"
+      ? "font-semibold text-success"
+      : tone === "destructive"
+        ? "font-semibold text-destructive"
+        : "text-base font-semibold";
+
   return (
     <div className="flex items-center justify-between">
       <span className="text-sm text-muted-foreground">{label}</span>
-      <span
-        className={
-          tone === "accent"
-            ? "font-semibold text-success"
-            : tone === "destructive"
-              ? "font-semibold text-destructive"
-              : "text-base font-semibold"
-        }
-      >
-        {formatCurrency(value)}
-      </span>
+      {href ? (
+        <Link href={href} className={cn(valueClassName, "hover:underline")}>
+          {formatCurrency(value)}
+        </Link>
+      ) : (
+        <span className={valueClassName}>{formatCurrency(value)}</span>
+      )}
     </div>
   );
 }
