@@ -78,6 +78,52 @@ export function StudentPaymentsTable({
     (p) => new Date(p.referenceMonth).getUTCFullYear() === year
   );
 
+  function deleteButton(p: PaymentHistoryRow) {
+    // Only a real row (p.id set) has anything to delete — a not-yet-
+    // generated placeholder is never persisted.
+    if (!p.id) return null;
+    return (
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="ghost" size="icon" className="text-destructive">
+            <Trash2 className="size-4" />
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir cobrança</AlertDialogTitle>
+            <AlertDialogDescription>
+              Remove permanentemente esta cobrança de {formatCalendarMonthYear(p.referenceMonth)} (
+              {formatCurrency(p.amount)}). Use isto só para um lançamento feito por engano — não
+              afeta a definição de cobrança (se ainda existir), nem qualquer outro mês. Não pode
+              ser desfeito.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isPending}
+              onClick={(ev) => {
+                ev.preventDefault();
+                startTransition(async () => {
+                  try {
+                    await deletePayment(p.id!, studentId);
+                    toast.success("Cobrança excluída.");
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : "Erro ao excluir.");
+                  }
+                });
+              }}
+            >
+              {isPending && <Loader2 className="animate-spin" />}
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
@@ -97,7 +143,97 @@ export function StudentPaymentsTable({
         />
       </div>
 
-      <div className="overflow-hidden rounded-xl border">
+      {/* Mobile: one card per month, instead of a 7/8-column table that
+          needed horizontal scrolling to reach Status/Ações. */}
+      <div className="space-y-3 md:hidden">
+        {filteredPayments.map((p) => (
+          <div
+            key={p.id ?? `${p.referenceMonth.toISOString()}::${p.payerName ?? ""}`}
+            className="space-y-2 rounded-xl border p-3"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate font-medium capitalize">
+                  {formatCalendarMonthYear(p.referenceMonth)}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">{p.payerName ?? studentName}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <div className="flex items-center gap-1">
+                  {formatCurrency(p.amount)}
+                  {editable && (
+                    <PaymentOverrideButton
+                      studentId={studentId}
+                      payerName={p.payerName}
+                      referenceMonth={p.referenceMonth}
+                      amount={p.amount}
+                      dueDate={p.dueDate}
+                      manualOverride={p.manualOverride}
+                      manualOverrideNote={p.manualOverrideNote}
+                      label="Ajustar valor deste mês"
+                    />
+                  )}
+                </div>
+                {p.manualOverride && p.manualOverrideNote && (
+                  <p className="text-[11px] leading-tight text-muted-foreground">
+                    {p.manualOverrideNote}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+              <span>Vence {formatCalendarDate(p.dueDate)}</span>
+              {editable && (
+                <PaymentOverrideButton
+                  studentId={studentId}
+                  payerName={p.payerName}
+                  referenceMonth={p.referenceMonth}
+                  amount={p.amount}
+                  dueDate={p.dueDate}
+                  manualOverride={p.manualOverride}
+                  manualOverrideNote={p.manualOverrideNote}
+                  label="Ajustar vencimento deste mês"
+                />
+              )}
+              <span>· Pago em {p.paidAt ? formatDate(p.paidAt) : "—"}</span>
+            </div>
+
+            {editable ? (
+              <PaymentBankAccountSelect
+                studentId={studentId}
+                payerName={p.payerName}
+                referenceMonth={p.referenceMonth}
+                bankAccount={p.bankAccount}
+                bankAccountOverride={p.bankAccountOverride}
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground">{bankAccountLabel[p.effectiveBankAccount]}</p>
+            )}
+
+            <div className="flex items-center justify-between gap-2">
+              {editable ? (
+                <PaymentStatusSelect
+                  studentId={studentId}
+                  payerName={p.payerName}
+                  status={p.status}
+                  paidAt={p.paidAt}
+                  referenceMonth={p.referenceMonth}
+                />
+              ) : (
+                <Badge variant={paymentStatusVariant[p.status]}>{paymentStatusLabel[p.status]}</Badge>
+              )}
+              {editable && deleteButton(p)}
+            </div>
+          </div>
+        ))}
+        {filteredPayments.length === 0 && (
+          <p className="py-10 text-center text-muted-foreground">Nenhum pagamento registrado neste ano.</p>
+        )}
+      </div>
+
+      {/* Desktop/tablet: the full table, unchanged. */}
+      <div className="hidden overflow-hidden rounded-xl border md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -188,52 +324,7 @@ export function StudentPaymentsTable({
                     </Badge>
                   )}
                 </TableCell>
-                {editable && (
-                  <TableCell className="text-right">
-                    {/* Only a real row (p.id set) has anything to delete —
-                        a not-yet-generated placeholder is never persisted. */}
-                    {p.id && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-destructive">
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Excluir cobrança</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Remove permanentemente esta cobrança de {formatCalendarMonthYear(p.referenceMonth)}{" "}
-                              ({formatCurrency(p.amount)}). Use isto só para um lançamento feito por engano — não
-                              afeta a definição de cobrança (se ainda existir), nem qualquer outro mês. Não pode
-                              ser desfeito.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              disabled={isPending}
-                              onClick={(ev) => {
-                                ev.preventDefault();
-                                startTransition(async () => {
-                                  try {
-                                    await deletePayment(p.id!, studentId);
-                                    toast.success("Cobrança excluída.");
-                                  } catch (err) {
-                                    toast.error(err instanceof Error ? err.message : "Erro ao excluir.");
-                                  }
-                                });
-                              }}
-                            >
-                              {isPending && <Loader2 className="animate-spin" />}
-                              Confirmar
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                  </TableCell>
-                )}
+                {editable && <TableCell className="text-right">{deleteButton(p)}</TableCell>}
               </TableRow>
             ))}
             {filteredPayments.length === 0 && (

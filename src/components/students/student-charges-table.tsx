@@ -63,14 +63,126 @@ export function StudentChargesTable({
 }) {
   const [isPending, startTransition] = useTransition();
 
+  function endButton(c: StudentChargeRow) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={isPending}
+        onClick={() =>
+          startTransition(async () => {
+            await endStudentCharge(c.id, studentId);
+            toast.success("Cobrança encerrada.");
+          })
+        }
+      >
+        <CalendarOff /> Encerrar
+      </Button>
+    );
+  }
+
+  function deleteButton(c: StudentChargeRow) {
+    return (
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="ghost" size="icon" className="text-destructive">
+            <Trash2 className="size-4" />
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir cobrança</AlertDialogTitle>
+            <AlertDialogDescription>
+              Remove esta definição de cobrança. Os meses já gerados a partir dela continuam
+              intactos — isto só afeta a geração futura.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isPending}
+              onClick={(ev) => {
+                ev.preventDefault();
+                startTransition(async () => {
+                  await deleteStudentCharge(c.id, studentId);
+                  toast.success("Cobrança excluída.");
+                });
+              }}
+            >
+              {isPending && <Loader2 className="animate-spin" />}
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  }
+
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle className="text-base">Cobranças cadastradas</CardTitle>
         {editable && <StudentChargeFormDialog studentId={studentId} defaultBankAccount={bankAccount} />}
       </CardHeader>
-      <CardContent className="p-0">
-        <div className="overflow-hidden rounded-b-xl border-t">
+      <CardContent className="space-y-3 p-3 md:p-0">
+        {/* Mobile: one card per cobrança, instead of a 6/7-column table that
+            needed horizontal scrolling to reach Vigência/Ações. */}
+        <div className="space-y-3 md:hidden">
+          {charges.map((c) => {
+            const ended = c.frequency === "RECURRING" && c.endDate && c.endDate <= brazilToday();
+            return (
+              <div key={c.id} className="space-y-2 rounded-lg border p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{c.payerName ?? studentName}</p>
+                    {c.description && (
+                      <p className="truncate text-xs text-muted-foreground">{c.description}</p>
+                    )}
+                  </div>
+                  <p className="shrink-0 font-medium">{formatCurrency(c.amount)}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                  <span>{bankAccountLabel[c.bankAccount]}</span>
+                  <Badge variant="outline">{c.frequency === "RECURRING" ? "Recorrente" : "Único"}</Badge>
+                  {c.frequency === "RECURRING" && <span>dia {c.dueDay}</span>}
+                  {ended && <Badge variant="outline">Encerrada</Badge>}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {c.frequency === "RECURRING"
+                    ? `${formatCalendarDate(c.date)} — ${c.endDate ? formatCalendarDate(c.endDate) : "em aberto"}`
+                    : formatCalendarDate(c.date)}
+                </p>
+                {editable && (
+                  <div className="flex flex-wrap items-center gap-1 border-t pt-2">
+                    <StudentChargeFormDialog
+                      studentId={studentId}
+                      defaultBankAccount={bankAccount}
+                      charge={{
+                        id: c.id,
+                        payerName: c.payerName,
+                        description: c.description,
+                        amount: c.amount,
+                        frequency: c.frequency,
+                        date: c.date.toISOString().slice(0, 10),
+                        dueDay: c.dueDay,
+                        endDate: c.endDate?.toISOString().slice(0, 10),
+                        bankAccount: c.bankAccount,
+                      }}
+                    />
+                    {c.frequency === "RECURRING" && !ended && endButton(c)}
+                    {deleteButton(c)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {charges.length === 0 && (
+            <p className="py-8 text-center text-muted-foreground">Nenhuma cobrança cadastrada.</p>
+          )}
+        </div>
+
+        {/* Desktop/tablet: the full table, unchanged. */}
+        <div className="hidden overflow-hidden rounded-b-xl border-t md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -139,53 +251,8 @@ export function StudentChargesTable({
                               bankAccount: c.bankAccount,
                             }}
                           />
-                          {c.frequency === "RECURRING" && !ended && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={isPending}
-                              onClick={() =>
-                                startTransition(async () => {
-                                  await endStudentCharge(c.id, studentId);
-                                  toast.success("Cobrança encerrada.");
-                                })
-                              }
-                            >
-                              <CalendarOff /> Encerrar
-                            </Button>
-                          )}
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="text-destructive">
-                                <Trash2 className="size-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Excluir cobrança</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Remove esta definição de cobrança. Os meses já gerados a partir
-                                  dela continuam intactos — isto só afeta a geração futura.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  disabled={isPending}
-                                  onClick={(ev) => {
-                                    ev.preventDefault();
-                                    startTransition(async () => {
-                                      await deleteStudentCharge(c.id, studentId);
-                                      toast.success("Cobrança excluída.");
-                                    });
-                                  }}
-                                >
-                                  {isPending && <Loader2 className="animate-spin" />}
-                                  Confirmar
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          {c.frequency === "RECURRING" && !ended && endButton(c)}
+                          {deleteButton(c)}
                         </div>
                       </TableCell>
                     )}
