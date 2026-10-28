@@ -134,7 +134,7 @@ export default async function AdminFinancialPage({
         <CardContent>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div>
-              <p className="mb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              <p className="mb-3 border-b-2 border-accent pb-1.5 text-base font-bold tracking-wide text-accent uppercase">
                 Realizado
               </p>
               <div className="space-y-3">
@@ -170,8 +170,8 @@ export default async function AdminFinancialPage({
                 <SummaryRow label="Lucro final" value={lucroFinalRealizado} tone="accent" />
               </div>
             </div>
-            <div>
-              <p className="mb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            <div className="border-t pt-6 sm:border-t-0 sm:pt-0">
+              <p className="mb-3 border-b-2 border-primary pb-1.5 text-base font-bold tracking-wide text-primary uppercase">
                 Previsto (mês)
               </p>
               <div className="space-y-3">
