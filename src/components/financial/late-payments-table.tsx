@@ -43,6 +43,8 @@ export function LatePaymentsTable({ payments }: { payments: Row[] }) {
           .includes(q)
       )
     : payments;
+  const emptyMessage =
+    payments.length === 0 ? "Nenhum pagamento em atraso no momento." : "Nenhum resultado para essa pesquisa.";
 
   return (
     <div className="space-y-3">
@@ -53,7 +55,39 @@ export function LatePaymentsTable({ payments }: { payments: Row[] }) {
         className="max-w-xs"
       />
 
-      <div className="overflow-hidden rounded-xl border">
+      {/* Mobile: one card per late payment, instead of an 8-column table
+          that needed horizontal scrolling to reach Conta/Status. */}
+      <div className="space-y-3 md:hidden">
+        {filtered.map((p) => (
+          <div key={p.id} className="space-y-2 rounded-xl border p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate font-medium">{p.studentName}</p>
+                <p className="text-xs text-muted-foreground">Prof. {p.teacherName ?? "—"}</p>
+              </div>
+              <p className="shrink-0 font-medium">{formatCurrency(p.amount)}</p>
+            </div>
+            {p.payerName && <p className="text-xs text-muted-foreground">Pagador: {p.payerName}</p>}
+            <p className="text-xs text-muted-foreground capitalize">
+              {formatCalendarMonthYear(p.referenceMonth)} · venceu {formatCalendarDate(p.dueDate)} ·{" "}
+              {bankAccountLabel[p.bankAccount]}
+            </p>
+            <PaymentStatusSelect
+              studentId={p.studentId}
+              payerName={p.payerName}
+              status={"LATE" as PaymentStatus}
+              paidAt={null}
+              referenceMonth={p.referenceMonth}
+            />
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <p className="py-10 text-center text-muted-foreground">{emptyMessage}</p>
+        )}
+      </div>
+
+      {/* Desktop/tablet: the full table, unchanged. */}
+      <div className="hidden overflow-hidden rounded-xl border md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -95,9 +129,7 @@ export function LatePaymentsTable({ payments }: { payments: Row[] }) {
             {filtered.length === 0 && (
               <TableRow>
                 <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
-                  {payments.length === 0
-                    ? "Nenhum pagamento em atraso no momento."
-                    : "Nenhum resultado para essa pesquisa."}
+                  {emptyMessage}
                 </TableCell>
               </TableRow>
             )}

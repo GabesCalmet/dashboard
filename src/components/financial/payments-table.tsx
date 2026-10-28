@@ -74,10 +74,81 @@ export function PaymentsTable({
       (!status || paymentStatusLabel[p.status].toLowerCase().includes(status))
     );
   });
+  const emptyMessage =
+    payments.length === 0 ? "Nenhum aluno ativo no momento." : "Nenhum resultado para esses filtros.";
 
   return (
     <div className="space-y-3">
-      <div className="overflow-hidden rounded-xl border">
+      {/* Mobile: filter inputs above a stacked card per payment, instead of
+          a 7-column table that needed horizontal scrolling to reach
+          Conta/Status. */}
+      <div className="space-y-3 md:hidden">
+        <div className="grid grid-cols-2 gap-2">
+          <Input
+            value={filters.aluno}
+            onChange={(e) => setFilter("aluno", e.target.value)}
+            placeholder="Aluno..."
+            className="h-8 text-xs"
+          />
+          <Input
+            value={filters.professor}
+            onChange={(e) => setFilter("professor", e.target.value)}
+            placeholder="Professor..."
+            className="h-8 text-xs"
+          />
+          <Input
+            value={filters.vencimento}
+            onChange={(e) => setFilter("vencimento", e.target.value)}
+            placeholder="Vencimento..."
+            className="h-8 text-xs"
+          />
+          <Input
+            value={filters.conta}
+            onChange={(e) => setFilter("conta", e.target.value)}
+            placeholder="Conta..."
+            className="h-8 text-xs"
+          />
+          <Input
+            value={filters.status}
+            onChange={(e) => setFilter("status", e.target.value)}
+            placeholder="Status..."
+            className="col-span-2 h-8 text-xs"
+          />
+        </div>
+
+        <div className="space-y-3">
+          {filteredPayments.map((p) => (
+            <div key={`${p.studentId}::${p.payerName ?? ""}`} className="space-y-2 rounded-xl border p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{p.studentName}</p>
+                  <p className="text-xs text-muted-foreground">Prof. {p.teacherName ?? "—"}</p>
+                </div>
+                <p className="shrink-0 font-medium">{formatCurrency(p.amount)}</p>
+              </div>
+              {p.payerName && (
+                <p className="text-xs text-muted-foreground">Pagador: {p.payerName}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Vence {formatCalendarDate(p.dueDate)} · {bankAccountLabel[p.bankAccount]}
+              </p>
+              <PaymentStatusSelect
+                studentId={p.studentId}
+                payerName={p.payerName}
+                status={p.status}
+                paidAt={p.paidAt}
+                referenceMonth={referenceMonth}
+              />
+            </div>
+          ))}
+          {filteredPayments.length === 0 && (
+            <p className="py-10 text-center text-muted-foreground">{emptyMessage}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop/tablet: the full table, unchanged. */}
+      <div className="hidden overflow-hidden rounded-xl border md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -161,9 +232,7 @@ export function PaymentsTable({
             {filteredPayments.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
-                  {payments.length === 0
-                    ? "Nenhum aluno ativo no momento."
-                    : "Nenhum resultado para esses filtros."}
+                  {emptyMessage}
                 </TableCell>
               </TableRow>
             )}

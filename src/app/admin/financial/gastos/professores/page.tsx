@@ -51,7 +51,79 @@ export default async function AdminTeacherPayrollPage({
         <MonthNav basePath="/admin/financial/gastos/professores" year={year} month={month} />
       </div>
 
-      <div className="overflow-hidden rounded-xl border">
+      {/* Mobile: one card per teacher, instead of a 5-column table that
+          needed horizontal scrolling to reach Realizado. */}
+      <div className="space-y-3 md:hidden">
+        {rows.map((r) => (
+          <div key={r.teacherId} className="space-y-2 rounded-xl border p-3">
+            <Link
+              href={`/admin/financial/gastos/professores/${r.teacherId}?month=${monthQuery}`}
+              className="font-medium hover:underline"
+            >
+              {r.teacherName}
+            </Link>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Previsto por contrato</p>
+                <p>{formatCurrency(r.previstoContrato)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Previsto por hora</p>
+                <p>{formatCurrency(r.previsto)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Acumulado</p>
+                <p>{formatCurrency(r.realizado)}</p>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Realizado</p>
+              <TeacherPayoutCell
+                teacherId={r.teacherId}
+                year={year}
+                month={month}
+                previsto={r.previsto}
+                entries={(entriesByTeacher.get(r.teacherId) ?? []).map((p) => ({
+                  id: p.id,
+                  amount: Number(p.amount),
+                  paidAt: p.paidAt,
+                  bankAccount: p.bankAccount,
+                  notes: p.notes,
+                }))}
+              />
+            </div>
+          </div>
+        ))}
+        {rows.length === 0 && (
+          <p className="py-10 text-center text-muted-foreground">Nenhum professor ativo.</p>
+        )}
+        {rows.length > 0 && (
+          <div className="space-y-2 rounded-xl border bg-secondary p-3">
+            <p className="font-bold text-secondary-foreground">Total</p>
+            <div className="grid grid-cols-2 gap-2 text-sm text-secondary-foreground">
+              <div>
+                <p className="text-xs opacity-80">Previsto por contrato</p>
+                <p className="font-bold">{formatCurrency(totals.previstoContrato)}</p>
+              </div>
+              <div>
+                <p className="text-xs opacity-80">Previsto por hora</p>
+                <p className="font-bold">{formatCurrency(totals.previsto)}</p>
+              </div>
+              <div>
+                <p className="text-xs opacity-80">Acumulado</p>
+                <p className="font-bold">{formatCurrency(totals.realizado)}</p>
+              </div>
+              <div>
+                <p className="text-xs opacity-80">Realizado</p>
+                <p className="font-bold">{formatCurrency(totalRealizado)}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop/tablet: the full table, unchanged. */}
+      <div className="hidden overflow-hidden rounded-xl border md:block">
         <Table>
           <TableHeader>
             <TableRow>

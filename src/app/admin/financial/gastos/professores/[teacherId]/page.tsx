@@ -101,7 +101,43 @@ export default async function AdminTeacherPayrollDetailPage({
         />
       </div>
 
-      <div className="overflow-hidden rounded-xl border">
+      {/* Mobile: one card per status group, instead of a 5-column table. */}
+      <div className="space-y-3 md:hidden">
+        {detail.groups.map((g) => (
+          <div key={g.status} className="space-y-2 rounded-xl border p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-medium">{lessonStatusLabel[g.status]}</p>
+              <p className="font-medium">{formatCurrency(g.pay)}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+              <span>{g.count} aulas</span>
+              <span>{g.hours.toFixed(1)}h</span>
+            </div>
+            <div className="flex gap-1.5">
+              {g.countsAsPrevisto && <Badge variant="outline">Previsto</Badge>}
+              {g.countsAsRealizado && <Badge variant="success">Atual</Badge>}
+              {!g.countsAsPrevisto && !g.countsAsRealizado && (
+                <span className="text-sm text-muted-foreground">—</span>
+              )}
+            </div>
+          </div>
+        ))}
+        {detail.groups.length === 0 && (
+          <p className="py-10 text-center text-muted-foreground">Nenhuma aula neste mês.</p>
+        )}
+        {detail.groups.length > 0 && (
+          <div className="space-y-1 rounded-xl border bg-secondary p-3 text-secondary-foreground">
+            <p className="font-bold">Total previsto / atual</p>
+            <p>
+              {formatCurrency(detail.totals.previsto)}{" "}
+              <span className="opacity-70">/</span> {formatCurrency(detail.totals.realizado)}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop/tablet: the full table, unchanged. */}
+      <div className="hidden overflow-hidden rounded-xl border md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -152,7 +188,83 @@ export default async function AdminTeacherPayrollDetailPage({
       </div>
 
       <h2 className="mt-6 mb-3 text-sm font-semibold">Por aluno</h2>
-      <div className="overflow-hidden rounded-xl border">
+
+      {/* Mobile: one card per student, instead of an 11-column table
+          (Aluno/Valor-hora + Contratado/Previsto/Atual × Aulas/Horas/
+          Valor) — the widest table in the app, badly needed this. */}
+      <div className="space-y-3 md:hidden">
+        {detail.students.map((s) => (
+          <div key={s.studentId} className="space-y-3 rounded-xl border p-3">
+            <div className="flex items-start justify-between gap-3">
+              <Link href={`/admin/students/${s.studentId}`} className="font-medium hover:underline">
+                {s.studentName}
+              </Link>
+              <div className="shrink-0 text-right">
+                <p className="text-xs text-muted-foreground">Valor/hora</p>
+                <p className="text-sm">
+                  {s.mode === "MONTHLY"
+                    ? "Mensal fixo"
+                    : s.mode === "PERCENTAGE"
+                      ? `${s.percentage}% do valor`
+                      : formatCurrency(s.rate)}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-sm">
+              <div>
+                <p className="text-xs font-bold text-muted-foreground">Contratado</p>
+                <p>{s.contractedCount} aulas</p>
+                <p>{s.contractedHours.toFixed(1)}h</p>
+                <p className="font-medium">{formatCurrency(s.contratado)}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-muted-foreground">Previsto</p>
+                <p>{s.count} aulas</p>
+                <p>{s.hours.toFixed(1)}h</p>
+                <p className="font-medium">{formatCurrency(s.previsto)}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-muted-foreground">Atual</p>
+                <p>{s.realizedCount} aulas</p>
+                <p>{s.realizedHours.toFixed(1)}h</p>
+                <p className="font-medium">{formatCurrency(s.realizado)}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+        {detail.students.length === 0 && (
+          <p className="py-10 text-center text-muted-foreground">Nenhum aluno neste mês.</p>
+        )}
+        {detail.students.length > 0 && (
+          <div className="space-y-2 rounded-xl border bg-secondary p-3 text-secondary-foreground">
+            <p className="font-bold">Total</p>
+            <div className="grid grid-cols-3 gap-2 text-sm">
+              <div>
+                <p className="text-xs font-bold opacity-80">Contratado</p>
+                <p>{studentTotals.contractedCount} aulas</p>
+                <p>{studentTotals.contractedHours.toFixed(1)}h</p>
+                <p className="font-bold">{formatCurrency(studentTotals.contratado)}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold opacity-80">Previsto</p>
+                <p>{studentTotals.count} aulas</p>
+                <p>{studentTotals.hours.toFixed(1)}h</p>
+                <p className="font-bold">{formatCurrency(studentTotals.previsto)}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold opacity-80">Atual</p>
+                <p>{studentTotals.realizedCount} aulas</p>
+                <p>{studentTotals.realizedHours.toFixed(1)}h</p>
+                <p className="font-bold">{formatCurrency(studentTotals.realizado)}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop/tablet: the full table, unchanged. */}
+      <div className="hidden overflow-hidden rounded-xl border md:block">
         <Table>
           <TableHeader>
             <TableRow>
