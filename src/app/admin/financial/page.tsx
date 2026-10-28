@@ -12,7 +12,7 @@ import {
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { MonthNav } from "@/components/financial/month-nav";
 import { MigrateChargesButton } from "@/components/financial/migrate-charges-button";
 import { BankAccountCard } from "@/components/financial/bank-account-card";
@@ -68,38 +68,42 @@ export default async function AdminFinancialPage({
       />
 
       {/* Not affected by the month switcher below — just links to the
-          Receita/Gastos pages, which browse their own months independently. */}
+          Receita/Gastos pages, which browse their own months independently.
+          The whole card is the tap target (not just the button inside it) —
+          easier to hit on mobile. The "Abrir X" pill stays purely visual
+          (a styled div, not its own link/button) since nesting it inside
+          another link would be invalid HTML. */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <TrendingUp className="size-4.5 text-accent" /> Receita
-            </CardTitle>
-            <CardDescription>Mensalidades, cobranças e fluxo de caixa recebido.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="outline">
-              <Link href="/admin/financial/receita">
+        <Link href="/admin/financial/receita" className="block">
+          <Card className="h-full transition-colors hover:border-accent hover:bg-accent/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <TrendingUp className="size-4.5 text-accent" /> Receita
+              </CardTitle>
+              <CardDescription>Mensalidades, cobranças e fluxo de caixa recebido.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <span className={buttonVariants({ variant: "outline" })}>
                 Abrir Receita <ArrowRight />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ReceiptText className="size-4.5 text-destructive" /> Gastos
-            </CardTitle>
-            <CardDescription>Gastos únicos e recorrentes da escola.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="outline">
-              <Link href="/admin/financial/gastos">
+              </span>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/financial/gastos" className="block">
+          <Card className="h-full transition-colors hover:border-accent hover:bg-accent/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ReceiptText className="size-4.5 text-destructive" /> Gastos
+              </CardTitle>
+              <CardDescription>Gastos únicos e recorrentes da escola.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <span className={buttonVariants({ variant: "outline" })}>
                 Abrir Gastos <ArrowRight />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+              </span>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <div className="mb-4">
