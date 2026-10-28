@@ -1,6 +1,8 @@
+import { BookOpen } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { CourseFormDialog } from "@/components/catalog/course-form-dialog";
 import { PlanFormDialog } from "@/components/catalog/plan-form-dialog";
 import { DeleteCourseButton } from "@/components/catalog/delete-course-button";
@@ -13,7 +15,21 @@ export default async function AdminCatalogPage() {
 
   return (
     <div>
-      <PageHeader title="Cursos & Planos" description="Catálogo usado no cadastro de alunos." />
+      <PageHeader
+        title="Cursos & Planos"
+        description="Catálogo usado no cadastro de alunos."
+        actions={
+          <Button asChild variant="outline">
+            <a
+              href="https://upfrontidiomas.com.br/newportal/upfront-A1.html"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <BookOpen /> Material didático
+            </a>
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div>
