@@ -11,7 +11,6 @@ import {
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { buttonVariants } from "@/components/ui/button";
 import { MonthNav } from "@/components/financial/month-nav";
 import { MigrateChargesButton } from "@/components/financial/migrate-charges-button";
 import { BankAccountCard } from "@/components/financial/bank-account-card";
@@ -76,8 +75,8 @@ export default async function AdminFinancialPage({
           one to reach the other. */}
       <div className="mb-6 grid grid-cols-2 gap-3">
         <Link href="/admin/financial/receita" className="block">
-          <Card className="h-full gap-2 transition-colors hover:border-accent hover:bg-accent/5">
-            <CardHeader className="gap-0.5 px-3 pt-3">
+          <Card className="h-full transition-colors hover:border-accent hover:bg-accent/5">
+            <CardHeader className="gap-0.5 px-3 py-3">
               <CardTitle className="flex items-center gap-1.5 text-sm">
                 <TrendingUp className="size-4 shrink-0 text-accent" /> Receita
               </CardTitle>
@@ -85,22 +84,16 @@ export default async function AdminFinancialPage({
                 Mensalidades, cobranças e fluxo de caixa recebido.
               </CardDescription>
             </CardHeader>
-            <CardContent className="px-3 pb-3">
-              <span className={buttonVariants({ variant: "outline", size: "sm" })}>Abrir Receita</span>
-            </CardContent>
           </Card>
         </Link>
         <Link href="/admin/financial/gastos" className="block">
-          <Card className="h-full gap-2 transition-colors hover:border-accent hover:bg-accent/5">
-            <CardHeader className="gap-0.5 px-3 pt-3">
+          <Card className="h-full transition-colors hover:border-accent hover:bg-accent/5">
+            <CardHeader className="gap-0.5 px-3 py-3">
               <CardTitle className="flex items-center gap-1.5 text-sm">
                 <ReceiptText className="size-4 shrink-0 text-destructive" /> Gastos
               </CardTitle>
               <CardDescription className="text-xs">Gastos únicos e recorrentes da escola.</CardDescription>
             </CardHeader>
-            <CardContent className="px-3 pb-3">
-              <span className={buttonVariants({ variant: "outline", size: "sm" })}>Abrir Gastos</span>
-            </CardContent>
           </Card>
         </Link>
       </div>
