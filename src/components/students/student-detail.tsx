@@ -33,7 +33,6 @@ import type { ValueHistoryEntry } from "@/components/students/monthly-value-hist
 import type { SelectHistoryEntry } from "@/components/students/select-history-editor";
 import type { TeacherHistoryEntry } from "@/components/students/teacher-assignment-editor";
 import { DeleteStudentButton } from "@/components/students/delete-student-button";
-import { GroupMembersCard } from "@/components/students/group-members-card";
 import { MonthlyReportButton } from "@/components/students/monthly-report-button";
 import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
 import { SetPasswordButton } from "@/components/shared/set-password-button";
@@ -500,24 +499,6 @@ export function StudentDetailView({
             <StatCard label="Feriado" value={String(canceledHolidayCount)} icon={PartyPopper} />
             <StatCard label="Cancelamento Férias" value={String(canceledVacationCount)} icon={Palmtree} />
           </div>
-
-          {permissions.canEdit && (
-            <GroupMembersCard
-              studentId={student.id}
-              owner={{
-                userId: student.userId,
-                name: student.user.name,
-                username: student.user.username,
-              }}
-              members={student.groupMembers.map((m) => ({
-                id: m.id,
-                userId: m.userId,
-                name: m.user.name,
-                username: m.user.username,
-              }))}
-              canManage={permissions.canEdit}
-            />
-          )}
 
           {student.levelHistory.length > 0 && (
             <Card>

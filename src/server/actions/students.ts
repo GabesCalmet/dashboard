@@ -1,6 +1,5 @@
 "use server";
 
-import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole, requireUser } from "@/lib/auth";
@@ -15,8 +14,6 @@ import {
   studentFormSchema,
   studentClassConfigSchema,
   studentClassPeriodSchema,
-  usernameField,
-  passwordField,
 } from "@/lib/validation/student";
 import { levelOrder } from "@/lib/labels";
 import { syncRecurringLessons } from "@/server/lessons/recurring";
@@ -440,132 +437,6 @@ export async function deleteStudent(studentId: string) {
   }
   await hardDeleteUserAccount(student.userId);
   revalidatePath("/admin/students");
-}
-
-// Adds one more login to an existing "grupo" student — same shared
-// profile (lessons, progress, billing) as every other member, just its own
-// username/password.
-export async function addStudentGroupMember(
-  studentId: string,
-  _prev: ActionState,
-  formData: FormData
-): Promise<ActionState> {
-  const actor = await requireRole("ADMIN", "COORDINATOR");
-  const raw = Object.fromEntries(formData.entries());
-  const parsed = z
-    .object({
-      name: z.string().min(2, "Informe o nome completo"),
-      username: usernameField,
-      password: passwordField,
-      email: z.string().email("Email inválido").optional().or(z.literal("")),
-      phone: z.string().optional(),
-    })
-    .safeParse(raw);
-
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
-  }
-  const data = parsed.data;
-
-  try {
-    const { user } = await provisionUsernameAccount({
-      name: data.name,
-      username: data.username,
-      password: data.password,
-      role: "STUDENT",
-      email: data.email || undefined,
-      phone: data.phone,
-    });
-    await prisma.studentGroupMember.create({
-      data: { studentProfileId: studentId, userId: user.id },
-    });
-
-    await recordAudit({
-      entityType: "StudentProfile",
-      entityId: studentId,
-      action: "UPDATE",
-      actor,
-      changes: { groupMemberAdded: data.username },
-    });
-
-    revalidatePath(`/admin/students/${studentId}`);
-    revalidatePath(`/coordinator/students/${studentId}`);
-    return { success: "Membro do grupo adicionado." };
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : "Erro ao adicionar membro." };
-  }
-}
-
-// Removes one group member's login — the shared profile (lessons, billing)
-// stays intact for everyone else.
-export async function removeStudentGroupMember(memberId: string) {
-  const actor = await requireRole("ADMIN", "COORDINATOR");
-  const member = await prisma.studentGroupMember.findUniqueOrThrow({ where: { id: memberId } });
-
-  await recordAudit({
-    entityType: "StudentProfile",
-    entityId: member.studentProfileId,
-    action: "UPDATE",
-    actor,
-    changes: { groupMemberRemoved: memberId },
-  });
-
-  await hardDeleteUserAccount(member.userId);
-  revalidatePath(`/admin/students/${member.studentProfileId}`);
-  revalidatePath(`/coordinator/students/${member.studentProfileId}`);
-}
-
-// Removes the group's current own-login participant (the one
-// StudentProfile.userId happens to point to) by first promoting the
-// longest-standing other member to take that slot — every participant is
-// meant to be equally removable, but the shared profile row (lessons,
-// progress, financeiro) needs exactly one User FK to exist at all times, so
-// whichever member is about to be removed while holding that FK hands it
-// off first. The group's shared data never moves; only which login anchors
-// it does. Requires at least one other member — the last remaining login
-// must go through deleteStudent instead, which removes the whole record.
-export async function removeGroupOwner(studentId: string) {
-  const actor = await requireRole("ADMIN", "COORDINATOR");
-  const student = await prisma.studentProfile.findUniqueOrThrow({
-    where: { id: studentId },
-    include: { groupMembers: { orderBy: { createdAt: "asc" } } },
-  });
-
-  const promoted = student.groupMembers[0];
-  if (!promoted) {
-    throw new Error(
-      'Não é possível remover o único login do grupo. Use "Excluir" para apagar o cadastro inteiro.'
-    );
-  }
-
-  const removedUserId = student.userId;
-
-  await prisma.$transaction([
-    prisma.studentGroupMember.delete({ where: { id: promoted.id } }),
-    prisma.studentProfile.update({
-      where: { id: studentId },
-      data: {
-        userId: promoted.userId,
-        monthlyValue: promoted.monthlyValue,
-        monthlyValueHistory: promoted.monthlyValueHistory as Prisma.InputJsonValue,
-      },
-    }),
-  ]);
-
-  await recordAudit({
-    entityType: "StudentProfile",
-    entityId: studentId,
-    action: "UPDATE",
-    actor,
-    changes: { groupOwnerRemoved: removedUserId, groupOwnerPromoted: promoted.userId },
-  });
-
-  await hardDeleteUserAccount(removedUserId);
-
-  revalidatePath("/admin/students");
-  revalidatePath("/coordinator/students");
-  revalidatePath(`/admin/students/${studentId}`);
-  revalidatePath(`/coordinator/students/${studentId}`);
 }
 
 export async function promoteStudentLevel(studentId: string) {
