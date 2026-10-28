@@ -71,31 +71,35 @@ export default async function AdminFinancialPage({
           The whole card is the tap target (not just the button inside it) —
           easier to hit on mobile. The "Abrir X" pill stays purely visual
           (a styled div, not its own link/button) since nesting it inside
-          another link would be invalid HTML. */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          another link would be invalid HTML. Always side by side (even on
+          phones) and compact, so both fit without needing to scroll past
+          one to reach the other. */}
+      <div className="mb-6 grid grid-cols-2 gap-3">
         <Link href="/admin/financial/receita" className="block">
-          <Card className="h-full transition-colors hover:border-accent hover:bg-accent/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <TrendingUp className="size-4.5 text-accent" /> Receita
+          <Card className="h-full gap-2 transition-colors hover:border-accent hover:bg-accent/5">
+            <CardHeader className="gap-0.5 px-3 pt-3">
+              <CardTitle className="flex items-center gap-1.5 text-sm">
+                <TrendingUp className="size-4 shrink-0 text-accent" /> Receita
               </CardTitle>
-              <CardDescription>Mensalidades, cobranças e fluxo de caixa recebido.</CardDescription>
+              <CardDescription className="text-xs">
+                Mensalidades, cobranças e fluxo de caixa recebido.
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <span className={buttonVariants({ variant: "outline" })}>Abrir Receita</span>
+            <CardContent className="px-3 pb-3">
+              <span className={buttonVariants({ variant: "outline", size: "sm" })}>Abrir Receita</span>
             </CardContent>
           </Card>
         </Link>
         <Link href="/admin/financial/gastos" className="block">
-          <Card className="h-full transition-colors hover:border-accent hover:bg-accent/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <ReceiptText className="size-4.5 text-destructive" /> Gastos
+          <Card className="h-full gap-2 transition-colors hover:border-accent hover:bg-accent/5">
+            <CardHeader className="gap-0.5 px-3 pt-3">
+              <CardTitle className="flex items-center gap-1.5 text-sm">
+                <ReceiptText className="size-4 shrink-0 text-destructive" /> Gastos
               </CardTitle>
-              <CardDescription>Gastos únicos e recorrentes da escola.</CardDescription>
+              <CardDescription className="text-xs">Gastos únicos e recorrentes da escola.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <span className={buttonVariants({ variant: "outline" })}>Abrir Gastos</span>
+            <CardContent className="px-3 pb-3">
+              <span className={buttonVariants({ variant: "outline", size: "sm" })}>Abrir Gastos</span>
             </CardContent>
           </Card>
         </Link>
