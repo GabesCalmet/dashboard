@@ -19,13 +19,13 @@ export default async function AdminCatalogPage() {
         title="Cursos & Planos"
         description="Catálogo usado no cadastro de alunos."
         actions={
-          <Button asChild variant="outline">
+          <Button asChild size="lg" className="bg-blue-600 px-8 text-base text-white hover:bg-blue-700">
             <a
               href="https://upfrontidiomas.com.br/newportal/upfront-A1.html"
               target="_blank"
               rel="noopener noreferrer"
             >
-              <BookOpen /> Material didático
+              <BookOpen className="size-6" /> Material didático
             </a>
           </Button>
         }
