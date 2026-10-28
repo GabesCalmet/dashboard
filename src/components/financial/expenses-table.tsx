@@ -95,44 +95,91 @@ export function ExpensesTable({
   month?: number;
 }) {
   const [isPending, startTransition] = useTransition();
+  const isEmpty = expenses.length === 0 && (!partners || partners.length === 0);
+
+  function deleteButton(e: Row) {
+    return (
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="ghost" size="icon" className="text-destructive">
+            <Trash2 className="size-4" />
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir gasto</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é permanente e remove o registro de &quot;{e.description}&quot;.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isPending}
+              onClick={(ev) => {
+                ev.preventDefault();
+                startTransition(async () => {
+                  await deleteExpense(e.id);
+                  toast.success("Gasto excluído.");
+                });
+              }}
+            >
+              {isPending && <Loader2 className="animate-spin" />}
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  }
+
+  function endButton(e: Row) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={isPending}
+        onClick={() =>
+          startTransition(async () => {
+            await endRecurringExpense(e.id);
+            toast.success("Gasto recorrente encerrado.");
+          })
+        }
+      >
+        <CalendarOff /> Encerrar
+      </Button>
+    );
+  }
 
   return (
-    <div className="overflow-hidden rounded-xl border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Descrição</TableHead>
-            <TableHead>Valor</TableHead>
-            <TableHead>Categoria</TableHead>
-            <TableHead>Conta</TableHead>
-            <TableHead>Tipo</TableHead>
-            <TableHead>Data</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Pagamento</TableHead>
-            <TableHead className="text-right">Ações</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {expenses.map((e) => {
-            const ended = e.frequency === "RECURRING" && e.endDate && e.endDate <= brazilToday();
-            return (
-              <TableRow key={e.id}>
-                <TableCell className="font-medium">{e.description}</TableCell>
-                <TableCell>
+    <>
+      {/* Mobile: one card per row, with Pagamento (status) and Ações
+          (editar/encerrar/excluir) always visible without any horizontal
+          scroll — the 9-column table below needed side-scrolling to reach
+          exactly those on a phone. */}
+      <div className="space-y-3 md:hidden">
+        {expenses.map((e) => {
+          const ended = e.frequency === "RECURRING" && e.endDate && e.endDate <= brazilToday();
+          const referenceMonth = new Date(
+            e.occurrenceDate.getUTCFullYear(),
+            e.occurrenceDate.getUTCMonth(),
+            1
+          );
+          return (
+            <div key={e.id} className="space-y-3 rounded-xl border p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{e.description}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {expenseCategoryLabel[e.category]} · {expenseFrequencyLabel[e.frequency]}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
                   <div className="flex items-center gap-1">
                     {formatCurrency(e.effectiveAmount)}
-                    {/* occurrenceDate is UTC midnight of the intended calendar day
-                        (built server-side) — this component is "use client", so
-                        plain getFullYear()/getMonth() would read it in the
-                        browser's own Brazil (UTC-3) time instead, which rolls a
-                        day-1 occurrence back into the PREVIOUS month. Reading the
-                        UTC components keeps this referenceMonth matching the
-                        month this row is actually being shown under. */}
                     <ExpenseAmountOverrideButton
                       expenseId={e.id}
-                      referenceMonth={
-                        new Date(e.occurrenceDate.getUTCFullYear(), e.occurrenceDate.getUTCMonth(), 1)
-                      }
+                      referenceMonth={referenceMonth}
                       amount={e.amount}
                       amountOverride={e.amountOverride}
                       amountOverrideNote={e.amountOverrideNote}
@@ -143,140 +190,220 @@ export function ExpensesTable({
                       {e.amountOverrideNote}
                     </p>
                   )}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {expenseCategoryLabel[e.category]}
-                </TableCell>
-                <TableCell>
-                  <ExpenseBankAccountSelect
-                    expenseId={e.id}
-                    referenceMonth={
-                      new Date(e.occurrenceDate.getUTCFullYear(), e.occurrenceDate.getUTCMonth(), 1)
-                    }
-                    bankAccount={e.bankAccount}
-                    bankAccountOverride={e.bankAccountOverride}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">{expenseFrequencyLabel[e.frequency]}</Badge>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {formatCalendarDate(e.occurrenceDate)}
-                  {e.frequency === "RECURRING" &&
-                    ` (recorrente${e.endDate ? `, até ${formatCalendarDate(e.endDate)}` : ""})`}
-                </TableCell>
-                <TableCell>
-                  {e.frequency === "RECURRING" ? (
-                    <Badge variant={ended ? "outline" : "success"}>
-                      {ended ? "Encerrado" : "Ativo"}
-                    </Badge>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <ExpenseOccurrenceStatusSelect
-                    expenseId={e.id}
-                    referenceMonth={
-                      new Date(e.occurrenceDate.getUTCFullYear(), e.occurrenceDate.getUTCMonth(), 1)
-                    }
-                    status={e.occurrenceStatus}
-                    paidAt={e.occurrencePaidAt}
-                  />
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <ExpenseFormDialog
-                      expense={{
-                        id: e.id,
-                        description: e.description,
-                        amount: e.amount,
-                        frequency: e.frequency,
-                        date: e.date.toISOString().slice(0, 10),
-                        dayOfMonth: e.dayOfMonth,
-                        endDate: e.endDate?.toISOString().slice(0, 10),
-                        bankAccount: e.bankAccount,
-                        notes: e.notes,
-                      }}
-                    />
-                    {e.frequency === "RECURRING" && !ended && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={isPending}
-                        onClick={() =>
-                          startTransition(async () => {
-                            await endRecurringExpense(e.id);
-                            toast.success("Gasto recorrente encerrado.");
-                          })
-                        }
-                      >
-                        <CalendarOff /> Encerrar
-                      </Button>
-                    )}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-destructive">
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Excluir gasto</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Esta ação é permanente e remove o registro de &quot;{e.description}&quot;.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            disabled={isPending}
-                            onClick={(ev) => {
-                              ev.preventDefault();
-                              startTransition(async () => {
-                                await deleteExpense(e.id);
-                                toast.success("Gasto excluído.");
-                              });
-                            }}
-                          >
-                            {isPending && <Loader2 className="animate-spin" />}
-                            Confirmar
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-          {partners != null &&
-            year !== undefined &&
-            month !== undefined &&
-            partners.map((p) => (
-              <TableRow key={p.kind}>
-                <TableCell className="font-medium">Parceiros — {p.name}</TableCell>
-                <TableCell>{formatCurrency(p.previsto)}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">Parceiros</TableCell>
-                <TableCell className="text-sm text-muted-foreground">—</TableCell>
-                <TableCell className="text-sm text-muted-foreground">—</TableCell>
-                <TableCell className="text-sm text-muted-foreground">—</TableCell>
-                <TableCell className="text-sm text-muted-foreground">—</TableCell>
-                <TableCell>
-                  <PartnerPayoutCell kind={p.kind} year={year} month={month} entries={p.entries} />
-                </TableCell>
-                <TableCell className="text-right text-sm text-muted-foreground">—</TableCell>
-              </TableRow>
-            ))}
-          {expenses.length === 0 && (!partners || partners.length === 0) && (
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                {formatCalendarDate(e.occurrenceDate)}
+                {e.frequency === "RECURRING" &&
+                  ` (recorrente${e.endDate ? `, até ${formatCalendarDate(e.endDate)}` : ""})`}
+                {e.frequency === "RECURRING" && (
+                  <Badge variant={ended ? "outline" : "success"} className="ml-1.5">
+                    {ended ? "Encerrado" : "Ativo"}
+                  </Badge>
+                )}
+              </p>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <ExpenseBankAccountSelect
+                  expenseId={e.id}
+                  referenceMonth={referenceMonth}
+                  bankAccount={e.bankAccount}
+                  bankAccountOverride={e.bankAccountOverride}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Pagamento</p>
+                <ExpenseOccurrenceStatusSelect
+                  expenseId={e.id}
+                  referenceMonth={referenceMonth}
+                  status={e.occurrenceStatus}
+                  paidAt={e.occurrencePaidAt}
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1 border-t pt-2">
+                <ExpenseFormDialog
+                  expense={{
+                    id: e.id,
+                    description: e.description,
+                    amount: e.amount,
+                    frequency: e.frequency,
+                    date: e.date.toISOString().slice(0, 10),
+                    dayOfMonth: e.dayOfMonth,
+                    endDate: e.endDate?.toISOString().slice(0, 10),
+                    bankAccount: e.bankAccount,
+                    notes: e.notes,
+                  }}
+                />
+                {e.frequency === "RECURRING" && !ended && endButton(e)}
+                {deleteButton(e)}
+              </div>
+            </div>
+          );
+        })}
+        {partners != null &&
+          year !== undefined &&
+          month !== undefined &&
+          partners.map((p) => (
+            <div key={p.kind} className="space-y-3 rounded-xl border p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium">Parceiros — {p.name}</p>
+                  <p className="text-xs text-muted-foreground">Parceiros</p>
+                </div>
+                <p className="shrink-0">{formatCurrency(p.previsto)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Pagamento</p>
+                <PartnerPayoutCell kind={p.kind} year={year} month={month} entries={p.entries} />
+              </div>
+            </div>
+          ))}
+        {isEmpty && (
+          <p className="py-10 text-center text-muted-foreground">Nenhum gasto neste mês.</p>
+        )}
+      </div>
+
+      {/* Desktop/tablet: the full table, unchanged. */}
+      <div className="hidden overflow-hidden rounded-xl border md:block">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
-                Nenhum gasto neste mês.
-              </TableCell>
+              <TableHead>Descrição</TableHead>
+              <TableHead>Valor</TableHead>
+              <TableHead>Categoria</TableHead>
+              <TableHead>Conta</TableHead>
+              <TableHead>Tipo</TableHead>
+              <TableHead>Data</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Pagamento</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {expenses.map((e) => {
+              const ended = e.frequency === "RECURRING" && e.endDate && e.endDate <= brazilToday();
+              return (
+                <TableRow key={e.id}>
+                  <TableCell className="font-medium">{e.description}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      {formatCurrency(e.effectiveAmount)}
+                      {/* occurrenceDate is UTC midnight of the intended calendar day
+                          (built server-side) — this component is "use client", so
+                          plain getFullYear()/getMonth() would read it in the
+                          browser's own Brazil (UTC-3) time instead, which rolls a
+                          day-1 occurrence back into the PREVIOUS month. Reading the
+                          UTC components keeps this referenceMonth matching the
+                          month this row is actually being shown under. */}
+                      <ExpenseAmountOverrideButton
+                        expenseId={e.id}
+                        referenceMonth={
+                          new Date(e.occurrenceDate.getUTCFullYear(), e.occurrenceDate.getUTCMonth(), 1)
+                        }
+                        amount={e.amount}
+                        amountOverride={e.amountOverride}
+                        amountOverrideNote={e.amountOverrideNote}
+                      />
+                    </div>
+                    {e.amountOverride != null && e.amountOverrideNote && (
+                      <p className="text-[11px] leading-tight text-muted-foreground">
+                        {e.amountOverrideNote}
+                      </p>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {expenseCategoryLabel[e.category]}
+                  </TableCell>
+                  <TableCell>
+                    <ExpenseBankAccountSelect
+                      expenseId={e.id}
+                      referenceMonth={
+                        new Date(e.occurrenceDate.getUTCFullYear(), e.occurrenceDate.getUTCMonth(), 1)
+                      }
+                      bankAccount={e.bankAccount}
+                      bankAccountOverride={e.bankAccountOverride}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{expenseFrequencyLabel[e.frequency]}</Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatCalendarDate(e.occurrenceDate)}
+                    {e.frequency === "RECURRING" &&
+                      ` (recorrente${e.endDate ? `, até ${formatCalendarDate(e.endDate)}` : ""})`}
+                  </TableCell>
+                  <TableCell>
+                    {e.frequency === "RECURRING" ? (
+                      <Badge variant={ended ? "outline" : "success"}>
+                        {ended ? "Encerrado" : "Ativo"}
+                      </Badge>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <ExpenseOccurrenceStatusSelect
+                      expenseId={e.id}
+                      referenceMonth={
+                        new Date(e.occurrenceDate.getUTCFullYear(), e.occurrenceDate.getUTCMonth(), 1)
+                      }
+                      status={e.occurrenceStatus}
+                      paidAt={e.occurrencePaidAt}
+                    />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <ExpenseFormDialog
+                        expense={{
+                          id: e.id,
+                          description: e.description,
+                          amount: e.amount,
+                          frequency: e.frequency,
+                          date: e.date.toISOString().slice(0, 10),
+                          dayOfMonth: e.dayOfMonth,
+                          endDate: e.endDate?.toISOString().slice(0, 10),
+                          bankAccount: e.bankAccount,
+                          notes: e.notes,
+                        }}
+                      />
+                      {e.frequency === "RECURRING" && !ended && endButton(e)}
+                      {deleteButton(e)}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            {partners != null &&
+              year !== undefined &&
+              month !== undefined &&
+              partners.map((p) => (
+                <TableRow key={p.kind}>
+                  <TableCell className="font-medium">Parceiros — {p.name}</TableCell>
+                  <TableCell>{formatCurrency(p.previsto)}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">Parceiros</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">—</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">—</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">—</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">—</TableCell>
+                  <TableCell>
+                    <PartnerPayoutCell kind={p.kind} year={year} month={month} entries={p.entries} />
+                  </TableCell>
+                  <TableCell className="text-right text-sm text-muted-foreground">—</TableCell>
+                </TableRow>
+              ))}
+            {isEmpty && (
+              <TableRow>
+                <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
+                  Nenhum gasto neste mês.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </>
   );
 }
