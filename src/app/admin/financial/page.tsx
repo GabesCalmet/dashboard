@@ -5,7 +5,6 @@ import {
   TrendingUp,
   TrendingDown,
   PiggyBank,
-  ArrowRight,
   ReceiptText,
   Landmark,
 } from "lucide-react";
@@ -83,9 +82,7 @@ export default async function AdminFinancialPage({
               <CardDescription>Mensalidades, cobranças e fluxo de caixa recebido.</CardDescription>
             </CardHeader>
             <CardContent>
-              <span className={buttonVariants({ variant: "outline" })}>
-                Abrir Receita <ArrowRight />
-              </span>
+              <span className={buttonVariants({ variant: "outline" })}>Abrir Receita</span>
             </CardContent>
           </Card>
         </Link>
@@ -98,9 +95,7 @@ export default async function AdminFinancialPage({
               <CardDescription>Gastos únicos e recorrentes da escola.</CardDescription>
             </CardHeader>
             <CardContent>
-              <span className={buttonVariants({ variant: "outline" })}>
-                Abrir Gastos <ArrowRight />
-              </span>
+              <span className={buttonVariants({ variant: "outline" })}>Abrir Gastos</span>
             </CardContent>
           </Card>
         </Link>
