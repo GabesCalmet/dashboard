@@ -78,6 +78,73 @@ export function LessonHistoryTable({
     return d.getFullYear() === year && d.getMonth() + 1 === month;
   });
 
+  // Shared between the mobile card layout and the desktop table below, so
+  // Status/Reagendamento/Resumo/Observações never drift between the two.
+  function statusContent(l: HistoryLesson) {
+    if (l.isMakeup) {
+      return editable ? (
+        <MakeupOutcomeSelect makeupLessonId={l.id} status={toMakeupOutcome(l.status)} />
+      ) : (
+        <Badge variant={lessonStatusBadgeVariant[l.status]}>
+          {makeupOutcomeLabel[toMakeupOutcome(l.status)]}
+        </Badge>
+      );
+    }
+    return editable ? (
+      <LessonStatusSelect lessonId={l.id} status={l.status} />
+    ) : (
+      <Badge variant={lessonStatusBadgeVariant[l.status]}>{lessonStatusLabel[l.status]}</Badge>
+    );
+  }
+
+  function reagendamentoContent(l: HistoryLesson) {
+    if (l.isMakeup) {
+      if (l.status !== "MAKEUP") return <span className="text-sm text-muted-foreground">—</span>;
+      return editable ? (
+        <MakeupRescheduleButton lessonId={l.id} scheduledAt={l.scheduledAt} durationMin={l.durationMin} />
+      ) : (
+        <span className="text-sm text-muted-foreground">—</span>
+      );
+    }
+    if (!(reschedulableStatuses as readonly string[]).includes(l.status)) {
+      return <span className="text-sm text-muted-foreground">—</span>;
+    }
+    if (editable) {
+      return <LessonRescheduleEditor lessonId={l.id} rescheduledTo={l.rescheduledTo ?? []} />;
+    }
+    if ((l.rescheduledTo ?? []).length === 0) {
+      return <span className="text-sm text-muted-foreground">—</span>;
+    }
+    return (
+      <div className="space-y-0.5">
+        {(l.rescheduledTo ?? []).map((r) => (
+          <div key={r.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>{formatDateTime(r.scheduledAt)}</span>
+            <span className="text-xs">{makeupOutcomeShortLabel(r.status)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  function resumoContent(l: HistoryLesson) {
+    return editable ? (
+      <LessonSummaryEditor lessonId={l.id} contentTaught={l.contentTaught} classFocus={l.classFocus} />
+    ) : (
+      <p className="truncate text-sm text-muted-foreground">
+        {[l.contentTaught, l.classFocus].filter(Boolean).join(" · ") || "—"}
+      </p>
+    );
+  }
+
+  function observacoesContent(l: HistoryLesson) {
+    return editable ? (
+      <LessonObservationsEditor lessonId={l.id} observations={l.observations} />
+    ) : (
+      <p className="truncate text-sm text-muted-foreground">{l.observations ?? "—"}</p>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -97,7 +164,66 @@ export function LessonHistoryTable({
         />
       </div>
 
-      <div className="overflow-hidden rounded-xl border">
+      {/* Mobile: one card per lesson — the 7/8-column table needed
+          horizontal scrolling on a phone to reach Reagendamento/Resumo/
+          Observações (and Professor, when present), so everything is
+          stacked here instead. */}
+      <div className="space-y-3 md:hidden">
+        {filteredLessons.map((l) => (
+          <div key={l.id} className="space-y-3 rounded-xl border p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                {teacherOptions ? (
+                  <LessonDateTimeEditor lessonId={l.id} scheduledAt={l.scheduledAt} />
+                ) : (
+                  <p>{formatDateTime(l.scheduledAt)}</p>
+                )}
+                <p className="text-xs text-muted-foreground">{formatWeekday(l.scheduledAt)}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                {teacherOptions ? (
+                  <LessonDurationEditor lessonId={l.id} durationMin={l.durationMin} />
+                ) : (
+                  <p className="text-sm text-muted-foreground">{l.durationMin} min</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1">
+              {statusContent(l)}
+              {canDelete && <DeleteLessonButton lessonId={l.id} />}
+            </div>
+
+            {teacherOptions && (
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Professor</p>
+                <LessonTeacherSelect lessonId={l.id} teacherId={l.teacherId} teachers={teacherOptions} />
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Reagendamento</p>
+              {reagendamentoContent(l)}
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Resumo</p>
+              {resumoContent(l)}
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Observações</p>
+              {observacoesContent(l)}
+            </div>
+          </div>
+        ))}
+        {filteredLessons.length === 0 && (
+          <p className="py-10 text-center text-muted-foreground">Nenhuma aula registrada neste mês.</p>
+        )}
+      </div>
+
+      {/* Desktop/tablet: the full table, unchanged. */}
+      <div className="hidden overflow-hidden rounded-xl border md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -133,21 +259,7 @@ export function LessonHistoryTable({
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
-                    {l.isMakeup ? (
-                      editable ? (
-                        <MakeupOutcomeSelect makeupLessonId={l.id} status={toMakeupOutcome(l.status)} />
-                      ) : (
-                        <Badge variant={lessonStatusBadgeVariant[l.status]}>
-                          {makeupOutcomeLabel[toMakeupOutcome(l.status)]}
-                        </Badge>
-                      )
-                    ) : editable ? (
-                      <LessonStatusSelect lessonId={l.id} status={l.status} />
-                    ) : (
-                      <Badge variant={lessonStatusBadgeVariant[l.status]}>
-                        {lessonStatusLabel[l.status]}
-                      </Badge>
-                    )}
+                    {statusContent(l)}
                     {canDelete && <DeleteLessonButton lessonId={l.id} />}
                   </div>
                 </TableCell>
@@ -156,60 +268,9 @@ export function LessonHistoryTable({
                     <LessonTeacherSelect lessonId={l.id} teacherId={l.teacherId} teachers={teacherOptions} />
                   </TableCell>
                 )}
-                <TableCell>
-                  {l.isMakeup ? (
-                    l.status === "MAKEUP" ? (
-                      editable ? (
-                        <MakeupRescheduleButton
-                          lessonId={l.id}
-                          scheduledAt={l.scheduledAt}
-                          durationMin={l.durationMin}
-                        />
-                      ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
-                      )
-                    ) : (
-                      <span className="text-sm text-muted-foreground">—</span>
-                    )
-                  ) : (reschedulableStatuses as readonly string[]).includes(l.status) ? (
-                    editable ? (
-                      <LessonRescheduleEditor lessonId={l.id} rescheduledTo={l.rescheduledTo ?? []} />
-                    ) : (l.rescheduledTo ?? []).length === 0 ? (
-                      <span className="text-sm text-muted-foreground">—</span>
-                    ) : (
-                      <div className="space-y-0.5">
-                        {(l.rescheduledTo ?? []).map((r) => (
-                          <div key={r.id} className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>{formatDateTime(r.scheduledAt)}</span>
-                            <span className="text-xs">{makeupOutcomeShortLabel(r.status)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  ) : (
-                    <span className="text-sm text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell className="max-w-64">
-                  {editable ? (
-                    <LessonSummaryEditor
-                      lessonId={l.id}
-                      contentTaught={l.contentTaught}
-                      classFocus={l.classFocus}
-                    />
-                  ) : (
-                    <p className="truncate text-sm text-muted-foreground">
-                      {[l.contentTaught, l.classFocus].filter(Boolean).join(" · ") || "—"}
-                    </p>
-                  )}
-                </TableCell>
-                <TableCell className="max-w-48">
-                  {editable ? (
-                    <LessonObservationsEditor lessonId={l.id} observations={l.observations} />
-                  ) : (
-                    <p className="truncate text-sm text-muted-foreground">{l.observations ?? "—"}</p>
-                  )}
-                </TableCell>
+                <TableCell>{reagendamentoContent(l)}</TableCell>
+                <TableCell className="max-w-64">{resumoContent(l)}</TableCell>
+                <TableCell className="max-w-48">{observacoesContent(l)}</TableCell>
               </TableRow>
             ))}
             {filteredLessons.length === 0 && (
