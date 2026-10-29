@@ -148,12 +148,19 @@ export type TeacherRescheduleAlert = {
 // expected. Unlike the admin attendance alert this needs no dismiss/
 // history: it clears itself the moment a reposição is booked for the
 // lesson, since the query simply stops matching it.
+//
+// Scoped to the student's CURRENT cadastro (status ACTIVE, teacherId still
+// this teacher) rather than just the lesson's own teacherId — an old
+// cancellation stays on the lesson row forever, but once the student is
+// reassigned to another teacher or paused/canceled it's no longer this
+// teacher's to chase down.
 export async function getTeacherRescheduleAlerts(teacherId: string): Promise<TeacherRescheduleAlert[]> {
   const lessons = await prisma.lesson.findMany({
     where: {
       teacherId,
       status: { in: [...reschedulableStatuses] },
       rescheduledTo: { none: {} },
+      student: { status: "ACTIVE", teacherId },
     },
     orderBy: { scheduledAt: "asc" },
     include: { student: { include: { user: true } } },
