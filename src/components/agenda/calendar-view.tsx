@@ -112,6 +112,9 @@ export function CalendarView({
         // is mostly empty scroll space — classes never happen before 7am,
         // so pin the visible range to start there instead.
         slotMinTime="07:00:00"
+        // Live red line marking the current time in the week/day views,
+        // same as Google Calendar — ticks on its own every minute.
+        nowIndicator
         events={(info, success, failure) => {
           const teacherParam = teacherId ? `&teacherId=${teacherId}` : "";
           fetch(`/api/lessons?start=${info.startStr}&end=${info.endStr}${teacherParam}`)
