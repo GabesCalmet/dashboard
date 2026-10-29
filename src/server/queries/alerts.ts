@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { LessonStatus } from "@prisma/client";
+import { reschedulableStatuses } from "@/lib/validation/lesson";
 
 // Statuses that flag a student for the attendance alert.
 const FLAG_STATUSES: LessonStatus[] = [
@@ -131,6 +132,45 @@ export async function getAttendanceAlerts(): Promise<AttendanceAlert[]> {
   }
 
   return alerts.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "RED" ? -1 : 1));
+}
+
+export type TeacherRescheduleAlert = {
+  studentId: string;
+  studentName: string;
+  lessons: { id: string; scheduledAt: string; status: LessonStatus }[];
+};
+
+// Per-teacher reminder: classes canceled by the student, canceled by the
+// teacher, or lost to vacation (the same CA/CP/CF set that unlocks the
+// "Reagendamento" picker — see reschedulableStatuses) that still don't have
+// a makeup booked. Deliberately excludes CANCELED_HOLIDAY (feriado), which
+// the rest of the system already treats as resolved with no makeup
+// expected. Unlike the admin attendance alert this needs no dismiss/
+// history: it clears itself the moment a reposição is booked for the
+// lesson, since the query simply stops matching it.
+export async function getTeacherRescheduleAlerts(teacherId: string): Promise<TeacherRescheduleAlert[]> {
+  const lessons = await prisma.lesson.findMany({
+    where: {
+      teacherId,
+      status: { in: [...reschedulableStatuses] },
+      rescheduledTo: { none: {} },
+    },
+    orderBy: { scheduledAt: "asc" },
+    include: { student: { include: { user: true } } },
+  });
+
+  const byStudent = new Map<string, TeacherRescheduleAlert>();
+  for (const l of lessons) {
+    const entry = byStudent.get(l.studentId) ?? {
+      studentId: l.studentId,
+      studentName: l.student.user.name,
+      lessons: [],
+    };
+    entry.lessons.push({ id: l.id, scheduledAt: l.scheduledAt.toISOString(), status: l.status });
+    byStudent.set(l.studentId, entry);
+  }
+
+  return [...byStudent.values()].sort((a, b) => a.studentName.localeCompare(b.studentName, "pt-BR"));
 }
 
 export type AlertHistoryEntry = {

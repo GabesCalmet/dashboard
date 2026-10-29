@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
 import { getTeacherDashboardData } from "@/server/queries/teacher-dashboard";
+import { getTeacherRescheduleAlerts } from "@/server/queries/alerts";
+import { TeacherRescheduleAlerts } from "@/components/alerts/teacher-reschedule-alerts";
 import { formatDateTime, formatCurrency } from "@/lib/labels";
 import { MonthNav } from "@/components/financial/month-nav";
 import { parseMonthParam, monthParam } from "@/lib/month-param";
@@ -28,11 +30,18 @@ export default async function TeacherDashboardPage({
   const user = await requireRole("TEACHER");
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
-  const data = await getTeacherDashboardData(user.teacherProfile!.id, { year, month });
+  const [data, rescheduleAlerts] = await Promise.all([
+    getTeacherDashboardData(user.teacherProfile!.id, { year, month }),
+    getTeacherRescheduleAlerts(user.teacherProfile!.id),
+  ]);
 
   return (
     <div>
       <PageHeader title={`Olá, ${user.name.split(" ")[0]}`} description="Seu painel de aulas." />
+
+      <div className="mb-4">
+        <TeacherRescheduleAlerts alerts={rescheduleAlerts} studentsBasePath="/teacher/students" />
+      </div>
 
       <div className="my-4 flex justify-center">
         <Button asChild size="lg" className="bg-blue-600 px-8 text-base text-white hover:bg-blue-700">
