@@ -1,6 +1,8 @@
+import { startOfMonth, endOfMonth } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import type { LessonStatus } from "@prisma/client";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
+import { brazilToday } from "@/lib/timezone";
 
 // Statuses that flag a student for the attendance alert.
 const FLAG_STATUSES: LessonStatus[] = [
@@ -174,6 +176,51 @@ export async function getTeacherRescheduleAlerts(teacherId: string): Promise<Tea
       lessons: [],
     };
     entry.lessons.push({ id: l.id, scheduledAt: l.scheduledAt.toISOString(), status: l.status });
+    byStudent.set(l.studentId, entry);
+  }
+
+  return [...byStudent.values()].sort((a, b) => a.studentName.localeCompare(b.studentName, "pt-BR"));
+}
+
+export type TeacherMonthClosingAlert = {
+  monthLabel: string;
+  studentId: string;
+  studentName: string;
+  lessons: { id: string; scheduledAt: string }[];
+};
+
+// Reminder that only shows up in the last 3 days of the month (teachers
+// are paid on the 1st) — every class that's already happened this month
+// but still has no reported outcome (status still SCHEDULED), i.e. exactly
+// the backlog that would throw off that month's payroll numbers once it
+// closes. Empty outside that 3-day window, or once nothing is left unfilled.
+export async function getTeacherMonthClosingAlert(teacherId: string): Promise<TeacherMonthClosingAlert[]> {
+  const today = brazilToday();
+  const daysInMonth = endOfMonth(today).getUTCDate();
+  const dayOfMonth = today.getUTCDate();
+  if (dayOfMonth < daysInMonth - 2) return [];
+
+  const lessons = await prisma.lesson.findMany({
+    where: {
+      teacherId,
+      status: "SCHEDULED",
+      scheduledAt: { gte: startOfMonth(today), lt: new Date() },
+    },
+    orderBy: { scheduledAt: "asc" },
+    include: { student: { include: { user: true } } },
+  });
+  if (lessons.length === 0) return [];
+
+  const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(today);
+  const byStudent = new Map<string, TeacherMonthClosingAlert>();
+  for (const l of lessons) {
+    const entry = byStudent.get(l.studentId) ?? {
+      monthLabel,
+      studentId: l.studentId,
+      studentName: l.student.user.name,
+      lessons: [],
+    };
+    entry.lessons.push({ id: l.id, scheduledAt: l.scheduledAt.toISOString() });
     byStudent.set(l.studentId, entry);
   }
 

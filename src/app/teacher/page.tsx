@@ -16,8 +16,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
 import { getTeacherDashboardData } from "@/server/queries/teacher-dashboard";
-import { getTeacherRescheduleAlerts } from "@/server/queries/alerts";
+import { getTeacherRescheduleAlerts, getTeacherMonthClosingAlert } from "@/server/queries/alerts";
 import { TeacherRescheduleAlerts } from "@/components/alerts/teacher-reschedule-alerts";
+import { TeacherMonthClosingAlert } from "@/components/alerts/teacher-month-closing-alert";
 import { formatDateTime, formatCurrency } from "@/lib/labels";
 import { MonthNav } from "@/components/financial/month-nav";
 import { parseMonthParam, monthParam } from "@/lib/month-param";
@@ -30,16 +31,18 @@ export default async function TeacherDashboardPage({
   const user = await requireRole("TEACHER");
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
-  const [data, rescheduleAlerts] = await Promise.all([
+  const [data, rescheduleAlerts, monthClosingAlerts] = await Promise.all([
     getTeacherDashboardData(user.teacherProfile!.id, { year, month }),
     getTeacherRescheduleAlerts(user.teacherProfile!.id),
+    getTeacherMonthClosingAlert(user.teacherProfile!.id),
   ]);
 
   return (
     <div>
       <PageHeader title={`Olá, ${user.name.split(" ")[0]}`} description="Seu painel de aulas." />
 
-      <div className="mb-4">
+      <div className="mb-4 space-y-3">
+        <TeacherMonthClosingAlert alerts={monthClosingAlerts} studentsBasePath="/teacher/students" />
         <TeacherRescheduleAlerts alerts={rescheduleAlerts} studentsBasePath="/teacher/students" />
       </div>
 
