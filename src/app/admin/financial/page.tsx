@@ -145,11 +145,17 @@ export default async function AdminFinancialPage({
                   tone="destructive"
                   href={`/admin/financial/gastos/professores?month=${monthQuery}`}
                 />
-                <SummaryRow label="Parceiros — Joe" value={data.partnerSplit.realizado.joe} tone="strong" />
+                <SummaryRow
+                  label="Parceiros — Joe"
+                  value={data.partnerSplit.realizado.joe}
+                  tone="strong"
+                  href={`/admin/financial/gastos?month=${monthQuery}`}
+                />
                 <SummaryRow
                   label="Parceiros — Gabriel"
                   value={data.partnerSplit.realizado.gabriel}
                   tone="strong"
+                  href={`/admin/financial/gastos?month=${monthQuery}`}
                 />
                 <SummaryRow label="Para a escola" value={data.partnerSplit.realizado.school} tone="strong" />
                 {manualCategories.map((c) => (
@@ -182,11 +188,17 @@ export default async function AdminFinancialPage({
                   tone="destructive"
                   href={`/admin/financial/gastos/professores?month=${monthQuery}`}
                 />
-                <SummaryRow label="Parceiros — Joe" value={data.partnerSplit.previsto.joe} tone="strong" />
+                <SummaryRow
+                  label="Parceiros — Joe"
+                  value={data.partnerSplit.previsto.joe}
+                  tone="strong"
+                  href={`/admin/financial/gastos?month=${monthQuery}`}
+                />
                 <SummaryRow
                   label="Parceiros — Gabriel"
                   value={data.partnerSplit.previsto.gabriel}
                   tone="strong"
+                  href={`/admin/financial/gastos?month=${monthQuery}`}
                 />
                 <SummaryRow label="Para a escola" value={data.partnerSplit.previsto.school} tone="strong" />
                 {manualCategories.map((c) => (
