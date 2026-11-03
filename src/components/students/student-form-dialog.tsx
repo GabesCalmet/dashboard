@@ -66,16 +66,18 @@ export function StudentFormDialog({
   courses,
   plans,
   student,
-  nextVipNumber,
+  nextStudentNumber,
 }: {
   courses: Option[];
   plans: Option[];
   student?: StudentDefaults;
-  // Suggested next "VIP-<N>" number (see lib/vip-number) for a brand new
-  // cadastro — prefilled into Nome completo, cursor parked at the start so
-  // typing the actual name just goes right before it. Never used in edit
-  // mode.
-  nextVipNumber?: number | null;
+  // Suggested next sequence number (see lib/student-number) for a brand
+  // new cadastro — just the plain number, no assumed label like "VIP-" in
+  // front of it, since that label isn't fixed and can change. Prefilled
+  // into Nome completo with the cursor parked at the start, so typing the
+  // actual name (and whatever label is wanted) goes right before it.
+  // Never used in edit mode.
+  nextStudentNumber?: number | null;
 }) {
   const isEdit = Boolean(student);
   const action = isEdit ? updateStudent.bind(null, student!.id) : createStudent;
@@ -86,7 +88,7 @@ export function StudentFormDialog({
   );
   useActionToast(state, () => setOpen(false));
 
-  const suggestedName = !isEdit && nextVipNumber ? `VIP-${nextVipNumber}` : "";
+  const suggestedName = !isEdit && nextStudentNumber ? String(nextStudentNumber) : "";
   const nameInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (open && suggestedName) {
