@@ -31,7 +31,6 @@ import { PaymentBankAccountSelect } from "@/components/students/payment-bank-acc
 import { deletePayment } from "@/server/actions/payments";
 import {
   formatCurrency,
-  formatDate,
   formatCalendarDate,
   formatCalendarMonthYear,
   paymentStatusLabel,
@@ -196,7 +195,7 @@ export function StudentPaymentsTable({
                   label="Ajustar vencimento deste mês"
                 />
               )}
-              <span>· Pago em {p.paidAt ? formatDate(p.paidAt) : "—"}</span>
+              <span>· Pago em {p.paidAt ? formatCalendarDate(p.paidAt) : "—"}</span>
             </div>
 
             {editable ? (
@@ -308,7 +307,7 @@ export function StudentPaymentsTable({
                     )}
                   </div>
                 </TableCell>
-                <TableCell>{p.paidAt ? formatDate(p.paidAt) : "—"}</TableCell>
+                <TableCell>{p.paidAt ? formatCalendarDate(p.paidAt) : "—"}</TableCell>
                 <TableCell>
                   {editable ? (
                     <PaymentStatusSelect

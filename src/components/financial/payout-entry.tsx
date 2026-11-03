@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { updatePayout, deletePayout } from "@/server/actions/payouts";
-import { formatCurrency, formatDate, bankAccountLabel } from "@/lib/labels";
+import { formatCurrency, formatCalendarDate, bankAccountLabel } from "@/lib/labels";
 import type { BankAccount } from "@prisma/client";
 
 export type PayoutEntryData = {
@@ -79,7 +79,11 @@ export function PayoutEntry({
     });
   }
 
-  const label = `${formatCurrency(entry.amount)} · ${formatDate(entry.paidAt)} · ${bankAccountLabel[entry.bankAccount]}`;
+  // paidAt is a calendar-only date (UTC midnight for its intended day, same
+  // as dueDate/referenceMonth elsewhere) — formatDate() would roll it back
+  // a day once rendered in Brazil's own UTC-3 browser clock, so this must
+  // use the UTC-pinned formatter instead.
+  const label = `${formatCurrency(entry.amount)} · ${formatCalendarDate(entry.paidAt)} · ${bankAccountLabel[entry.bankAccount]}`;
 
   return (
     <Popover
