@@ -43,7 +43,10 @@ export function MonthNav({
         type="month"
         value={monthParam(year, month)}
         onChange={(e) => e.target.value && router.push(`${basePath}?month=${e.target.value}`)}
-        className="w-40"
+        // w-40 clipped the native calendar icon on some browsers/devices —
+        // a long localized month name like "novembro de 2026" plus the
+        // icon needs more room than that.
+        className="w-48"
         aria-label="Ir para o mês"
       />
     </div>
