@@ -6,6 +6,7 @@ import type {
   BankAccount,
   ExpenseFrequency,
   ExpenseCategory,
+  AuditAction,
 } from "@prisma/client";
 
 export const blockTypeLabel: Record<string, string> = {
@@ -41,6 +42,25 @@ export const studentStatusVariant: Record<
   ACTIVE: "success",
   PAUSED: "warning",
   CANCELED: "destructive",
+};
+
+export const auditActionLabel: Record<AuditAction, string> = {
+  CREATE: "Criado",
+  UPDATE: "Atualizado",
+  DELETE: "Excluído",
+  PROMOTE: "Promovido",
+  STATUS_CHANGE: "Status alterado",
+};
+
+export const auditActionVariant: Record<
+  AuditAction,
+  "success" | "secondary" | "destructive" | "accent" | "warning"
+> = {
+  CREATE: "success",
+  UPDATE: "secondary",
+  DELETE: "destructive",
+  PROMOTE: "accent",
+  STATUS_CHANGE: "warning",
 };
 
 export const bankAccountLabel: Record<BankAccount, string> = {

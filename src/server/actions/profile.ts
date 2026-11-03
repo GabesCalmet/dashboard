@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
+import { recordAudit } from "@/server/audit";
 import type { ActionState } from "@/server/actions/students";
 
 export async function updateProfile(
@@ -20,6 +21,17 @@ export async function updateProfile(
   await prisma.user.update({
     where: { id: user.id },
     data: { name, phone: phone || null, avatarUrl: avatarUrl || undefined },
+  });
+
+  await recordAudit({
+    entityType: "User",
+    entityId: user.id,
+    action: "UPDATE",
+    actor: user,
+    changes: {
+      name: [user.name, name],
+      phone: [user.phone, phone || null],
+    },
   });
 
   revalidatePath("/", "layout");

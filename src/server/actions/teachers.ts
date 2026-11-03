@@ -182,6 +182,14 @@ export async function updateTeacherBlockedSlots(
     data: { blockedSlots: merged },
   });
 
+  await recordAudit({
+    entityType: "TeacherProfile",
+    entityId: actor.teacherProfile!.id,
+    action: "UPDATE",
+    actor,
+    changes: { blockedSlots: [existing, merged] },
+  });
+
   revalidatePath("/teacher/agenda");
   revalidatePath(`/admin/teachers/${actor.teacherProfile!.id}`);
   revalidatePath(`/coordinator/teachers/${actor.teacherProfile!.id}`);
@@ -216,8 +224,9 @@ export async function updateBlockedSlotDetail(
     return { error: "Esse bloqueio não existe mais — atualize a página." };
   }
 
+  const before = slots[blockIndex];
   slots[blockIndex] = {
-    ...slots[blockIndex],
+    ...before,
     start: parsed.data.start,
     end: parsed.data.end || undefined,
     from: parsed.data.from || undefined,
@@ -229,6 +238,14 @@ export async function updateBlockedSlotDetail(
   await prisma.teacherProfile.update({
     where: { id: actor.teacherProfile!.id },
     data: { blockedSlots: slots },
+  });
+
+  await recordAudit({
+    entityType: "TeacherProfile",
+    entityId: actor.teacherProfile!.id,
+    action: "UPDATE",
+    actor,
+    changes: { blockedSlot: [before, slots[blockIndex]] },
   });
 
   revalidatePath("/teacher/agenda");
@@ -243,11 +260,19 @@ export async function deleteBlockedSlot(blockIndex: number): Promise<void> {
     where: { id: actor.teacherProfile!.id },
   });
   const slots = asBlockedSlotArray(teacher.blockedSlots);
-  slots.splice(blockIndex, 1);
+  const [removed] = slots.splice(blockIndex, 1);
 
   await prisma.teacherProfile.update({
     where: { id: actor.teacherProfile!.id },
     data: { blockedSlots: slots },
+  });
+
+  await recordAudit({
+    entityType: "TeacherProfile",
+    entityId: actor.teacherProfile!.id,
+    action: "UPDATE",
+    actor,
+    changes: { removedBlockedSlot: removed },
   });
 
   revalidatePath("/teacher/agenda");

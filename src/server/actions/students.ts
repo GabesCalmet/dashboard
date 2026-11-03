@@ -474,10 +474,19 @@ export async function promoteStudentLevel(studentId: string) {
 }
 
 export async function updateLevelProgress(studentId: string, progress: number) {
-  await requireRole("ADMIN", "COORDINATOR");
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+  const clamped = Math.max(0, Math.min(100, progress));
+  const student = await prisma.studentProfile.findUniqueOrThrow({ where: { id: studentId } });
   await prisma.studentProfile.update({
     where: { id: studentId },
-    data: { levelProgress: Math.max(0, Math.min(100, progress)) },
+    data: { levelProgress: clamped },
+  });
+  await recordAudit({
+    entityType: "StudentProfile",
+    entityId: studentId,
+    action: "UPDATE",
+    actor,
+    changes: { levelProgress: [student.levelProgress, clamped] },
   });
   revalidatePath(`/admin/students/${studentId}`);
   revalidatePath(`/coordinator/students/${studentId}`);

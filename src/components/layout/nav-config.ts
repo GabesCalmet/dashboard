@@ -11,6 +11,7 @@ import {
   LineChart,
   History,
   Library,
+  ScrollText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -29,6 +30,7 @@ export const navByRole: Record<Role, NavItem[]> = {
     { label: "Agenda", href: "/admin/agenda", icon: CalendarDays },
     { label: "Cursos & Planos", href: "/admin/catalog", icon: Library },
     { label: "Usuários & Permissões", href: "/admin/users", icon: ShieldCheck },
+    { label: "Auditoria", href: "/admin/audit", icon: ScrollText },
     { label: "Configurações", href: "/admin/settings", icon: Settings },
   ],
   COORDINATOR: [
