@@ -71,7 +71,7 @@ export function UsersTable({ users, currentUserId }: { users: User[]; currentUse
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
-                  {u.role === "STUDENT" || u.role === "TEACHER" ? (
+                  {u.username ? (
                     <>
                       <ViewCredentialsButton userId={u.id} size="icon" />
                       <SetPasswordButton userId={u.id} size="icon" />

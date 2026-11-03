@@ -28,13 +28,28 @@ import { TempPasswordDialog } from "@/components/shared/temp-password-dialog";
 export function CreateStaffDialog() {
   const [state, formAction, isPending] = useActionState(createStaffUser, undefined);
   const [open, setOpen] = useState(false);
+  const [loginType, setLoginType] = useState<"email" | "username">("email");
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [newPassword, setNewPassword] = useState<string | null>(null);
-  useActionToast(state, () => setOpen(false), (password) => setNewPassword(password));
+  useActionToast(
+    state,
+    () => setOpen(false),
+    (password) => setNewPassword(password)
+  );
+
+  function handleOpenChange(next: boolean) {
+    if (next) {
+      setLoginType("email");
+      setEmail("");
+      setUsername("");
+    }
+    setOpen(next);
+  }
 
   return (
     <>
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button>
           <Plus /> Novo usuário
@@ -53,17 +68,68 @@ export function CreateStaffDialog() {
             <Label htmlFor="name">Nome</Label>
             <Input id="name" name="name" required />
           </div>
+
           <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+            <Label>Tipo de login</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={loginType === "email" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setLoginType("email")}
+              >
+                Email
+              </Button>
+              <Button
+                type="button"
+                variant={loginType === "username" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setLoginType("username")}
+              >
+                Nome de usuário
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {loginType === "email"
+                ? "Login real por email, com senha temporária gerada automaticamente."
+                : "Login por nome de usuário e senha escolhidos aqui, igual a alunos/professores — sem email associado."}
+            </p>
           </div>
+
+          <input type="hidden" name="loginType" value={loginType} />
+
+          {loginType === "email" ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="username">Nome de usuário</Label>
+                <Input
+                  id="username"
+                  name="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="ex: gabes"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Senha</Label>
+                <Input id="password" name="password" type="text" placeholder="Mínimo 6 caracteres" required />
+              </div>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label htmlFor="phone">Telefone</Label>
             <Input id="phone" name="phone" />

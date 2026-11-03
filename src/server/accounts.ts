@@ -58,16 +58,19 @@ export async function provisionUserAccount(params: {
   }
 }
 
-// Creates a STUDENT/TEACHER account that logs in with a username chosen by
-// the admin, using a password the admin also chooses (not auto-generated).
-// The password is stored encrypted so it can be shown again later from the
-// admin account via decryptStoredPassword — see src/lib/crypto.ts for why
-// this is encryption, not plain text, in the database.
+// Creates an account that logs in with a username chosen by the admin,
+// using a password the admin also chooses (not auto-generated) — the
+// default for STUDENT/TEACHER, and also available for ADMIN/COORDINATOR as
+// an alternative to the real-email login (see createStaffUser), e.g. for a
+// staff account that shouldn't be tied to a recoverable inbox. The password
+// is stored encrypted so it can be shown again later from the admin
+// account via decryptStoredPassword — see src/lib/crypto.ts for why this
+// is encryption, not plain text, in the database.
 export async function provisionUsernameAccount(params: {
   name: string;
   username: string;
   password: string;
-  role: "STUDENT" | "TEACHER";
+  role: Role;
   email?: string;
   phone?: string;
 }) {

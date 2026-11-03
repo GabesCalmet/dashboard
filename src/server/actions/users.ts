@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   provisionUserAccount,
+  provisionUsernameAccount,
   deactivateUserAccount,
   hardDeleteUserAccount,
   setUsernameAccountPassword,
@@ -15,12 +16,28 @@ import { createAdminClient, generateTempPassword } from "@/lib/supabase/admin";
 import { recordAudit } from "@/server/audit";
 import type { ActionState } from "@/server/actions/students";
 
-const staffSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  phone: z.string().optional(),
-  role: z.enum(["ADMIN", "COORDINATOR"]),
-});
+// An Admin/Coordinator account can log in either with a real email (gets
+// an auto-generated temp password, shown once) or with a username chosen
+// here, same as students/teachers (password is chosen here too, not
+// auto-generated) — e.g. for a staff account that shouldn't depend on a
+// recoverable inbox.
+const staffSchema = z.discriminatedUnion("loginType", [
+  z.object({
+    loginType: z.literal("email"),
+    name: z.string().min(2),
+    email: z.string().email(),
+    phone: z.string().optional(),
+    role: z.enum(["ADMIN", "COORDINATOR"]),
+  }),
+  z.object({
+    loginType: z.literal("username"),
+    name: z.string().min(2),
+    username: z.string().min(3),
+    password: z.string().min(6),
+    phone: z.string().optional(),
+    role: z.enum(["ADMIN", "COORDINATOR"]),
+  }),
+]);
 
 export async function createStaffUser(
   _prev: ActionState,
@@ -34,6 +51,19 @@ export async function createStaffUser(
   const data = parsed.data;
 
   try {
+    if (data.loginType === "username") {
+      const { user } = await provisionUsernameAccount(data);
+      await recordAudit({
+        entityType: "User",
+        entityId: user.id,
+        action: "CREATE",
+        actor,
+        changes: { role: data.role, username: data.username },
+      });
+      revalidatePath("/admin/users");
+      return { success: "Usuário criado com sucesso." };
+    }
+
     const { user, tempPassword } = await provisionUserAccount(data);
     await recordAudit({
       entityType: "User",
@@ -80,7 +110,7 @@ export async function resetUserPassword(userId: string) {
 
   const newPassword = generateTempPassword();
 
-  if (target.role === "STUDENT" || target.role === "TEACHER") {
+  if (target.username) {
     // Keeps the encrypted copy (shown via "Ver senha") in sync.
     await setUsernameAccountPassword(userId, newPassword);
   } else {
@@ -126,8 +156,8 @@ export async function changeCredentialsPassword(userId: string, newPassword: str
   if (actor.role === "COORDINATOR" && !["STUDENT", "TEACHER"].includes(target.role)) {
     throw new Error("Você não pode alterar a senha deste usuário.");
   }
-  if (target.role !== "STUDENT" && target.role !== "TEACHER") {
-    throw new Error("Esta ação é válida apenas para contas de aluno/professor.");
+  if (!target.username) {
+    throw new Error("Esta ação é válida apenas para contas com login por nome de usuário.");
   }
   if (newPassword.length < 6) {
     throw new Error("A senha deve ter ao menos 6 caracteres.");
