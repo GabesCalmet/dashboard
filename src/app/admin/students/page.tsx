@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { StudentsTable } from "@/components/students/students-table";
 import { StudentFormDialog } from "@/components/students/student-form-dialog";
 import { listStudents, listCoursesForSelect, listPlansForSelect } from "@/server/queries/students";
+import { nextVipNumber } from "@/lib/vip-number";
 
 export default async function AdminStudentsPage({
   searchParams,
@@ -40,6 +41,7 @@ export default async function AdminStudentsPage({
           <StudentFormDialog
             courses={courses.map((c) => ({ id: c.id, label: c.name }))}
             plans={plans.map((p) => ({ id: p.id, label: p.name }))}
+            nextVipNumber={nextVipNumber(rows.flatMap((r) => r.searchNames))}
           />
         }
       />

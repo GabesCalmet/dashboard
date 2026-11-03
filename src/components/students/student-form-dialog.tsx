@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Loader2, Plus, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,10 +66,16 @@ export function StudentFormDialog({
   courses,
   plans,
   student,
+  nextVipNumber,
 }: {
   courses: Option[];
   plans: Option[];
   student?: StudentDefaults;
+  // Suggested next "VIP-<N>" number (see lib/vip-number) for a brand new
+  // cadastro — prefilled into Nome completo, cursor parked at the start so
+  // typing the actual name just goes right before it. Never used in edit
+  // mode.
+  nextVipNumber?: number | null;
 }) {
   const isEdit = Boolean(student);
   const action = isEdit ? updateStudent.bind(null, student!.id) : createStudent;
@@ -79,6 +85,18 @@ export function StudentFormDialog({
     student?.isGroup ? "grupo" : "individual"
   );
   useActionToast(state, () => setOpen(false));
+
+  const suggestedName = !isEdit && nextVipNumber ? `VIP-${nextVipNumber}` : "";
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (open && suggestedName) {
+      const el = nameInputRef.current;
+      el?.focus();
+      el?.setSelectionRange(0, 0);
+    }
+    // Only when the dialog opens — not on every keystroke in the field.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -146,7 +164,19 @@ export function StudentFormDialog({
           <div className="grid grid-cols-1 gap-4 rounded-lg border p-3 sm:col-span-2 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="name">Nome completo</Label>
-              <Input id="name" name="name" defaultValue={student?.name} required />
+              <Input
+                id="name"
+                name="name"
+                ref={nameInputRef}
+                defaultValue={isEdit ? student?.name : suggestedName}
+                required
+              />
+              {suggestedName && (
+                <p className="text-xs text-muted-foreground">
+                  Próximo número sugerido: {suggestedName} — digite o nome antes dele, ou edite
+                  livremente.
+                </p>
+              )}
             </div>
 
 
