@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { StudentDetailView } from "@/components/students/student-detail";
 import { requireRole } from "@/lib/auth";
 import { getStudentDetail } from "@/server/queries/students";
+import { getTeacherRescheduleAlertForStudent } from "@/server/queries/alerts";
 import { parseMonthParam } from "@/lib/month-param";
 
 export default async function TeacherStudentDetailPage({
@@ -19,6 +20,8 @@ export default async function TeacherStudentDetailPage({
 
   if (!student || student.teacherId !== user.teacherProfile?.id) notFound();
 
+  const rescheduleAlert = await getTeacherRescheduleAlertForStudent(user.teacherProfile!.id, id);
+
   return (
     <StudentDetailView
       student={student}
@@ -34,6 +37,7 @@ export default async function TeacherStudentDetailPage({
         canEditLessons: true,
         showOverview: false,
       }}
+      rescheduleAlert={rescheduleAlert}
     />
   );
 }

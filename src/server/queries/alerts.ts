@@ -182,6 +182,33 @@ export async function getTeacherRescheduleAlerts(teacherId: string): Promise<Tea
   return [...byStudent.values()].sort((a, b) => a.studentName.localeCompare(b.studentName, "pt-BR"));
 }
 
+// Same signal as getTeacherRescheduleAlerts, narrowed to one student — for
+// the "aulas sem reposição" note on that student's own page (see
+// StudentDetailView), instead of the full per-teacher dashboard list.
+export async function getTeacherRescheduleAlertForStudent(
+  teacherId: string,
+  studentId: string
+): Promise<TeacherRescheduleAlert | null> {
+  const lessons = await prisma.lesson.findMany({
+    where: {
+      teacherId,
+      studentId,
+      status: { in: [...reschedulableStatuses] },
+      rescheduledTo: { none: {} },
+      student: { status: "ACTIVE", teacherId },
+    },
+    orderBy: { scheduledAt: "asc" },
+    include: { student: { include: { user: true } } },
+  });
+  if (lessons.length === 0) return null;
+
+  return {
+    studentId,
+    studentName: lessons[0].student.user.name,
+    lessons: lessons.map((l) => ({ id: l.id, scheduledAt: l.scheduledAt.toISOString(), status: l.status })),
+  };
+}
+
 export type TeacherMonthClosingAlert = {
   monthLabel: string;
   studentId: string;

@@ -37,8 +37,10 @@ import { MonthlyReportButton } from "@/components/students/monthly-report-button
 import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
 import { SetPasswordButton } from "@/components/shared/set-password-button";
 import { AuditTrail } from "@/components/shared/audit-trail";
+import { StudentRescheduleAlert } from "@/components/alerts/student-reschedule-alert";
 import { studentStatusLabel, studentStatusVariant, formatDate } from "@/lib/labels";
 import type { getStudentDetail } from "@/server/queries/students";
+import type { TeacherRescheduleAlert } from "@/server/queries/alerts";
 
 type Student = NonNullable<Awaited<ReturnType<typeof getStudentDetail>>>;
 
@@ -52,6 +54,7 @@ export function StudentDetailView({
   paymentHistory = [],
   charges = [],
   initialTab,
+  rescheduleAlert = null,
 }: {
   student: Student;
   basePath: string;
@@ -94,6 +97,9 @@ export function StudentDetailView({
     courses: { id: string; label: string }[];
     plans: { id: string; label: string }[];
   };
+  // Teacher's own "aulas sem reposição" note for this one student — only
+  // ever passed by the teacher route (see getTeacherRescheduleAlertForStudent).
+  rescheduleAlert?: TeacherRescheduleAlert | null;
   auditEntries?: Parameters<typeof AuditTrail>[0]["entries"];
 }) {
   // The number of classes actually scheduled this calendar month varies —
@@ -264,6 +270,11 @@ export function StudentDetailView({
             </p>
           </div>
         </div>
+        {rescheduleAlert && (
+          <div className="min-w-64 flex-1">
+            <StudentRescheduleAlert alert={rescheduleAlert} />
+          </div>
+        )}
         {permissions.canEdit && (
           <div className="flex flex-1 items-center justify-center">
             <MonthlyReportButton
