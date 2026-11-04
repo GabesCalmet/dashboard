@@ -17,7 +17,6 @@ export async function getAdminDashboardData(referenceMonth?: { year: number; mon
     totalStudents,
     activeStudents,
     pausedStudents,
-    pausedContactDue,
     canceledStudents,
     totalTeachers,
     lessonsThisMonth,
@@ -31,12 +30,6 @@ export async function getAdminDashboardData(referenceMonth?: { year: number; mon
     prisma.studentProfile.count(),
     prisma.studentProfile.count({ where: { status: "ACTIVE" } }),
     prisma.studentProfile.count({ where: { status: "PAUSED" } }),
-    // Paused students whose follow-up date has arrived and who haven't
-    // been marked Contatado yet — drives the "Alunos pausados" box's
-    // yellow alert state on the dashboard.
-    prisma.studentProfile.count({
-      where: { status: "PAUSED", pauseContactDate: { lte: now }, pauseContactedAt: null },
-    }),
     prisma.studentProfile.count({ where: { status: "CANCELED" } }),
     prisma.teacherProfile.count(),
     prisma.lesson.count({
@@ -123,7 +116,6 @@ export async function getAdminDashboardData(referenceMonth?: { year: number; mon
     totalStudents,
     activeStudents,
     pausedStudents,
-    pausedContactDue,
     canceledStudents,
     totalTeachers,
     lessonsThisMonth,

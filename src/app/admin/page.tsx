@@ -67,7 +67,6 @@ export default async function AdminDashboardPage({
           value={String(data.pausedStudents)}
           icon={PauseCircle}
           href="/admin/students?status=PAUSED"
-          tone={data.pausedContactDue > 0 ? "warning" : undefined}
         />
         <StatCard
           label="Alunos cancelados"

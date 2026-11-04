@@ -3,7 +3,6 @@ import { StudentsTable } from "@/components/students/students-table";
 import { StudentFormDialog } from "@/components/students/student-form-dialog";
 import { listStudents, listCoursesForSelect, listPlansForSelect } from "@/server/queries/students";
 import { nextStudentNumber } from "@/lib/student-number";
-import { brazilToday } from "@/lib/timezone";
 
 export default async function CoordinatorStudentsPage() {
   const [students, courses, plans] = await Promise.all([
@@ -12,7 +11,6 @@ export default async function CoordinatorStudentsPage() {
     listPlansForSelect(),
   ]);
 
-  const today = brazilToday();
   const rows = students.map((s) => {
     const memberNames = s.groupMembers.map((m) => m.user.name);
     return {
@@ -26,13 +24,6 @@ export default async function CoordinatorStudentsPage() {
       courseName: s.course?.name,
       searchNames: [s.user.name, s.groupName, ...memberNames].filter((n): n is string => Boolean(n)),
       groupMemberNames: s.groupName ? [s.user.name, ...memberNames] : memberNames,
-      pauseContactDate: s.pauseContactDate?.toISOString() ?? null,
-      pauseContacted: Boolean(s.pauseContactedAt),
-      pauseContactDue:
-        s.status === "PAUSED" &&
-        s.pauseContactDate !== null &&
-        s.pauseContactDate <= today &&
-        s.pauseContactedAt === null,
     };
   });
 
