@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AvatarUploader } from "@/components/settings/avatar-uploader";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { ChangePasswordForm } from "@/components/settings/change-password-form";
+import { BackupCard } from "@/components/settings/backup-card";
 import { roleLabel } from "@/components/layout/nav-config";
 import type { Role } from "@prisma/client";
 
@@ -46,6 +47,8 @@ export function SettingsPage({
             <ChangePasswordForm />
           </CardContent>
         </Card>
+
+        {role === "ADMIN" && <BackupCard />}
       </div>
     </div>
   );

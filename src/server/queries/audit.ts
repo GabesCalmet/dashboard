@@ -17,6 +17,7 @@ export const AUDIT_ENTITY_LABELS: Record<string, string> = {
   Expense: "Gastos",
   ExpenseOccurrence: "Ocorrências de gastos",
   ManualIncome: "Receita manual",
+  Backup: "Backups baixados",
 };
 
 export const AUDIT_ENTITY_TYPES = Object.keys(AUDIT_ENTITY_LABELS);
