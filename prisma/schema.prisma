@@ -322,6 +322,15 @@ model StudentProfile {
   objective              String?
   notes                  String?
   status                 StudentStatus   @default(ACTIVE)
+  // Set together, required, whenever status is set to PAUSED (see
+  // updateStudentStatus) — the date to follow up with this student again.
+  // pauseContactedAt stays null until someone marks it "Contatado"; while
+  // it's null and pauseContactDate has arrived, the student shows up as
+  // due on the "Alunos pausados" dashboard box and the Alunos list. Not
+  // cleared when status moves on from PAUSED — every new pause always
+  // sets a fresh date here anyway.
+  pauseContactDate       DateTime?
+  pauseContactedAt       DateTime?
   createdAt              DateTime        @default(now())
   updatedAt              DateTime        @updatedAt
 

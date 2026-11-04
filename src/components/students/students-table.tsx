@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -12,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -20,7 +24,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { levelLabel, studentStatusLabel, studentStatusVariant } from "@/lib/labels";
+import { markStudentContacted } from "@/server/actions/students";
+import { levelLabel, studentStatusLabel, studentStatusVariant, formatCalendarDate } from "@/lib/labels";
+import { cn } from "@/lib/utils";
 import type { CourseLevel, StudentStatus } from "@prisma/client";
 
 type Row = {
@@ -37,7 +43,57 @@ type Row = {
   // this one row/profile. Just [name] for an ordinary individual student.
   searchNames: string[];
   groupMemberNames?: string[];
+  // Pausados follow-up reminder — pauseContactDue is computed server-side
+  // (status PAUSED, date arrived, not yet contacted) so this stays in sync
+  // with Brazil's calendar day instead of the viewer's own browser clock.
+  pauseContactDate?: string | null;
+  pauseContacted?: boolean;
+  pauseContactDue?: boolean;
 };
+
+function ContatoCell({ row }: { row: Row }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  if (row.status !== "PAUSED") return <span className="text-sm text-muted-foreground">—</span>;
+  if (row.pauseContacted) {
+    return (
+      <span className="flex items-center gap-1 text-sm text-muted-foreground">
+        <CheckCircle2 className="size-3.5 text-success" /> Contatado
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className={cn("text-xs", row.pauseContactDue ? "font-medium text-warning" : "text-muted-foreground")}>
+        {row.pauseContactDate ? formatCalendarDate(row.pauseContactDate) : "—"}
+      </span>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={isPending}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          startTransition(async () => {
+            try {
+              await markStudentContacted(row.id);
+              toast.success("Aluno marcado como contatado.");
+              router.refresh();
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : "Erro ao atualizar.");
+            }
+          });
+        }}
+      >
+        {isPending && <Loader2 className="animate-spin" />}
+        Contatado
+      </Button>
+    </div>
+  );
+}
 
 export function StudentsTable({
   rows,
@@ -91,11 +147,15 @@ export function StudentsTable({
               <TableHead>Professor</TableHead>
               <TableHead>Curso</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Contato</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.map((r) => (
-              <TableRow key={r.id} className="cursor-pointer">
+              <TableRow
+                key={r.id}
+                className={cn("cursor-pointer", r.pauseContactDue && "bg-warning/5")}
+              >
                 <TableCell className="p-0">
                   <Link
                     href={`${basePath}/${r.id}`}
@@ -130,11 +190,14 @@ export function StudentsTable({
                     {studentStatusLabel[r.status]}
                   </Badge>
                 </TableCell>
+                <TableCell>
+                  <ContatoCell row={r} />
+                </TableCell>
               </TableRow>
             ))}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                   Nenhum aluno encontrado.
                 </TableCell>
               </TableRow>
