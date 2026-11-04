@@ -307,7 +307,12 @@ export const studentFormSchema = z.object({
   // that reads whatever was already there.
   objective: z.string().optional(),
   notes: z.string().optional(),
-  status: z.enum(["ACTIVE", "PAUSED", "CANCELED"]).default("ACTIVE"),
+  // No status field here anymore — Ativo/Pausado/Cancelado moved out of
+  // the cadastro entirely, onto a standalone selector next to the
+  // student's name on their own page (see updateStudentStatus and
+  // StudentStatusSelect). The cadastro form is informational only now;
+  // a new cadastro just keeps StudentProfile.status's own DB default
+  // (ACTIVE), and editing the cadastro never touches it.
 });
 
 export type StudentFormValues = z.infer<typeof studentFormSchema>;

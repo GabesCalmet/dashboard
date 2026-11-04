@@ -26,6 +26,7 @@ import { LessonHistoryTable } from "@/components/students/lesson-history-table";
 import { StudentPaymentsTable, type PaymentHistoryRow } from "@/components/students/student-payments-table";
 import { StudentChargesTable, type StudentChargeRow } from "@/components/students/student-charges-table";
 import { StudentFormDialog } from "@/components/students/student-form-dialog";
+import { StudentStatusSelect } from "@/components/students/student-status-select";
 import { StudentClassConfigCard } from "@/components/students/student-class-config-card";
 import { StudentNewClassPeriodDialog } from "@/components/students/student-new-class-period-dialog";
 import type { ScheduleEntry } from "@/components/students/lesson-schedule-editor";
@@ -246,9 +247,13 @@ export function StudentDetailView({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-semibold">{student.groupName ?? student.user.name}</h1>
-              <Badge variant={studentStatusVariant[student.status]}>
-                {studentStatusLabel[student.status]}
-              </Badge>
+              {permissions.canEdit ? (
+                <StudentStatusSelect studentId={student.id} status={student.status} />
+              ) : (
+                <Badge variant={studentStatusVariant[student.status]}>
+                  {studentStatusLabel[student.status]}
+                </Badge>
+              )}
             </div>
             {student.groupName ? (
               <p className="text-sm text-muted-foreground">
@@ -314,7 +319,6 @@ export function StudentDetailView({
                   level: student.level,
                   objective: student.objective,
                   notes: student.notes,
-                  status: student.status,
                 }}
               />
             )}

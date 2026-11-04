@@ -1,6 +1,6 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
+import { Prisma, type StudentStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole, requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -71,7 +71,8 @@ export async function createStudent(
         // (a schedule entry's own vigência "until").
         objective: data.objective,
         notes: data.notes,
-        status: data.status,
+        // status is no longer part of this form — left unset, so it just
+        // keeps the DB default (ACTIVE).
       },
     });
 
@@ -182,7 +183,9 @@ export async function updateStudent(
         level: data.level,
         objective: data.objective,
         notes: data.notes,
-        status: data.status,
+        // status is no longer part of this form — see
+        // updateStudentStatus for the standalone Ativo/Pausado/Cancelado
+        // control next to the student's name, so left untouched here.
       },
     }),
   ]);
@@ -217,8 +220,8 @@ export async function updateStudent(
     action: "UPDATE",
     actor,
     changes: {
-      before: { status: before.status, level: before.level, username: before.user.username },
-      after: { status: data.status, level: data.level, username: data.username },
+      before: { level: before.level, username: before.user.username },
+      after: { level: data.level, username: data.username },
     },
   });
 
@@ -231,6 +234,30 @@ export async function updateStudent(
     return { error: `Aluno atualizado, mas houve um erro ao adicionar participante: ${memberError}` };
   }
   return { success: "Aluno atualizado." };
+}
+
+// Ativo/Pausado/Cancelado, standalone — moved out of the cadastro edit
+// form entirely onto its own selector next to the student's name (see
+// StudentStatusSelect), so it can be changed without opening "Editar
+// aluno" at all.
+export async function updateStudentStatus(studentId: string, status: StudentStatus) {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+  const before = await prisma.studentProfile.findUniqueOrThrow({ where: { id: studentId } });
+
+  await prisma.studentProfile.update({ where: { id: studentId }, data: { status } });
+
+  await recordAudit({
+    entityType: "StudentProfile",
+    entityId: studentId,
+    action: "STATUS_CHANGE",
+    actor,
+    changes: { status: [before.status, status] },
+  });
+
+  revalidatePath("/admin/students");
+  revalidatePath("/coordinator/students");
+  revalidatePath(`/admin/students/${studentId}`);
+  revalidatePath(`/coordinator/students/${studentId}`);
 }
 
 // Updates everything about a student's actual CLASSES — teacher

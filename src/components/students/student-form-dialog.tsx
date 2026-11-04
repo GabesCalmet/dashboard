@@ -35,7 +35,7 @@ import {
   type GroupMemberFields,
 } from "@/components/students/group-member-fields-editor";
 import { levelLabel } from "@/lib/labels";
-import type { CourseLevel, StudentStatus } from "@prisma/client";
+import type { CourseLevel } from "@prisma/client";
 
 type Option = { id: string; label: string };
 
@@ -59,7 +59,6 @@ type StudentDefaults = {
   level: CourseLevel;
   objective?: string | null;
   notes?: string | null;
-  status: StudentStatus;
 };
 
 export function StudentFormDialog({
@@ -271,20 +270,6 @@ export function StudentFormDialog({
                     {label}
                   </SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Status</Label>
-            <Select name="status" defaultValue={student?.status ?? "ACTIVE"}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ACTIVE">Ativo</SelectItem>
-                <SelectItem value="PAUSED">Pausado</SelectItem>
-                <SelectItem value="CANCELED">Cancelado</SelectItem>
               </SelectContent>
             </Select>
           </div>
