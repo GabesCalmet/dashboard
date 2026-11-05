@@ -239,25 +239,71 @@ export async function updateStudent(
 // Ativo/Pausado/Cancelado, standalone — moved out of the cadastro edit
 // form entirely onto its own selector next to the student's name (see
 // StudentStatusSelect), so it can be changed without opening "Editar
-// aluno" at all.
-export async function updateStudentStatus(studentId: string, status: StudentStatus) {
+// aluno" at all. Pausing always requires a follow-up contact date — see
+// pauseContactDate on the schema — which resets pauseContactedAt so the
+// new pause starts its own fresh reminder.
+export async function updateStudentStatus(
+  studentId: string,
+  status: StudentStatus,
+  contactDate?: string
+) {
   const actor = await requireRole("ADMIN", "COORDINATOR");
+  if (status === "PAUSED" && !contactDate) {
+    throw new Error("Informe a data para entrar em contato novamente.");
+  }
   const before = await prisma.studentProfile.findUniqueOrThrow({ where: { id: studentId } });
 
-  await prisma.studentProfile.update({ where: { id: studentId }, data: { status } });
+  await prisma.studentProfile.update({
+    where: { id: studentId },
+    data: {
+      status,
+      ...(status === "PAUSED"
+        ? { pauseContactDate: new Date(contactDate!), pauseContactedAt: null }
+        : {}),
+    },
+  });
 
   await recordAudit({
     entityType: "StudentProfile",
     entityId: studentId,
     action: "STATUS_CHANGE",
     actor,
-    changes: { status: [before.status, status] },
+    changes: {
+      status: [before.status, status],
+      ...(status === "PAUSED" ? { pauseContactDate: contactDate } : {}),
+    },
   });
 
   revalidatePath("/admin/students");
   revalidatePath("/coordinator/students");
   revalidatePath(`/admin/students/${studentId}`);
   revalidatePath(`/coordinator/students/${studentId}`);
+  revalidatePath("/admin");
+  revalidatePath("/coordinator");
+}
+
+// Clears the "aulas sem reposição"-style alert for a paused student once
+// someone's actually followed up with them — see pauseContactDate above.
+export async function markStudentContacted(studentId: string) {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+
+  await prisma.studentProfile.update({
+    where: { id: studentId },
+    data: { pauseContactedAt: new Date() },
+  });
+
+  await recordAudit({
+    entityType: "StudentProfile",
+    entityId: studentId,
+    action: "UPDATE",
+    actor,
+    changes: { pauseContactedAt: "contacted" },
+  });
+
+  revalidatePath("/admin/students");
+  revalidatePath("/coordinator/students");
+  revalidatePath("/admin");
+  revalidatePath("/coordinator");
 }
 
 // Updates everything about a student's actual CLASSES — teacher
