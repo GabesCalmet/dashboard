@@ -1,7 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/api/auth/callback"];
+// manifest.webmanifest/sw.js/offline.html must be reachable without a
+// session — Chrome's PWA installability check (and the service worker
+// itself) fetches them directly, and a 307 to /login there breaks
+// "Add to Home Screen"/install entirely instead of just showing a
+// logged-out page.
+const PUBLIC_PATHS = ["/login", "/api/auth/callback", "/manifest.webmanifest", "/sw.js", "/offline.html"];
 const USER_ID_HEADER = "x-user-id";
 
 function isPublicPath(pathname: string) {
