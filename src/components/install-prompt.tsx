@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { X, Share, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 // Chrome/Android fire this before showing their own install UI — capturing
 // it lets a page show its own button and trigger the native prompt on
@@ -23,18 +25,27 @@ interface NavigatorWithIosStandalone extends Navigator {
   standalone?: boolean;
 }
 
-const DISMISS_KEY = "upfront-install-prompt-dismissed";
+// Permanent (never show again) — only ever set by the explicit checkbox,
+// or once the app is actually installed. Session-only (just hide for this
+// visit) — set whenever the banner is closed without checking that box,
+// so closing it isn't mistaken for "stop asking forever" the way a bare X
+// button usually is; it just comes back next time instead.
+const PERMANENT_DISMISS_KEY = "upfront-install-prompt-dismissed";
+const SESSION_DISMISS_KEY = "upfront-install-prompt-dismissed-session";
 
 export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showIosHint, setShowIosHint] = useState(false);
-  const [dismissedByUser, setDismissedByUser] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
   useEffect(() => {
     try {
-      if (localStorage.getItem(DISMISS_KEY) === "1") {
+      const permanentlyDismissed = localStorage.getItem(PERMANENT_DISMISS_KEY) === "1";
+      const dismissedThisSession = sessionStorage.getItem(SESSION_DISMISS_KEY) === "1";
+      if (permanentlyDismissed || dismissedThisSession) {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- classic SSR-safe client-only check: server and first client render must match, so the real value can only be known once mounted.
-        setDismissedByUser(true);
+        setHidden(true);
         return;
       }
     } catch {
@@ -61,51 +72,75 @@ export function InstallPrompt() {
 
   function dismiss() {
     try {
-      localStorage.setItem(DISMISS_KEY, "1");
+      if (dontShowAgain) {
+        localStorage.setItem(PERMANENT_DISMISS_KEY, "1");
+      } else {
+        sessionStorage.setItem(SESSION_DISMISS_KEY, "1");
+      }
     } catch {
-      // Ignore — worst case the banner reappears next visit.
+      // Ignore — worst case the banner reappears next visit/page.
     }
-    setDismissedByUser(true);
+    setHidden(true);
   }
 
   async function install() {
     if (!deferredPrompt) return;
     await deferredPrompt.prompt();
     await deferredPrompt.userChoice;
-    dismiss();
+    try {
+      localStorage.setItem(PERMANENT_DISMISS_KEY, "1");
+    } catch {
+      // Ignore — app is installed either way, just not remembered.
+    }
+    setHidden(true);
   }
 
-  const visible = !dismissedByUser && (showIosHint || deferredPrompt !== null);
+  const visible = !hidden && (showIosHint || deferredPrompt !== null);
   if (!visible) return null;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 border-t bg-card px-4 py-3 shadow-lg">
-      <div className="mx-auto flex max-w-2xl items-center gap-3">
-        <Image
-          src="/icons/icon-192.png"
-          alt=""
-          width={40}
-          height={40}
-          className="shrink-0 rounded-lg"
-        />
-        <div className="min-w-0 flex-1 text-sm">
-          {deferredPrompt ? (
-            <p>Instale o Upfront Portal no seu celular para acesso rápido, como um app.</p>
-          ) : (
-            <p>
-              Toque em <Share className="inline size-3.5 align-text-bottom" /> (Compartilhar) e depois em
-              &quot;Adicionar à Tela de Início&quot; para instalar o app.
-            </p>
+      <div className="mx-auto flex max-w-2xl flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <Image
+            src="/icons/icon-192.png"
+            alt=""
+            width={40}
+            height={40}
+            className="shrink-0 rounded-lg"
+          />
+          <div className="min-w-0 flex-1 text-sm">
+            {deferredPrompt ? (
+              <p>Instale o Upfront Portal no seu celular para acesso rápido, como um app.</p>
+            ) : (
+              <p>
+                Toque em <Share className="inline size-3.5 align-text-bottom" /> (Compartilhar) e depois em
+                &quot;Adicionar à Tela de Início&quot; para instalar o app.
+              </p>
+            )}
+          </div>
+          {deferredPrompt && (
+            <Button size="sm" onClick={install} className="shrink-0">
+              <Download /> Instalar
+            </Button>
           )}
-        </div>
-        {deferredPrompt && (
-          <Button size="sm" onClick={install} className="shrink-0">
-            <Download /> Instalar
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={dismiss} aria-label="Fechar">
+            <X className="size-4" />
           </Button>
-        )}
-        <Button variant="ghost" size="icon" className="shrink-0" onClick={dismiss} aria-label="Fechar">
-          <X className="size-4" />
-        </Button>
+        </div>
+        <div className="flex items-center gap-2 pl-[52px]">
+          <Checkbox
+            id="install-prompt-dont-show-again"
+            checked={dontShowAgain}
+            onCheckedChange={(v) => setDontShowAgain(v === true)}
+          />
+          <Label
+            htmlFor="install-prompt-dont-show-again"
+            className="text-xs font-normal text-muted-foreground"
+          >
+            Não mostrar novamente
+          </Label>
+        </div>
       </div>
     </div>
   );
