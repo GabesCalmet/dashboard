@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { toast } from "sonner";
 import { X, Share, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -86,13 +87,30 @@ export function InstallPrompt() {
   async function install() {
     if (!deferredPrompt) return;
     await deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
+    const { outcome } = await deferredPrompt.userChoice;
+    // Spent either way — a BeforeInstallPromptEvent can only be prompted
+    // once, so the banner can't offer a retry from this same event
+    // regardless of outcome. What matters is NOT treating a cancel as
+    // "never ask again": only an actual accept gets the permanent flag;
+    // a cancel just hides for this visit (see dismiss()'s session key),
+    // so the banner naturally comes back next time Chrome offers a fresh
+    // install prompt.
     try {
-      localStorage.setItem(PERMANENT_DISMISS_KEY, "1");
+      if (outcome === "accepted") {
+        localStorage.setItem(PERMANENT_DISMISS_KEY, "1");
+      } else {
+        sessionStorage.setItem(SESSION_DISMISS_KEY, "1");
+      }
     } catch {
-      // Ignore — app is installed either way, just not remembered.
+      // Ignore — worst case the banner reappears next visit/page.
     }
     setHidden(true);
+
+    if (outcome === "accepted") {
+      toast.success("Instalando... o ícone deve aparecer na gaveta de apps em instantes.");
+    } else {
+      toast.info("Instalação cancelada — nada foi instalado.");
+    }
   }
 
   const visible = !hidden && (showIosHint || deferredPrompt !== null);
