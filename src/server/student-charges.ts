@@ -10,8 +10,52 @@ export type StudentChargeLike = {
   date: Date;
   dueDay: number | null;
   endDate: Date | null;
+  decemberAmount: number | null;
+  januaryAmount: number | null;
   bankAccount: BankAccount;
 };
+
+type RawChargeRow = {
+  payerName: string | null;
+  amount: unknown;
+  frequency: ExpenseFrequency;
+  date: Date;
+  dueDay: number | null;
+  endDate: Date | null;
+  decemberAmount: unknown;
+  januaryAmount: unknown;
+  bankAccount: BankAccount;
+};
+
+// Converts a raw StudentCharge row (Decimal fields) into StudentChargeLike
+// — the one place every caller funnels through, so adding another
+// per-month override later only means touching this function plus
+// resolveChargeAmount.
+export function toChargeLike<T extends RawChargeRow>(c: T): StudentChargeLike {
+  return {
+    payerName: c.payerName,
+    amount: Number(c.amount),
+    frequency: c.frequency,
+    date: c.date,
+    dueDay: c.dueDay,
+    endDate: c.endDate,
+    decemberAmount: c.decemberAmount != null ? Number(c.decemberAmount) : null,
+    januaryAmount: c.januaryAmount != null ? Number(c.januaryAmount) : null,
+    bankAccount: c.bankAccount,
+  };
+}
+
+// A RECURRING charge's amount for one specific month — `amount` unless
+// that month is December/January and the matching override is set (every
+// year the charge is active, not just once). ONE_TIME charges have no
+// override slot, since they're already a single specific month.
+function resolveChargeAmount(charge: StudentChargeLike, monthStart: Date): number {
+  if (charge.frequency !== "RECURRING") return charge.amount;
+  const month = monthStart.getMonth();
+  if (month === 11 && charge.decemberAmount != null) return charge.decemberAmount;
+  if (month === 0 && charge.januaryAmount != null) return charge.januaryAmount;
+  return charge.amount;
+}
 
 // A student's billing slot for one specific month — the StudentCharge
 // counterpart to the old history-based BillingSlot in billing.ts (see
@@ -58,7 +102,12 @@ export function getChargeSlotsForMonth(
       const endMonth = new Date(c.endDate.getFullYear(), c.endDate.getMonth(), 1);
       if (endMonth < monthStart) continue;
     }
-    slots.push({ payerName: c.payerName, amount: c.amount, dueDay: c.dueDay ?? 10, bankAccount: c.bankAccount });
+    slots.push({
+      payerName: c.payerName,
+      amount: resolveChargeAmount(c, monthStart),
+      dueDay: c.dueDay ?? 10,
+      bankAccount: c.bankAccount,
+    });
     seen.add(key);
   }
 
@@ -77,10 +126,7 @@ export async function getStudentChargeSlotsForMonth(
     where: { studentId },
     orderBy: { createdAt: "desc" },
   });
-  return getChargeSlotsForMonth(
-    charges.map((c) => ({ ...c, amount: Number(c.amount) })),
-    referenceMonth
-  );
+  return getChargeSlotsForMonth(charges.map(toChargeLike), referenceMonth);
 }
 
 // Batched version of "what's this student's own charge worth this month"
@@ -113,10 +159,9 @@ export async function getOwnChargeAmountsForMonth(
   }
 
   for (const [studentId, list] of byStudent) {
-    const slot = getChargeSlotsForMonth(
-      list.map((c) => ({ ...c, amount: Number(c.amount) })),
-      monthStart
-    ).find((s) => s.payerName === null);
+    const slot = getChargeSlotsForMonth(list.map(toChargeLike), monthStart).find(
+      (s) => s.payerName === null
+    );
     if (slot) result.set(studentId, slot.amount);
   }
 
@@ -183,7 +228,7 @@ export async function materializeStudentCharge(
         data: {
           studentId,
           referenceMonth: monthStart,
-          amount: charge.amount,
+          amount: resolveChargeAmount(charge, monthStart),
           dueDate,
           payerName: charge.payerName,
           status: dueDate < now ? "LATE" : "PENDING",
@@ -219,10 +264,7 @@ export async function getTotalChargeRevenueForMonth(referenceMonth: Date): Promi
 
   let total = 0;
   for (const list of byStudent.values()) {
-    const slots = getChargeSlotsForMonth(
-      list.map((c) => ({ ...c, amount: Number(c.amount) })),
-      monthStart
-    );
+    const slots = getChargeSlotsForMonth(list.map(toChargeLike), monthStart);
     total += slots.reduce((sum, s) => sum + s.amount, 0);
   }
   return total;
@@ -260,10 +302,7 @@ export async function createMissingPaymentsForMonth(referenceMonth: Date) {
 
   let created = 0;
   for (const [studentId, list] of byStudent) {
-    const slots = getChargeSlotsForMonth(
-      list.map((c) => ({ ...c, amount: Number(c.amount) })),
-      monthStart
-    );
+    const slots = getChargeSlotsForMonth(list.map(toChargeLike), monthStart);
     for (const slot of slots) {
       const existing = await prisma.payment.findFirst({
         where: { studentId, referenceMonth: monthStart, payerName: slot.payerName },

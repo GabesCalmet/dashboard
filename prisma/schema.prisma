@@ -549,6 +549,8 @@ model StudentCharge {
   date        DateTime // ONE_TIME: the due date. RECURRING: when billing starts.
   dueDay      Int? // RECURRING only: day of month it's due, 1-31
   endDate     DateTime? // RECURRING only: when it stops — null means still ongoing
+  decemberAmount Decimal?      @db.Decimal(10, 2) // RECURRING only: overrides `amount` every December
+  januaryAmount  Decimal?      @db.Decimal(10, 2) // RECURRING only: overrides `amount` every January
   bankAccount BankAccount      @default(JOE)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt

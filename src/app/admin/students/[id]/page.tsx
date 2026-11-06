@@ -47,6 +47,8 @@ export default async function AdminStudentDetailPage({
         date: c.date,
         dueDay: c.dueDay,
         endDate: c.endDate,
+        decemberAmount: c.decemberAmount != null ? Number(c.decemberAmount) : null,
+        januaryAmount: c.januaryAmount != null ? Number(c.januaryAmount) : null,
         bankAccount: c.bankAccount,
       }))}
       initialTab={tab}

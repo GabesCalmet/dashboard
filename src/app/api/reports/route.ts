@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { csvResponse } from "@/lib/csv";
-import { getChargeSlotsForMonth } from "@/server/student-charges";
+import { getChargeSlotsForMonth, toChargeLike } from "@/server/student-charges";
 import {
   levelLabel,
   lessonStatusLabel,
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         "alunos.csv",
         students.map((s) => {
           const ownSlot = getChargeSlotsForMonth(
-            (chargesByStudent.get(s.id) ?? []).map((c) => ({ ...c, amount: Number(c.amount) })),
+            (chargesByStudent.get(s.id) ?? []).map(toChargeLike),
             now
           ).find((slot) => slot.payerName === null);
           return {

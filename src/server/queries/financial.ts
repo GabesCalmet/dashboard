@@ -3,7 +3,7 @@ import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { bankAccountLabel } from "@/lib/labels";
 import { brazilToday, endOfBrazilDay } from "@/lib/timezone";
 import { resolveSlotStudentName } from "@/server/billing";
-import { getChargeSlotsForMonth, getTotalChargeRevenueForMonth } from "@/server/student-charges";
+import { getChargeSlotsForMonth, getTotalChargeRevenueForMonth, toChargeLike, type StudentChargeLike } from "@/server/student-charges";
 import { getTeacherPayrollForMonth, getTeacherFeriasForYear } from "@/server/queries/teachers";
 import { getPaidTeacherPayrollTotal, getPartnerPayoutAmount } from "@/server/queries/payouts";
 import type { BankAccount, Expense, PaymentStatus, StudentCharge } from "@prisma/client";
@@ -14,9 +14,9 @@ import type { BankAccount, Expense, PaymentStatus, StudentCharge } from "@prisma
 // getChargeSlotsForMonth expects. Shared by every query below that needs
 // per-student charge slots for a given month.
 function groupChargesByStudent(charges: StudentCharge[]) {
-  const byStudent = new Map<string, { payerName: string | null; amount: number; frequency: StudentCharge["frequency"]; date: Date; dueDay: number | null; endDate: Date | null; bankAccount: BankAccount }[]>();
+  const byStudent = new Map<string, StudentChargeLike[]>();
   for (const c of charges) {
-    const entry = { ...c, amount: Number(c.amount) };
+    const entry = toChargeLike(c);
     const bucket = byStudent.get(c.studentId);
     if (bucket) bucket.push(entry);
     else byStudent.set(c.studentId, [entry]);
@@ -666,7 +666,7 @@ export async function getStudentPaymentHistory(studentId: string) {
     prisma.payment.findMany({ where: { studentId } }),
     prisma.studentCharge.findMany({ where: { studentId }, orderBy: { createdAt: "desc" } }),
   ]);
-  const chargeList = charges.map((c) => ({ ...c, amount: Number(c.amount) }));
+  const chargeList = charges.map(toChargeLike);
 
   const now = brazilToday();
   const end = new Date(now.getFullYear() + 1, 11, 1);

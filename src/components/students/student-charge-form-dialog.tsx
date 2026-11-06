@@ -36,6 +36,8 @@ type ChargeDefaults = {
   date: string;
   dueDay: number | null;
   endDate?: string;
+  decemberAmount: number | null;
+  januaryAmount: number | null;
   bankAccount: BankAccount;
 };
 
@@ -164,6 +166,30 @@ export function StudentChargeFormDialog({
               <div className="space-y-1.5">
                 <Label htmlFor="endDate">Encerra em (opcional)</Label>
                 <DateInput id="endDate" name="endDate" defaultValue={charge?.endDate} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="decemberAmount">Dezembro (R$, opcional)</Label>
+                <Input
+                  id="decemberAmount"
+                  name="decemberAmount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="Deixe em branco para o valor normal"
+                  defaultValue={charge?.decemberAmount ?? ""}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="januaryAmount">Janeiro (R$, opcional)</Label>
+                <Input
+                  id="januaryAmount"
+                  name="januaryAmount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="Deixe em branco para o valor normal"
+                  defaultValue={charge?.januaryAmount ?? ""}
+                />
               </div>
             </>
           )}
