@@ -8,6 +8,7 @@ import {
 } from "@/server/queries/students";
 import { getAuditTrail } from "@/server/audit";
 import { getStudentPaymentHistory, listStudentCharges } from "@/server/queries/financial";
+import { getRescheduleAlertForStudent } from "@/server/queries/alerts";
 import { parseMonthParam } from "@/lib/month-param";
 
 export default async function AdminStudentDetailPage({
@@ -20,7 +21,7 @@ export default async function AdminStudentDetailPage({
   const { id } = await params;
   const { month: monthParamValue, tab } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
-  const [student, teachers, courses, plans, audit, paymentHistory, charges] = await Promise.all([
+  const [student, teachers, courses, plans, audit, paymentHistory, charges, rescheduleAlert] = await Promise.all([
     getStudentDetail(id),
     listActiveTeachersForSelect(),
     listCoursesForSelect(),
@@ -28,6 +29,7 @@ export default async function AdminStudentDetailPage({
     getAuditTrail("StudentProfile", id),
     getStudentPaymentHistory(id),
     listStudentCharges(id),
+    getRescheduleAlertForStudent(id),
   ]);
 
   if (!student) notFound();
@@ -52,6 +54,7 @@ export default async function AdminStudentDetailPage({
         bankAccount: c.bankAccount,
       }))}
       initialTab={tab}
+      rescheduleAlert={rescheduleAlert}
       permissions={{
         canEdit: true,
         canDelete: true,

@@ -17,7 +17,13 @@ function statusTone(status: LessonStatus, isMakeup: boolean): StatusTone {
   if (isMakeup) return "makeup";
   if (status === "COMPLETED") return "completed";
   if (status === "SCHEDULED") return "neutral";
-  return "canceled"; // every CANCELED_*/NO_SHOW variant
+  // Red stays reserved for the two cancellations actually attributable to
+  // someone (aluno/professor) — every other CANCELED_*/NO_SHOW variant
+  // (não compareceu, feriado, cancelamento tarde, cancelamento sem
+  // reposição, férias, falta de energia, etc.) is a yellow "heads up," not
+  // a red "someone's fault."
+  if (status === "CANCELED_BY_STUDENT" || status === "CANCELED_BY_TEACHER") return "canceled";
+  return "warning";
 }
 
 function brDate(date: Date): string {

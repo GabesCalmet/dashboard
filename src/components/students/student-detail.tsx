@@ -98,8 +98,9 @@ export function StudentDetailView({
     courses: { id: string; label: string }[];
     plans: { id: string; label: string }[];
   };
-  // Teacher's own "aulas sem reposição" note for this one student — only
-  // ever passed by the teacher route (see getTeacherRescheduleAlertForStudent).
+  // "Aulas sem reposição" note for this one student — passed by the
+  // teacher route (see getTeacherRescheduleAlertForStudent) and the admin
+  // route (see getRescheduleAlertForStudent).
   rescheduleAlert?: TeacherRescheduleAlert | null;
   auditEntries?: Parameters<typeof AuditTrail>[0]["entries"];
 }) {

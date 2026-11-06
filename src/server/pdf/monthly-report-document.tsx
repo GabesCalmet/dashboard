@@ -36,6 +36,7 @@ const NAVY = "#0B2254";
 const ORANGE = "#D4542E";
 const GREEN = "#1F9D55";
 const RED = "#D64545";
+const YELLOW = "#B7791F";
 const GRAY = "#6b7280";
 
 // Past this many rows, the table switches to a more compact row style so
@@ -121,11 +122,12 @@ const styles = StyleSheet.create({
 const STATUS_TONE_STYLE: Record<StatusTone, { backgroundColor: string; color: string }> = {
   completed: { backgroundColor: "#e7f7ec", color: GREEN },
   canceled: { backgroundColor: "#fdecec", color: RED },
+  warning: { backgroundColor: "#fdf3e0", color: YELLOW },
   makeup: { backgroundColor: "#fff2e3", color: ORANGE },
   neutral: { backgroundColor: "#f3f4f6", color: GRAY },
 };
 
-export type StatusTone = "completed" | "canceled" | "makeup" | "neutral";
+export type StatusTone = "completed" | "canceled" | "warning" | "makeup" | "neutral";
 
 export type MonthlyReportRow = {
   data: string;

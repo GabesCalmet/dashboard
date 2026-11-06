@@ -209,6 +209,19 @@ export async function getTeacherRescheduleAlertForStudent(
   };
 }
 
+// Same "aulas sem reposição" note for admin/coordinator viewing a student's
+// own page — unlike the teacher route, there's no logged-in teacherId to
+// scope by, so this resolves the student's own CURRENT teacher first (no
+// teacher assigned means nothing to chase down).
+export async function getRescheduleAlertForStudent(studentId: string): Promise<TeacherRescheduleAlert | null> {
+  const student = await prisma.studentProfile.findUnique({
+    where: { id: studentId },
+    select: { teacherId: true },
+  });
+  if (!student?.teacherId) return null;
+  return getTeacherRescheduleAlertForStudent(student.teacherId, studentId);
+}
+
 export type TeacherMonthClosingAlert = {
   monthLabel: string;
   studentId: string;
