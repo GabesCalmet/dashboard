@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // The build container reports far more CPUs than it actually allows
+  // threads/processes for (Next tried to spawn 63 workers and the OS
+  // refused: "can't spawn worker thread: Resource temporarily
+  // unavailable"). Capping this avoids overshooting the container's real
+  // limit — only affects build-time parallelism, not runtime performance.
+  experimental: {
+    cpus: 2,
+  },
   // @react-pdf/renderer (via pdfkit) loads its standard-font files
   // dynamically at runtime — Next's file tracing doesn't always pick that
   // up automatically for the deployed serverless bundle, which produced
