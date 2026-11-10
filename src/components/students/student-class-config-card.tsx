@@ -131,6 +131,7 @@ export function StudentClassConfigCard({
                   <MonthlyValueHistoryEditor
                     label="Aulas contratadas por mês"
                     amountLabel="Aulas/mês"
+                    addButtonLabel="Adicionar aulas contratadas"
                     amountFieldName="lessonsPerMonth"
                     historyFieldName="lessonsPerMonthHistory"
                     defaultAmount={lessonsPerMonth}

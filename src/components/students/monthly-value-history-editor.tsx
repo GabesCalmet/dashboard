@@ -27,6 +27,7 @@ function resolveCurrentAmount(entries: ValueHistoryEntry[]): number {
 export function MonthlyValueHistoryEditor({
   label = "Valor mensal (R$)",
   amountLabel = "Valor (R$)",
+  addButtonLabel = "Adicionar valor",
   amountFieldName,
   historyFieldName,
   defaultAmount,
@@ -41,6 +42,10 @@ export function MonthlyValueHistoryEditor({
   // the group heading, which reads oddly reused per-row for non-currency
   // fields like "Dia de vencimento" or "Aulas por mês".
   amountLabel?: string;
+  // "Adicionar valor" reads fine for a genuinely financial field (a
+  // teacher's hourly rate) but confusingly money-flavored for a non-
+  // currency one like aulas contratadas, which has no "valor" at all.
+  addButtonLabel?: string;
   // Omit both field names to use this in "controlled" mode instead — no
   // hidden inputs of its own, just reports every change via onChange so a
   // parent editing several of these at once (one per group participant,
@@ -142,7 +147,7 @@ export function MonthlyValueHistoryEditor({
       ))}
 
       <Button type="button" variant="outline" size="sm" onClick={addEntry}>
-        <Plus className="size-4" /> Adicionar valor
+        <Plus className="size-4" /> {addButtonLabel}
       </Button>
     </div>
   );
