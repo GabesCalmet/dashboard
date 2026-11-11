@@ -42,6 +42,7 @@ export const teacherFormSchema = z.object({
     }),
   admissionDate: z.string().optional(),
   endDate: z.string().optional(),
+  pixKey: z.string().optional(),
   notes: z.string().optional(),
 });
 

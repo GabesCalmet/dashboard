@@ -34,6 +34,7 @@ type TeacherDefaults = {
   hourlyRateHistory?: ValueHistoryEntry[];
   admissionDate?: string;
   endDate?: string;
+  pixKey?: string | null;
   notes?: string | null;
 };
 
@@ -112,6 +113,10 @@ export function TeacherFormDialog({ teacher }: { teacher?: TeacherDefaults }) {
           <div className="space-y-1.5">
             <Label htmlFor="endDate">Data de término (opcional)</Label>
             <DateInput id="endDate" name="endDate" defaultValue={teacher?.endDate} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pixKey">PIX</Label>
+            <Input id="pixKey" name="pixKey" defaultValue={teacher?.pixKey ?? ""} />
           </div>
 
           <MonthlyValueHistoryEditor

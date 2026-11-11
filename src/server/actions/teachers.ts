@@ -59,6 +59,7 @@ export async function createTeacher(
         hourlyRateHistory: data.hourlyRateHistory,
         admissionDate: data.admissionDate ? new Date(data.admissionDate) : brazilToday(),
         endDate: data.endDate ? new Date(data.endDate) : undefined,
+        pixKey: data.pixKey || null,
         notes: data.notes,
       },
     });
@@ -122,6 +123,7 @@ export async function updateTeacher(
         hourlyRateHistory: data.hourlyRateHistory,
         admissionDate: data.admissionDate ? new Date(data.admissionDate) : undefined,
         endDate: data.endDate ? new Date(data.endDate) : null,
+        pixKey: data.pixKey || null,
         notes: data.notes,
       },
     }),

@@ -80,6 +80,7 @@ export function TeacherDetailView({
                   hourlyRateHistory: parseValueHistory(teacher.hourlyRateHistory),
                   admissionDate: teacher.admissionDate.toISOString().slice(0, 10),
                   endDate: teacher.endDate?.toISOString().slice(0, 10),
+                  pixKey: teacher.pixKey,
                   notes: teacher.notes,
                 }}
               />
