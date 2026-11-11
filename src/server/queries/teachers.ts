@@ -667,7 +667,15 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
         if (!assignment.assigned) contratadoFerias += pay;
       }
     }
-    return { teacherId: t.id, teacherName: t.user.name, previsto, realizado, previstoContrato, contratadoFerias };
+    return {
+      teacherId: t.id,
+      teacherName: t.user.name,
+      pixKey: t.pixKey,
+      previsto,
+      realizado,
+      previstoContrato,
+      contratadoFerias,
+    };
   });
 
   rows.sort((a, b) => teacherOrderIndex(a.teacherName) - teacherOrderIndex(b.teacherName));

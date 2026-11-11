@@ -92,6 +92,10 @@ export default async function AdminTeacherPayrollPage({
                 }))}
               />
             </div>
+            <div>
+              <p className="text-xs text-muted-foreground">PIX</p>
+              <p>{r.pixKey || "—"}</p>
+            </div>
           </div>
         ))}
         {rows.length === 0 && (
@@ -132,6 +136,7 @@ export default async function AdminTeacherPayrollPage({
               <TableHead>Previsto por hora</TableHead>
               <TableHead>Acumulado</TableHead>
               <TableHead>Realizado</TableHead>
+              <TableHead>PIX</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -163,11 +168,12 @@ export default async function AdminTeacherPayrollPage({
                     }))}
                   />
                 </TableCell>
+                <TableCell>{r.pixKey || "—"}</TableCell>
               </TableRow>
             ))}
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                   Nenhum professor ativo.
                 </TableCell>
               </TableRow>
@@ -181,6 +187,7 @@ export default async function AdminTeacherPayrollPage({
                 <TableCell>{formatCurrency(totals.previsto)}</TableCell>
                 <TableCell>{formatCurrency(totals.realizado)}</TableCell>
                 <TableCell>{formatCurrency(totalRealizado)}</TableCell>
+                <TableCell />
               </TableRow>
             </TableFooter>
           )}
