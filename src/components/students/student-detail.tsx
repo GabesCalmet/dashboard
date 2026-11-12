@@ -352,8 +352,8 @@ export function StudentDetailView({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-6">
-        <div className="lg:col-span-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-10">
+        <div className="lg:col-span-9">
           <Tabs
             defaultValue={
               initialTab === "financial" && permissions.showFinancial
