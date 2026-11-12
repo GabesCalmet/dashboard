@@ -11,6 +11,7 @@ export function StatCard({
   accent = false,
   tone,
   href,
+  compact = false,
 }: {
   label: string;
   value: string;
@@ -19,20 +20,32 @@ export function StatCard({
   accent?: boolean;
   tone?: "warning" | "danger";
   href?: string;
+  // Smaller padding/text — for a dense grid of many cards side by side
+  // (e.g. a student's lesson-status breakdown) where the default size
+  // meant for a handful of dashboard overview tiles wastes a lot of space.
+  compact?: boolean;
 }) {
   const card = (
     <Card
       className={cn(
-        "gap-0 py-5",
+        "gap-0",
+        compact ? "py-3" : "py-5",
         tone === "warning" && "border-warning/40 bg-warning/5",
         tone === "danger" && "border-destructive/40 bg-destructive/5",
         href && "transition-colors hover:border-accent/50"
       )}
     >
-      <CardContent className="flex items-start justify-between px-5">
+      <CardContent className={cn("flex items-start justify-between", compact ? "px-3" : "px-5")}>
         <div className="min-w-0">
           <p className="text-xs font-medium text-muted-foreground">{label}</p>
-          <p className="mt-1.5 text-2xl font-semibold tracking-tight">{value}</p>
+          <p
+            className={cn(
+              "mt-1.5 font-semibold tracking-tight",
+              compact ? "text-lg" : "text-2xl"
+            )}
+          >
+            {value}
+          </p>
           {trend && (
             <p
               className={cn(
@@ -46,7 +59,8 @@ export function StatCard({
         </div>
         <div
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-lg",
+            "flex shrink-0 items-center justify-center rounded-lg",
+            compact ? "size-7" : "size-9",
             tone === "warning"
               ? "bg-warning/15 text-warning"
               : tone === "danger"
@@ -56,7 +70,7 @@ export function StatCard({
                   : "bg-secondary text-muted-foreground"
           )}
         >
-          <Icon className="size-4.5" />
+          <Icon className={compact ? "size-3.5" : "size-4.5"} />
         </div>
       </CardContent>
     </Card>

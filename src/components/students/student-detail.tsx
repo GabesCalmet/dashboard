@@ -352,8 +352,8 @@ export function StudentDetailView({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+        <div className="lg:col-span-3">
           <Tabs
             defaultValue={
               initialTab === "financial" && permissions.showFinancial
@@ -494,26 +494,44 @@ export function StudentDetailView({
         </div>
 
         <div className="space-y-6">
-          <div className="space-y-3">
-            <StatCard label="Aulas Realizadas" value={String(realizedLessonsAllTime)} icon={Award} />
-            <StatCard label="Aulas Dadas" value={String(completedLessons)} icon={CheckCircle2} accent />
-            <StatCard label="Reposição Dada" value={String(makeupGivenCount)} icon={Repeat} />
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard label="Aulas Realizadas" value={String(realizedLessonsAllTime)} icon={Award} compact />
+            <StatCard
+              label="Aulas Dadas"
+              value={String(completedLessons)}
+              icon={CheckCircle2}
+              accent
+              compact
+            />
+            <StatCard label="Reposição Dada" value={String(makeupGivenCount)} icon={Repeat} compact />
             <StatCard
               label="Reposição Não Compareceu"
               value={String(makeupNoShowCount)}
               icon={UserX}
+              compact
             />
-            <StatCard label="Não Compareceu" value={String(noShowCount)} icon={UserX} />
-            <StatCard label="Cancelamento Tarde" value={String(canceledLateCount)} icon={Clock3} />
-            <StatCard label="Cancelamento Aluno" value={String(canceledByStudent)} icon={XCircle} />
+            <StatCard label="Não Compareceu" value={String(noShowCount)} icon={UserX} compact />
+            <StatCard label="Cancelamento Tarde" value={String(canceledLateCount)} icon={Clock3} compact />
+            <StatCard label="Cancelamento Aluno" value={String(canceledByStudent)} icon={XCircle} compact />
             <StatCard
               label="Cancelamento Aluno (Sem Rep)"
               value={String(canceledByStudentNoMakeup)}
               icon={XCircle}
+              compact
             />
-            <StatCard label="Cancelamento Professor" value={String(canceledByTeacher)} icon={XCircle} />
-            <StatCard label="Feriado" value={String(canceledHolidayCount)} icon={PartyPopper} />
-            <StatCard label="Cancelamento Férias" value={String(canceledVacationCount)} icon={Palmtree} />
+            <StatCard
+              label="Cancelamento Professor"
+              value={String(canceledByTeacher)}
+              icon={XCircle}
+              compact
+            />
+            <StatCard label="Feriado" value={String(canceledHolidayCount)} icon={PartyPopper} compact />
+            <StatCard
+              label="Cancelamento Férias"
+              value={String(canceledVacationCount)}
+              icon={Palmtree}
+              compact
+            />
           </div>
 
           {student.levelHistory.length > 0 && (
