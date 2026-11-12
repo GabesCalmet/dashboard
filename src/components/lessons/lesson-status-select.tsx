@@ -17,9 +17,14 @@ import type { LessonStatus } from "@prisma/client";
 export function LessonStatusSelect({
   lessonId,
   status,
+  triggerClassName,
 }: {
   lessonId: string;
   status: LessonStatus;
+  // Lets a denser table (e.g. the student's own Histórico de aulas) shrink
+  // the trigger below its normal width/text size without affecting other
+  // callers, which keep the default.
+  triggerClassName?: string;
 }) {
   const [isPending, startTransition] = useTransition();
 
@@ -38,7 +43,7 @@ export function LessonStatusSelect({
         })
       }
     >
-      <SelectTrigger size="sm" className="w-[190px]">
+      <SelectTrigger size="sm" className={triggerClassName ?? "w-[190px]"}>
         {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <SelectValue />}
       </SelectTrigger>
       <SelectContent>

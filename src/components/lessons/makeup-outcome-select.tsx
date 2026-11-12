@@ -28,11 +28,16 @@ export function MakeupOutcomeSelect({
   status,
   onChange,
   onCanceled,
+  triggerClassName,
 }: {
   makeupLessonId: string;
   status: MakeupOutcome;
   onChange?: (status: MakeupOutcome) => void;
   onCanceled?: () => void;
+  // Lets a denser table (e.g. the student's own Histórico de aulas) shrink
+  // the trigger below its normal width/text size without affecting other
+  // callers, which keep the default.
+  triggerClassName?: string;
 }) {
   const [isPending, startTransition] = useTransition();
 
@@ -58,7 +63,7 @@ export function MakeupOutcomeSelect({
 
   return (
     <Select value={status} disabled={isPending} onValueChange={handleChange}>
-      <SelectTrigger size="sm" className="w-[210px]">
+      <SelectTrigger size="sm" className={triggerClassName ?? "w-[210px]"}>
         {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <SelectValue />}
       </SelectTrigger>
       <SelectContent>

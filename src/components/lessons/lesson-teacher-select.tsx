@@ -43,7 +43,7 @@ export function LessonTeacherSelect({
         })
       }
     >
-      <SelectTrigger size="sm" className="w-[160px]">
+      <SelectTrigger size="sm" className="w-[130px] text-xs">
         {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <SelectValue />}
       </SelectTrigger>
       <SelectContent>

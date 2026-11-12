@@ -57,21 +57,22 @@ export function StatCard({
             </p>
           )}
         </div>
-        <div
-          className={cn(
-            "flex shrink-0 items-center justify-center rounded-lg",
-            compact ? "size-7" : "size-9",
-            tone === "warning"
-              ? "bg-warning/15 text-warning"
-              : tone === "danger"
-                ? "bg-destructive/15 text-destructive"
-                : accent
-                  ? "bg-accent/15 text-accent"
-                  : "bg-secondary text-muted-foreground"
-          )}
-        >
-          <Icon className={compact ? "size-3.5" : "size-4.5"} />
-        </div>
+        {!compact && (
+          <div
+            className={cn(
+              "flex size-9 shrink-0 items-center justify-center rounded-lg",
+              tone === "warning"
+                ? "bg-warning/15 text-warning"
+                : tone === "danger"
+                  ? "bg-destructive/15 text-destructive"
+                  : accent
+                    ? "bg-accent/15 text-accent"
+                    : "bg-secondary text-muted-foreground"
+            )}
+          >
+            <Icon className="size-4.5" />
+          </div>
+        )}
       </CardContent>
     </Card>
   );
