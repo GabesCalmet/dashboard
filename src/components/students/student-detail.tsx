@@ -352,8 +352,8 @@ export function StudentDetailView({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-        <div className="lg:col-span-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <div className="lg:col-span-4">
           <Tabs
             defaultValue={
               initialTab === "financial" && permissions.showFinancial
@@ -494,7 +494,7 @@ export function StudentDetailView({
         </div>
 
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-2">
             <StatCard label="Aulas Realizadas" value={String(realizedLessonsAllTime)} icon={Award} compact />
             <StatCard
               label="Aulas Dadas"
