@@ -100,7 +100,7 @@ export function CalendarView({
       <FullCalendar
         ref={calendarRef}
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
-        initialView="dayGridMonth"
+        initialView="timeGridWeek"
         locale={ptBrLocale}
         headerToolbar={{
           left: "prev,next today",
