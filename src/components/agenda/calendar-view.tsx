@@ -105,7 +105,7 @@ export function CalendarView({
         headerToolbar={{
           left: "prev,next today",
           center: "title",
-          right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
+          right: "timeGridWeek,dayGridMonth,timeGridDay,listWeek",
         }}
         height="auto"
         // The week/day time-grid views start at midnight by default, which
