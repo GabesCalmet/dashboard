@@ -10,8 +10,19 @@ import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 const NAVY = "#0B2254";
 const GREEN = "#1F9D55";
 const RED = "#D64545";
+const YELLOW = "#D97706";
 const GRAY = "#6b7280";
 const BORDER = "#d9dee8";
+
+// Colors the "Status" column by its label — Pago/Pausado/Pendente — across
+// every table in this report. Any other status (e.g. Atrasado) keeps the
+// default text color.
+function statusColor(label: string): string | undefined {
+  if (label === "Pago") return GREEN;
+  if (label === "Pausado") return YELLOW;
+  if (label === "Pendente") return RED;
+  return undefined;
+}
 
 const styles = StyleSheet.create({
   page: { fontSize: 9, fontFamily: "Helvetica", color: "#1f2937", padding: 28 },
@@ -129,17 +140,21 @@ function Table({
       ) : (
         rows.map((r, i) => (
           <View key={i} style={[i % 2 === 1 ? styles.trAlt : {}, i === rows.length - 1 ? styles.trLast : styles.tr]}>
-            {r.map((cell, j) => (
-              <Text
-                key={j}
-                style={[
-                  columns[j].align === "right" ? styles.tdRight : styles.td,
-                  { width: columns[j].width },
-                ]}
-              >
-                {cell}
-              </Text>
-            ))}
+            {r.map((cell, j) => {
+              const color = columns[j].label === "Status" ? statusColor(cell) : undefined;
+              return (
+                <Text
+                  key={j}
+                  style={[
+                    columns[j].align === "right" ? styles.tdRight : styles.td,
+                    { width: columns[j].width },
+                    color ? { color, fontFamily: "Helvetica-Bold" } : {},
+                  ]}
+                >
+                  {cell}
+                </Text>
+              );
+            })}
           </View>
         ))
       )}
