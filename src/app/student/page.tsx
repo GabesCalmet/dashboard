@@ -58,9 +58,9 @@ export default async function StudentDashboardPage() {
         <StatCard label="Aulas no mês" value={String(data.completedThisMonth)} icon={GraduationCap} />
       </div>
 
-      {data.nextLesson && data.student.meetLink && (
+      {data.nextLesson && data.nextLessonMeetLink && (
         <Button asChild className="mt-4">
-          <a href={data.student.meetLink} target="_blank" rel="noopener noreferrer">
+          <a href={data.nextLessonMeetLink} target="_blank" rel="noopener noreferrer">
             <Video /> Entrar na próxima aula
           </a>
         </Button>

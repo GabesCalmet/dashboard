@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth } from "date-fns";
 import { brazilToday } from "@/lib/timezone";
+import { parseLessonSchedule, resolveMeetLink } from "@/server/lessons/meet-link";
 
 export async function getStudentDashboardData(studentId: string) {
   const student = await prisma.studentProfile.findUniqueOrThrow({
@@ -23,6 +24,7 @@ export async function getStudentDashboardData(studentId: string) {
     prisma.lesson.findFirst({
       where: { studentId, status: "SCHEDULED", scheduledAt: { gt: now } },
       orderBy: { scheduledAt: "asc" },
+      include: { rescheduledFrom: { select: { scheduledAt: true } } },
     }),
     prisma.lesson.findMany({
       where: { studentId },
@@ -36,12 +38,20 @@ export async function getStudentDashboardData(studentId: string) {
   const pendingHomework = recentLessons.find((l) => l.homework)?.homework ?? null;
   const remainingThisMonth = Math.max(0, student.lessonsPerMonth - completedThisMonth);
 
+  const nextLessonMeetLink = nextLesson
+    ? resolveMeetLink(
+        parseLessonSchedule(student.lessonSchedule),
+        nextLesson.isMakeup && nextLesson.rescheduledFrom ? nextLesson.rescheduledFrom.scheduledAt : nextLesson.scheduledAt
+      )
+    : null;
+
   return {
     student,
     completedTotal,
     completedThisMonth,
     remainingThisMonth,
     nextLesson,
+    nextLessonMeetLink,
     recentLessons,
     lastObservation,
     pendingHomework,

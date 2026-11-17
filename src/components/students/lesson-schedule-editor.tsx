@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
 import { TimeInput } from "@/components/ui/time-input";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
@@ -13,13 +14,18 @@ import { Button } from "@/components/ui/button";
 // from/until (both optional) scope when that specific entry is in effect:
 // undefined means "since enrollment" / "still ongoing". Entries sharing the
 // same from/until are grouped back into one visual block when the editor
-// loads.
+// loads. meetLink is this specific day/time's own Google Meet link — a
+// student with classes on different days can have a different link per
+// day, instead of one flat link for everything (see resolveLessonMeetLink
+// in the lessons API route for how a real Lesson resolves which entry's
+// link applies to it).
 export type ScheduleEntry = {
   weekday: number;
   start: string;
   end: string;
   from?: string;
   until?: string;
+  meetLink?: string;
 };
 
 const DAYS = [
@@ -32,7 +38,7 @@ const DAYS = [
   { value: 6, label: "S", name: "Sábado" },
 ];
 
-type BlockDay = { _id: number; weekday: number; start: string; end: string };
+type BlockDay = { _id: number; weekday: number; start: string; end: string; meetLink: string };
 type Block = { _id: number; from: string; until: string; days: BlockDay[] };
 
 let nextId = 0;
@@ -52,7 +58,7 @@ function toBlocks(entries: ScheduleEntry[]): Block[] {
       block = { _id: nextId++, from, until, days: [] };
       groups.set(key, block);
     }
-    block.days.push({ _id: nextId++, weekday: e.weekday, start: e.start, end: e.end });
+    block.days.push({ _id: nextId++, weekday: e.weekday, start: e.start, end: e.end, meetLink: e.meetLink ?? "" });
   }
   return [...groups.values()];
 }
@@ -100,7 +106,7 @@ export function LessonScheduleEditor({
         const exists = b.days.some((d) => d.weekday === weekday);
         const days = exists
           ? b.days.filter((d) => d.weekday !== weekday)
-          : [...b.days, { _id: nextId++, weekday, start: "", end: "" }].sort(
+          : [...b.days, { _id: nextId++, weekday, start: "", end: "", meetLink: "" }].sort(
               (a, c) => a.weekday - c.weekday
             );
         return { ...b, days };
@@ -122,7 +128,7 @@ export function LessonScheduleEditor({
             break;
           }
         }
-        days.splice(insertAt, 0, { _id: nextId++, weekday, start: "", end: "" });
+        days.splice(insertAt, 0, { _id: nextId++, weekday, start: "", end: "", meetLink: "" });
         return { ...b, days };
       })
     );
@@ -134,7 +140,7 @@ export function LessonScheduleEditor({
     );
   }
 
-  function updateDay(blockId: number, dayId: number, field: "start" | "end", value: string) {
+  function updateDay(blockId: number, dayId: number, field: "start" | "end" | "meetLink", value: string) {
     setBlocks((prev) =>
       prev.map((b) =>
         b._id !== blockId
@@ -151,6 +157,7 @@ export function LessonScheduleEditor({
       end: d.end,
       from: b.from || undefined,
       until: b.until || undefined,
+      meetLink: d.meetLink || undefined,
     }))
   );
 
@@ -202,44 +209,56 @@ export function LessonScheduleEditor({
                 {groupByWeekday(block.days).map(([weekday, entries]) => (
                   <div key={weekday} className="space-y-2">
                     {entries.map((d, idx) => (
-                      <div key={d._id} className="flex items-center gap-2">
-                        <span className="w-20 shrink-0 text-sm font-medium">
-                          {idx === 0 ? DAYS[weekday].name : ""}
-                        </span>
-                        <TimeInput
-                          value={d.start}
-                          onChange={(v) => updateDay(block._id, d._id, "start", v)}
-                          aria-label={`Início — ${DAYS[weekday].name}`}
-                        />
-                        <span className="shrink-0 text-sm text-muted-foreground">até</span>
-                        <TimeInput
-                          value={d.end}
-                          onChange={(v) => updateDay(block._id, d._id, "end", v)}
-                          aria-label={`Término — ${DAYS[weekday].name}`}
-                        />
-                        {idx === entries.length - 1 ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="shrink-0 text-muted-foreground hover:text-foreground"
-                            onClick={() => addTimeSlot(block._id, weekday)}
-                            aria-label={`Adicionar outro horário — ${DAYS[weekday].name}`}
-                          >
-                            <Plus className="size-4" />
-                          </Button>
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="shrink-0 text-muted-foreground hover:text-destructive"
-                            onClick={() => removeTimeSlot(block._id, d._id)}
-                            aria-label={`Remover este horário — ${DAYS[weekday].name}`}
-                          >
-                            <X className="size-4" />
-                          </Button>
-                        )}
+                      <div key={d._id} className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="w-20 shrink-0 text-sm font-medium">
+                            {idx === 0 ? DAYS[weekday].name : ""}
+                          </span>
+                          <TimeInput
+                            value={d.start}
+                            onChange={(v) => updateDay(block._id, d._id, "start", v)}
+                            aria-label={`Início — ${DAYS[weekday].name}`}
+                          />
+                          <span className="shrink-0 text-sm text-muted-foreground">até</span>
+                          <TimeInput
+                            value={d.end}
+                            onChange={(v) => updateDay(block._id, d._id, "end", v)}
+                            aria-label={`Término — ${DAYS[weekday].name}`}
+                          />
+                          {idx === entries.length - 1 ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="shrink-0 text-muted-foreground hover:text-foreground"
+                              onClick={() => addTimeSlot(block._id, weekday)}
+                              aria-label={`Adicionar outro horário — ${DAYS[weekday].name}`}
+                            >
+                              <Plus className="size-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="shrink-0 text-muted-foreground hover:text-destructive"
+                              onClick={() => removeTimeSlot(block._id, d._id)}
+                              aria-label={`Remover este horário — ${DAYS[weekday].name}`}
+                            >
+                              <X className="size-4" />
+                            </Button>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 pl-[88px]">
+                          <Input
+                            value={d.meetLink}
+                            onChange={(e) => updateDay(block._id, d._id, "meetLink", e.target.value)}
+                            type="url"
+                            placeholder="Link do Google Meet (opcional)"
+                            aria-label={`Link do Meet — ${DAYS[weekday].name}`}
+                            className="h-8 max-w-xs text-xs"
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>

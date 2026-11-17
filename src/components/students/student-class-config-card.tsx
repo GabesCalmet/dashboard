@@ -12,7 +12,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { updateStudentClassConfig } from "@/server/actions/students";
@@ -48,7 +47,6 @@ function isCurrentlyActive(e: { from?: string; until?: string }, today: string):
 export function StudentClassConfigCard({
   studentId,
   teachers,
-  meetLink,
   teacherId,
   teacherHistory,
   teacherPayRate,
@@ -62,7 +60,6 @@ export function StudentClassConfigCard({
 }: {
   studentId: string;
   teachers: { id: string; label: string }[];
-  meetLink: string | null;
   teacherId: string | null;
   teacherHistory: TeacherHistoryEntry[];
   teacherPayRate: number;
@@ -140,17 +137,6 @@ export function StudentClassConfigCard({
                     min={0}
                     onChange={(amount) => setLiveLessonsPerMonth(amount)}
                   />
-
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label htmlFor="meetLink">Link do Google Meet (opcional)</Label>
-                    <Input
-                      id="meetLink"
-                      name="meetLink"
-                      type="url"
-                      placeholder="https://meet.google.com/..."
-                      defaultValue={meetLink ?? ""}
-                    />
-                  </div>
                 </div>
 
                 <TeacherAssignmentEditor
@@ -202,8 +188,31 @@ export function StudentClassConfigCard({
           <p className="font-medium">{scheduleLabel}</p>
         </div>
         <div className="sm:col-span-3">
-          <p className="text-xs text-muted-foreground">Link do Meet</p>
-          <p className="font-medium">{meetLink ?? "—"}</p>
+          <p className="text-xs text-muted-foreground">Link do Meet por dia</p>
+          {activeSchedule.filter((e) => e.meetLink).length === 0 ? (
+            <p className="font-medium">—</p>
+          ) : (
+            <div className="space-y-0.5">
+              {activeSchedule
+                .filter((e) => e.meetLink)
+                .map((e, i) => (
+                  <p key={i} className="text-sm">
+                    <span className="font-medium">
+                      {WEEKDAY_ABBR[e.weekday]}
+                      {e.start ? ` ${e.start}` : ""}:
+                    </span>{" "}
+                    <a
+                      href={e.meetLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="break-all text-accent hover:underline"
+                    >
+                      {e.meetLink}
+                    </a>
+                  </p>
+                ))}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

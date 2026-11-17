@@ -55,12 +55,12 @@ export function StudentNewClassPeriodDialog({ studentId, teachers }: {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button size="sm">
-          <Plus /> Adicionar aula
+          <Plus /> Novo período de aulas
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Adicionar aula</DialogTitle>
+          <DialogTitle>Novo período de aulas</DialogTitle>
           <DialogDescription>
             Inicia um período novo — professor, horário e aulas/mês próprios, com vigência
             definida aqui. Qualquer professor/horário/aulas-mês ainda em aberto é encerrado
@@ -82,11 +82,6 @@ export function StudentNewClassPeriodDialog({ studentId, teachers }: {
               <Label htmlFor="lessonsPerMonth">Aulas/mês</Label>
               <Input id="lessonsPerMonth" name="lessonsPerMonth" type="number" min={0} step="1" defaultValue={4} />
             </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="meetLink">Link do Google Meet (opcional)</Label>
-            <Input id="meetLink" name="meetLink" type="url" placeholder="https://meet.google.com/..." />
           </div>
 
           <div className="space-y-2 rounded-lg border p-3">

@@ -161,7 +161,6 @@ const groupMemberUpdatesField = z
 // main "Editar aluno" form — a brand-new student has none of this set
 // until an admin configures it there for the first time.
 export const studentClassConfigSchema = z.object({
-  meetLink: z.string().url("Link inválido").optional().or(z.literal("")),
   teacherId: z.string().optional(),
   teacherHistory: teacherHistoryField,
   // The amount the assigned teacher is paid per hour for this specific
@@ -213,6 +212,7 @@ export const studentClassConfigSchema = z.object({
             end: typeof e.end === "string" ? e.end : "",
             from: typeof e.from === "string" && e.from ? e.from : undefined,
             until: typeof e.until === "string" && e.until ? e.until : undefined,
+            meetLink: typeof e.meetLink === "string" && e.meetLink ? e.meetLink : undefined,
           }));
       } catch {
         return [];
@@ -224,8 +224,9 @@ export type StudentClassConfigValues = z.infer<typeof studentClassConfigSchema>;
 
 // A clean new "mini-contract" — new teacher, new schedule, new aulas/mês,
 // all sharing ONE vigência (periodFrom/periodUntil) — submitted from the
-// separate "Adicionar aula" button (distinct from "Editar", which just
-// opens the full history as-is for manual correction). Deliberately
+// separate "Novo período de aulas" button (distinct from "Editar"/
+// "Adicionar aula" on StudentClassConfigCard, which just opens the full
+// history as-is for manual correction). Deliberately
 // simpler than studentClassConfigSchema: exactly one new teacher
 // assignment, no per-entry vigência on the schedule (every day/time shares
 // the same period-level one) — addStudentClassPeriod does the bookkeeping
@@ -233,7 +234,6 @@ export type StudentClassConfigValues = z.infer<typeof studentClassConfigSchema>;
 export const studentClassPeriodSchema = z.object({
   periodFrom: z.string().min(1, "Informe a data de início"),
   periodUntil: z.string().optional(),
-  meetLink: z.string().url("Link inválido").optional().or(z.literal("")),
   teacherId: z.string().min(1, "Selecione um professor"),
   teacherPayMode: z.enum(["HOURLY", "MONTHLY", "PERCENTAGE"]).default("HOURLY"),
   teacherPayRate: z.coerce.number().min(0, "Valor inválido").default(0),
@@ -243,7 +243,8 @@ export const studentClassPeriodSchema = z.object({
   // Submitted by WeekdayTimeGridEditor as a JSON string, e.g.
   // '[{"weekday":2,"start":"19:00","end":"19:50"}]' — no from/until per
   // entry, since every entry in this one submission shares periodFrom/
-  // periodUntil (set server-side in addStudentClassPeriod).
+  // periodUntil (set server-side in addStudentClassPeriod). meetLink is
+  // this specific day/time's own Meet link (see ScheduleEntry).
   schedule: z
     .string()
     .optional()
@@ -258,6 +259,7 @@ export const studentClassPeriodSchema = z.object({
             weekday: e.weekday,
             start: typeof e.start === "string" ? e.start : "",
             end: typeof e.end === "string" ? e.end : "",
+            meetLink: typeof e.meetLink === "string" && e.meetLink ? e.meetLink : undefined,
           }));
       } catch {
         return [];

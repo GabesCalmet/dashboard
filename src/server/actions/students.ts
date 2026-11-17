@@ -329,7 +329,6 @@ export async function updateStudentClassConfig(
   await prisma.studentProfile.update({
     where: { id: studentId },
     data: {
-      meetLink: data.meetLink || null,
       teacherId: data.teacherId || null,
       teacherHistory: data.teacherHistory,
       teacherPayRate: data.teacherPayRate,
@@ -439,6 +438,7 @@ export async function addStudentClassPeriod(
       end: e.end,
       from: data.periodFrom,
       until: data.periodUntil || undefined,
+      meetLink: e.meetLink,
     });
   }
 
@@ -461,7 +461,6 @@ export async function addStudentClassPeriod(
       lessonsPerMonth: data.lessonsPerMonth,
       lessonsPerMonthHistory: lessonsPerMonthHistory as Prisma.InputJsonValue[],
       lessonSchedule: lessonSchedule as Prisma.InputJsonValue[],
-      ...(data.meetLink ? { meetLink: data.meetLink } : {}),
     },
   });
 

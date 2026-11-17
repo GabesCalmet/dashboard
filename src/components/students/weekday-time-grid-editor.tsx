@@ -3,10 +3,13 @@
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { TimeInput } from "@/components/ui/time-input";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export type WeekdayTimeEntry = { weekday: number; start: string; end: string };
+// meetLink is this specific day/time's own Google Meet link — see the
+// matching comment on ScheduleEntry in lesson-schedule-editor.tsx.
+export type WeekdayTimeEntry = { weekday: number; start: string; end: string; meetLink?: string };
 
 const DAYS = [
   { value: 0, label: "D", name: "Domingo" },
@@ -51,7 +54,7 @@ export function WeekdayTimeGridEditor({
       const exists = prev.some((e) => e.weekday === weekday);
       return exists
         ? prev.filter((e) => e.weekday !== weekday)
-        : [...prev, { _id: nextId++, weekday, start: "", end: "" }].sort(
+        : [...prev, { _id: nextId++, weekday, start: "", end: "", meetLink: "" }].sort(
             (a, b) => a.weekday - b.weekday
           );
     });
@@ -67,7 +70,7 @@ export function WeekdayTimeGridEditor({
           break;
         }
       }
-      next.splice(insertAt, 0, { _id: nextId++, weekday, start: "", end: "" });
+      next.splice(insertAt, 0, { _id: nextId++, weekday, start: "", end: "", meetLink: "" });
       return next;
     });
   }
@@ -76,14 +79,15 @@ export function WeekdayTimeGridEditor({
     setEntries((prev) => prev.filter((e) => e._id !== id));
   }
 
-  function updateEntry(id: number, field: "start" | "end", value: string) {
+  function updateEntry(id: number, field: "start" | "end" | "meetLink", value: string) {
     setEntries((prev) => prev.map((e) => (e._id === id ? { ...e, [field]: value } : e)));
   }
 
-  const value: WeekdayTimeEntry[] = entries.map(({ weekday, start, end }) => ({
+  const value: WeekdayTimeEntry[] = entries.map(({ weekday, start, end, meetLink }) => ({
     weekday,
     start,
     end,
+    meetLink: meetLink || undefined,
   }));
   const selectedDays = new Set(entries.map((e) => e.weekday));
 
@@ -119,44 +123,56 @@ export function WeekdayTimeGridEditor({
           {groupByWeekday(entries).map(([weekday, dayEntries]) => (
             <div key={weekday} className="space-y-2">
               {dayEntries.map((e, idx) => (
-                <div key={e._id} className="flex items-center gap-2">
-                  <span className="w-20 shrink-0 text-sm font-medium">
-                    {idx === 0 ? DAYS[weekday].name : ""}
-                  </span>
-                  <TimeInput
-                    value={e.start}
-                    onChange={(v) => updateEntry(e._id, "start", v)}
-                    aria-label={`Início — ${DAYS[weekday].name}`}
-                  />
-                  <span className="shrink-0 text-sm text-muted-foreground">até</span>
-                  <TimeInput
-                    value={e.end}
-                    onChange={(v) => updateEntry(e._id, "end", v)}
-                    aria-label={`Término — ${DAYS[weekday].name}`}
-                  />
-                  {idx === dayEntries.length - 1 ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="shrink-0 text-muted-foreground hover:text-foreground"
-                      onClick={() => addTimeSlot(weekday)}
-                      aria-label={`Adicionar outro horário — ${DAYS[weekday].name}`}
-                    >
-                      <Plus className="size-4" />
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeTimeSlot(e._id)}
-                      aria-label={`Remover este horário — ${DAYS[weekday].name}`}
-                    >
-                      <X className="size-4" />
-                    </Button>
-                  )}
+                <div key={e._id} className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-20 shrink-0 text-sm font-medium">
+                      {idx === 0 ? DAYS[weekday].name : ""}
+                    </span>
+                    <TimeInput
+                      value={e.start}
+                      onChange={(v) => updateEntry(e._id, "start", v)}
+                      aria-label={`Início — ${DAYS[weekday].name}`}
+                    />
+                    <span className="shrink-0 text-sm text-muted-foreground">até</span>
+                    <TimeInput
+                      value={e.end}
+                      onChange={(v) => updateEntry(e._id, "end", v)}
+                      aria-label={`Término — ${DAYS[weekday].name}`}
+                    />
+                    {idx === dayEntries.length - 1 ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => addTimeSlot(weekday)}
+                        aria-label={`Adicionar outro horário — ${DAYS[weekday].name}`}
+                      >
+                        <Plus className="size-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeTimeSlot(e._id)}
+                        aria-label={`Remover este horário — ${DAYS[weekday].name}`}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 pl-[88px]">
+                    <Input
+                      value={e.meetLink ?? ""}
+                      onChange={(ev) => updateEntry(e._id, "meetLink", ev.target.value)}
+                      type="url"
+                      placeholder="Link do Google Meet (opcional)"
+                      aria-label={`Link do Meet — ${DAYS[weekday].name}`}
+                      className="h-8 max-w-xs text-xs"
+                    />
+                  </div>
                 </div>
               ))}
             </div>

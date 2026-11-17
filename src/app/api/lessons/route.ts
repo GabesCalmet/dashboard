@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { lessonStatusCalendarStyle, lessonStatusDisplayLabel } from "@/lib/labels";
+import { parseLessonSchedule, resolveMeetLink } from "@/server/lessons/meet-link";
 import type { Prisma } from "@prisma/client";
 
 type BlockedSlot = {
@@ -123,6 +124,9 @@ export async function GET(request: NextRequest) {
 
   const events = lessons.map((l) => {
     const style = lessonStatusCalendarStyle[l.status];
+    const schedule = parseLessonSchedule(l.student.lessonSchedule);
+    const linkTarget = l.isMakeup && l.rescheduledFrom ? l.rescheduledFrom.scheduledAt : l.scheduledAt;
+    const meetLink = resolveMeetLink(schedule, linkTarget);
     return {
       id: l.id,
       title: `${l.student.user.name} — ${l.teacher.user.name}`,
@@ -144,7 +148,7 @@ export async function GET(request: NextRequest) {
         classFocus: l.classFocus,
         homework: l.homework,
         observations: l.observations,
-        meetLink: l.student.meetLink,
+        meetLink,
         rescheduledTo: l.rescheduledTo.map((r) => ({
           id: r.id,
           scheduledAt: r.scheduledAt.toISOString(),

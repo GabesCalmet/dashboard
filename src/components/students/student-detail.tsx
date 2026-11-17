@@ -413,7 +413,6 @@ export function StudentDetailView({
                   />
                   <InfoRow label="Telefone" value={student.user.phone ?? "—"} />
                   <InfoRow label="Email" value={student.user.email ?? "—"} />
-                  <InfoRow label="Link do Meet" value={student.meetLink ?? "—"} />
                 </CardContent>
               </Card>
 
@@ -440,7 +439,6 @@ export function StudentDetailView({
                 <StudentClassConfigCard
                   studentId={student.id}
                   teachers={editOptions.teachers}
-                  meetLink={student.meetLink}
                   teacherId={student.teacherId}
                   teacherHistory={parseTeacherHistory(student.teacherHistory)}
                   teacherPayRate={Number(student.teacherPayRate)}
