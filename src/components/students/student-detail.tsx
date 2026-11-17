@@ -607,7 +607,16 @@ function parseLessonSchedule(value: unknown): ScheduleEntry[] {
   if (!Array.isArray(value)) return [];
   return value
     .filter(
-      (e): e is { weekday: number; start: string; end: string; from?: string; until?: string } =>
+      (
+        e
+      ): e is {
+        weekday: number;
+        start: string;
+        end: string;
+        from?: string;
+        until?: string;
+        meetLink?: string;
+      } =>
         typeof e === "object" &&
         e !== null &&
         typeof (e as Record<string, unknown>).weekday === "number"
@@ -618,6 +627,7 @@ function parseLessonSchedule(value: unknown): ScheduleEntry[] {
       end: typeof e.end === "string" ? e.end : "",
       from: typeof e.from === "string" && e.from ? e.from : undefined,
       until: typeof e.until === "string" && e.until ? e.until : undefined,
+      meetLink: typeof e.meetLink === "string" && e.meetLink ? e.meetLink : undefined,
     }))
     .sort((a, b) => a.weekday - b.weekday);
 }
