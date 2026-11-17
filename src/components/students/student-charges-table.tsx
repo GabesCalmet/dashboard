@@ -40,8 +40,6 @@ export type StudentChargeRow = {
   date: Date;
   dueDay: number | null;
   endDate: Date | null;
-  decemberAmount: number | null;
-  januaryAmount: number | null;
   bankAccount: BankAccount;
 };
 
@@ -168,8 +166,6 @@ export function StudentChargesTable({
                         date: c.date.toISOString().slice(0, 10),
                         dueDay: c.dueDay,
                         endDate: c.endDate?.toISOString().slice(0, 10),
-                        decemberAmount: c.decemberAmount,
-                        januaryAmount: c.januaryAmount,
                         bankAccount: c.bankAccount,
                       }}
                     />
@@ -252,8 +248,6 @@ export function StudentChargesTable({
                               date: c.date.toISOString().slice(0, 10),
                               dueDay: c.dueDay,
                               endDate: c.endDate?.toISOString().slice(0, 10),
-                              decemberAmount: c.decemberAmount,
-                              januaryAmount: c.januaryAmount,
                               bankAccount: c.bankAccount,
                             }}
                           />

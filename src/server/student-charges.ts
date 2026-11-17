@@ -10,8 +10,6 @@ export type StudentChargeLike = {
   date: Date;
   dueDay: number | null;
   endDate: Date | null;
-  decemberAmount: number | null;
-  januaryAmount: number | null;
   bankAccount: BankAccount;
 };
 
@@ -22,15 +20,11 @@ type RawChargeRow = {
   date: Date;
   dueDay: number | null;
   endDate: Date | null;
-  decemberAmount: unknown;
-  januaryAmount: unknown;
   bankAccount: BankAccount;
 };
 
-// Converts a raw StudentCharge row (Decimal fields) into StudentChargeLike
-// — the one place every caller funnels through, so adding another
-// per-month override later only means touching this function plus
-// resolveChargeAmount.
+// Converts a raw StudentCharge row (Decimal amount) into StudentChargeLike
+// — the one place every caller funnels through.
 export function toChargeLike<T extends RawChargeRow>(c: T): StudentChargeLike {
   return {
     payerName: c.payerName,
@@ -39,22 +33,8 @@ export function toChargeLike<T extends RawChargeRow>(c: T): StudentChargeLike {
     date: c.date,
     dueDay: c.dueDay,
     endDate: c.endDate,
-    decemberAmount: c.decemberAmount != null ? Number(c.decemberAmount) : null,
-    januaryAmount: c.januaryAmount != null ? Number(c.januaryAmount) : null,
     bankAccount: c.bankAccount,
   };
-}
-
-// A RECURRING charge's amount for one specific month — `amount` unless
-// that month is December/January and the matching override is set (every
-// year the charge is active, not just once). ONE_TIME charges have no
-// override slot, since they're already a single specific month.
-function resolveChargeAmount(charge: StudentChargeLike, monthStart: Date): number {
-  if (charge.frequency !== "RECURRING") return charge.amount;
-  const month = monthStart.getMonth();
-  if (month === 11 && charge.decemberAmount != null) return charge.decemberAmount;
-  if (month === 0 && charge.januaryAmount != null) return charge.januaryAmount;
-  return charge.amount;
 }
 
 // A student's billing slot for one specific month — the StudentCharge
@@ -102,12 +82,7 @@ export function getChargeSlotsForMonth(
       const endMonth = new Date(c.endDate.getFullYear(), c.endDate.getMonth(), 1);
       if (endMonth < monthStart) continue;
     }
-    slots.push({
-      payerName: c.payerName,
-      amount: resolveChargeAmount(c, monthStart),
-      dueDay: c.dueDay ?? 10,
-      bankAccount: c.bankAccount,
-    });
+    slots.push({ payerName: c.payerName, amount: c.amount, dueDay: c.dueDay ?? 10, bankAccount: c.bankAccount });
     seen.add(key);
   }
 
@@ -228,7 +203,7 @@ export async function materializeStudentCharge(
         data: {
           studentId,
           referenceMonth: monthStart,
-          amount: resolveChargeAmount(charge, monthStart),
+          amount: charge.amount,
           dueDate,
           payerName: charge.payerName,
           status: dueDate < now ? "LATE" : "PENDING",

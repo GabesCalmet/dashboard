@@ -34,8 +34,6 @@ export async function createStudentCharge(_prev: ActionState, formData: FormData
   const payerName = data.payerName?.trim() || null;
   const date = new Date(data.date);
   const endDate = data.frequency === "RECURRING" && data.endDate ? new Date(data.endDate) : null;
-  const decemberAmount = data.frequency === "RECURRING" ? (data.decemberAmount ?? null) : null;
-  const januaryAmount = data.frequency === "RECURRING" ? (data.januaryAmount ?? null) : null;
 
   const charge = await prisma.studentCharge.create({
     data: {
@@ -47,8 +45,6 @@ export async function createStudentCharge(_prev: ActionState, formData: FormData
       date,
       dueDay: data.frequency === "RECURRING" ? data.dueDay : null,
       endDate,
-      decemberAmount,
-      januaryAmount,
       bankAccount: data.bankAccount,
     },
   });
@@ -62,8 +58,6 @@ export async function createStudentCharge(_prev: ActionState, formData: FormData
       date,
       dueDay: data.frequency === "RECURRING" ? (data.dueDay ?? null) : null,
       endDate,
-      decemberAmount,
-      januaryAmount,
       bankAccount: data.bankAccount,
     },
     brazilToday()
@@ -101,8 +95,6 @@ export async function updateStudentCharge(
   const payerName = data.payerName?.trim() || null;
   const date = new Date(data.date);
   const endDate = data.frequency === "RECURRING" && data.endDate ? new Date(data.endDate) : null;
-  const decemberAmount = data.frequency === "RECURRING" ? (data.decemberAmount ?? null) : null;
-  const januaryAmount = data.frequency === "RECURRING" ? (data.januaryAmount ?? null) : null;
 
   await prisma.studentCharge.update({
     where: { id: chargeId },
@@ -114,8 +106,6 @@ export async function updateStudentCharge(
       date,
       dueDay: data.frequency === "RECURRING" ? data.dueDay : null,
       endDate,
-      decemberAmount,
-      januaryAmount,
       bankAccount: data.bankAccount,
     },
   });
@@ -133,8 +123,6 @@ export async function updateStudentCharge(
       date,
       dueDay: data.frequency === "RECURRING" ? (data.dueDay ?? null) : null,
       endDate,
-      decemberAmount,
-      januaryAmount,
       bankAccount: data.bankAccount,
     },
     brazilToday()
@@ -281,8 +269,6 @@ export async function migrateStudentBillingToCharges() {
           date,
           dueDay: slot.dueDay,
           endDate,
-          decemberAmount: null,
-          januaryAmount: null,
           bankAccount: slot.bankAccount,
         },
         now
