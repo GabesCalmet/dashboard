@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { endOfMonth } from "date-fns";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -9,7 +10,7 @@ import {
   paymentStatusLabel,
   formatCalendarDate,
 } from "@/lib/labels";
-import { getFinancialSummary, getFinancialOverview } from "@/server/queries/financial";
+import { getFinancialSummary, getFinancialOverview, getBankBalances } from "@/server/queries/financial";
 import { listExpensesForMonth } from "@/server/queries/expenses";
 import { getTeacherPayoutEntriesByTeacher, getPartnerPayoutEntries } from "@/server/queries/payouts";
 import {
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Mês inválido" }, { status: 400 });
   }
 
-  const [summary, overview, expenses, teacherPayoutsByTeacher, joePayouts, gabrielPayouts] =
+  const [summary, overview, expenses, teacherPayoutsByTeacher, joePayouts, gabrielPayouts, bankBalances] =
     await Promise.all([
       getFinancialSummary(year, month),
       getFinancialOverview(year, month),
@@ -48,7 +49,12 @@ export async function GET(request: NextRequest) {
       getTeacherPayoutEntriesByTeacher(year, month),
       getPartnerPayoutEntries("PARTNER_JOE", year, month),
       getPartnerPayoutEntries("PARTNER_GABRIEL", year, month),
+      // Cumulative balance per account as of the end of the viewed month —
+      // "Saldo total atual", as opposed to "Saldo do mês" which is just
+      // that month's own received/spent movement.
+      getBankBalances(endOfMonth(new Date(year, month, 1))),
     ]);
+  const totalBalanceByAccount = new Map(bankBalances.map((b) => [b.account, b.balance]));
 
   const teacherIds = [...teacherPayoutsByTeacher.keys()];
   const teachers = teacherIds.length
@@ -120,6 +126,7 @@ export async function GET(request: NextRequest) {
     label: b.label,
     received: b.received,
     spent: spentByAccount.get(b.label) ?? 0,
+    totalBalance: totalBalanceByAccount.get(b.account) ?? 0,
   }));
 
   const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(

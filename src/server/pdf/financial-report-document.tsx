@@ -109,6 +109,10 @@ export type BankAccountTotalRow = {
   label: string;
   received: number;
   spent: number;
+  // Cumulative balance for this account as of the end of the viewed
+  // month — "Saldo total atual", distinct from "Saldo do mês" (this
+  // month's own received/spent movement).
+  totalBalance: number;
 };
 
 function toneColor(tone?: "green" | "red" | "normal") {
@@ -278,10 +282,11 @@ export function FinancialReportDocument({
           <Text style={styles.sectionTitle}>Totais por conta bancária (no mês)</Text>
           <View style={styles.table}>
             <View style={styles.thRow}>
-              <Text style={[styles.th, { width: "34%" }]}>Conta</Text>
-              <Text style={[styles.th, { width: "22%", textAlign: "right" }]}>Recebido</Text>
-              <Text style={[styles.th, { width: "22%", textAlign: "right" }]}>Gasto</Text>
-              <Text style={[styles.th, { width: "22%", textAlign: "right" }]}>Saldo do mês</Text>
+              <Text style={[styles.th, { width: "26%" }]}>Conta</Text>
+              <Text style={[styles.th, { width: "18%", textAlign: "right" }]}>Recebido</Text>
+              <Text style={[styles.th, { width: "18%", textAlign: "right" }]}>Gasto</Text>
+              <Text style={[styles.th, { width: "18%", textAlign: "right" }]}>Saldo do mês</Text>
+              <Text style={[styles.th, { width: "20%", textAlign: "right" }]}>Saldo total atual</Text>
             </View>
             {bankAccountTotals.map((b, i) => {
               const saldo = b.received - b.spent;
@@ -293,16 +298,24 @@ export function FinancialReportDocument({
                     i === bankAccountTotals.length - 1 ? styles.trLast : styles.tr,
                   ]}
                 >
-                  <Text style={[styles.td, { width: "34%" }]}>{b.label}</Text>
-                  <Text style={[styles.tdRight, { width: "22%", color: GREEN }]}>{brl(b.received)}</Text>
-                  <Text style={[styles.tdRight, { width: "22%", color: RED }]}>{brl(b.spent)}</Text>
+                  <Text style={[styles.td, { width: "26%" }]}>{b.label}</Text>
+                  <Text style={[styles.tdRight, { width: "18%", color: GREEN }]}>{brl(b.received)}</Text>
+                  <Text style={[styles.tdRight, { width: "18%", color: RED }]}>{brl(b.spent)}</Text>
                   <Text
                     style={[
                       styles.tdRight,
-                      { width: "22%", fontFamily: "Helvetica-Bold", color: saldo >= 0 ? GREEN : RED },
+                      { width: "18%", fontFamily: "Helvetica-Bold", color: saldo >= 0 ? GREEN : RED },
                     ]}
                   >
                     {brl(saldo)}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.tdRight,
+                      { width: "20%", fontFamily: "Helvetica-Bold", color: b.totalBalance >= 0 ? GREEN : RED },
+                    ]}
+                  >
+                    {brl(b.totalBalance)}
                   </Text>
                 </View>
               );
