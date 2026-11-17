@@ -65,7 +65,17 @@ export async function GET(request: NextRequest) {
     : [];
   const teacherNameById = new Map(teachers.map((t) => [t.id, t.user.name]));
 
-  const students: StudentPaymentRow[] = overview.payments.map((p) => ({
+  // Grouped by account (Joe, then Gabriel, then Asaas) so it's easy to see
+  // what went to each account at a glance; within each group, highest
+  // payer first.
+  const bankAccountGroupOrder: Record<string, number> = { JOE: 0, GABES: 1, ASAAS: 2 };
+  const sortedPayments = [...overview.payments].sort((a, b) => {
+    const groupDiff = bankAccountGroupOrder[a.bankAccount] - bankAccountGroupOrder[b.bankAccount];
+    if (groupDiff !== 0) return groupDiff;
+    return b.amount - a.amount;
+  });
+
+  const students: StudentPaymentRow[] = sortedPayments.map((p) => ({
     studentName: p.studentName,
     amount: p.amount,
     statusLabel: paymentStatusLabel[p.status],
