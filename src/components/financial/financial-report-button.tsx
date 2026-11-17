@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 // MonthlyReportButton.
 export function FinancialReportButton({ year, month }: { year: number; month: number }) {
   return (
-    <Button asChild variant="outline">
+    <Button asChild size="lg">
       <a
         href={`/api/admin/financial-report?year=${year}&month=${month}`}
         target="_blank"

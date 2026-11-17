@@ -8,7 +8,6 @@ import {
   ReceiptText,
   Landmark,
 } from "lucide-react";
-import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { MonthNav } from "@/components/financial/month-nav";
@@ -60,16 +59,18 @@ export default async function AdminFinancialPage({
 
   return (
     <div>
-      <PageHeader
-        title="Financeiro"
-        description="Visão geral de receita, gastos e caixa da escola."
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <FinancialReportButton year={year} month={month} />
-            <MigrateChargesButton />
-          </div>
-        }
-      />
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Financeiro</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Visão geral de receita, gastos e caixa da escola.
+          </p>
+        </div>
+        <div className="flex flex-1 items-center justify-center">
+          <FinancialReportButton year={year} month={month} />
+        </div>
+        <MigrateChargesButton />
+      </div>
 
       {/* Not affected by the month switcher below — just links to the
           Receita/Gastos pages, which browse their own months independently.
