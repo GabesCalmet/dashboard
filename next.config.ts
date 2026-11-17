@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
   // bundler (webpack/Turbopack) built the function.
   outputFileTracingIncludes: {
     "/api/students/[id]/monthly-report": ["./node_modules/pdfkit/js/standard-fonts/**/*"],
+    "/api/admin/financial-report": ["./node_modules/pdfkit/js/standard-fonts/**/*"],
   },
 };
 

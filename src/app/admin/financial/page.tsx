@@ -13,6 +13,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { MonthNav } from "@/components/financial/month-nav";
 import { MigrateChargesButton } from "@/components/financial/migrate-charges-button";
+import { FinancialReportButton } from "@/components/financial/financial-report-button";
 import { BankAccountCard } from "@/components/financial/bank-account-card";
 import { YearlyGrowthChart } from "@/components/financial/yearly-growth-chart";
 import { getFinancialSummary, getBankBalances } from "@/server/queries/financial";
@@ -62,7 +63,12 @@ export default async function AdminFinancialPage({
       <PageHeader
         title="Financeiro"
         description="Visão geral de receita, gastos e caixa da escola."
-        actions={<MigrateChargesButton />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <FinancialReportButton year={year} month={month} />
+            <MigrateChargesButton />
+          </div>
+        }
       />
 
       {/* Not affected by the month switcher below — just links to the
