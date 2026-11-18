@@ -36,7 +36,7 @@ export function CategoryPieChart({ rows }: { rows: CategoryBreakdownRow[] }) {
   if (total === 0) return null;
 
   return (
-    <ResponsiveContainer width="100%" height={340}>
+    <ResponsiveContainer width="100%" height={300}>
       <PieChart>
         <Pie
           data={data}
@@ -44,7 +44,7 @@ export function CategoryPieChart({ rows }: { rows: CategoryBreakdownRow[] }) {
           nameKey="name"
           cx="50%"
           cy="50%"
-          outerRadius={120}
+          outerRadius={100}
           // Recharts' own default (startAngle=0, endAngle=360) starts at
           // 3 o'clock and sweeps counterclockwise, which visually scrambles
           // the slice order relative to `data` — this is the standard fix:
