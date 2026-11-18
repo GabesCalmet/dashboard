@@ -6,8 +6,7 @@ import type { CategoryBreakdownRow } from "@/server/queries/financial";
 import type { ChargeCategory } from "@prisma/client";
 
 // Reuses the app's own fixed categorical chart ramp (chart-1..5, already
-// used by YearlyGrowthChart) — a neutral muted tone covers the "Sem
-// categoria" bucket, which isn't a real tier.
+// used by YearlyGrowthChart).
 const CATEGORY_COLOR: Record<ChargeCategory, string> = {
   STANDARD: "var(--color-chart-5)",
   BRONZE: "var(--color-chart-4)",
@@ -15,6 +14,8 @@ const CATEGORY_COLOR: Record<ChargeCategory, string> = {
   GOLD: "var(--color-chart-3)",
   PREMIUM: "var(--color-chart-1)",
 };
+// Only ever used if the server-side breakdown somehow includes an
+// uncategorized row — the normal case excludes it entirely.
 const NONE_COLOR = "var(--color-muted-foreground)";
 
 function CategoryTooltip({ active, payload }: { active?: boolean; payload?: { payload: { name: string; value: number; avgProfit: number } }[] }) {
@@ -54,6 +55,13 @@ export function CategoryPieChart({ rows }: { rows: CategoryBreakdownRow[] }) {
           cx="50%"
           cy="50%"
           outerRadius={95}
+          // Recharts' own default (startAngle=0, endAngle=360) starts at
+          // 3 o'clock and sweeps counterclockwise, which visually scrambles
+          // the slice order relative to `data` — this is the standard fix:
+          // start at 12 and sweep clockwise, so slices render in the exact
+          // order `data` is given (Standard, Bronze, Silver, Gold, Premium).
+          startAngle={90}
+          endAngle={-270}
           // >4 slices is past the point where every one can carry its own
           // name label without colliding — the percentage alone stays
           // readable, and the legend/tooltip carry the full name + count.

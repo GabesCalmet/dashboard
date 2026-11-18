@@ -458,9 +458,8 @@ export type CategoryBreakdownRow = {
 // what that student's assigned teacher is contracted to earn from them
 // this month, independent of attendance (see getTeacherPayrollDetail) —
 // so profit here doesn't bounce around with lesson-by-lesson attendance.
-// A student with no category tagged yet lands in a "Sem categoria" (null)
-// bucket, listed last, so totals here stay honest while the five real
-// tiers are still easy to read.
+// Only the five real tiers are returned — a student with no category
+// tagged yet is simply left out of every bucket (and out of the totals).
 export async function getCategoryBreakdownForMonth(year: number, month: number) {
   const monthStart = new Date(year, month, 1);
 
@@ -503,7 +502,9 @@ export async function getCategoryBreakdownForMonth(year: number, month: number) 
     buckets.set(category, bucket);
   }
 
-  const order: (ChargeCategory | null)[] = ["STANDARD", "BRONZE", "SILVER", "GOLD", "PREMIUM", null];
+  // No "Sem categoria" bucket — an uncategorized student's revenue/cost
+  // still existed in the underlying data, it's just not surfaced here.
+  const order: (ChargeCategory | null)[] = ["STANDARD", "BRONZE", "SILVER", "GOLD", "PREMIUM"];
   const rows: CategoryBreakdownRow[] = order
     .filter((category) => buckets.has(category))
     .map((category) => {
