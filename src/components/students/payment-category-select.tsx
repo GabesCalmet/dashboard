@@ -55,7 +55,21 @@ export function PaymentCategorySelect({
       }
     >
       <SelectTrigger size="sm" className="w-[130px]">
-        {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <SelectValue />}
+        {isPending ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : (
+          // The trigger always shows the plain resolved label (e.g. just
+          // "Silver") — never "Padrão (Silver)" — regardless of whether
+          // that came from an explicit override or is inherited from the
+          // charge. The list below still spells out "Padrão (...)" for
+          // the inherited option, so it's clear which one clears the
+          // override.
+          <SelectValue>
+            {categoryOverride
+              ? chargeCategoryLabel[categoryOverride]
+              : (category && chargeCategoryLabel[category]) || "Nenhuma"}
+          </SelectValue>
+        )}
       </SelectTrigger>
       <SelectContent>
         <SelectItem value={DEFAULT_VALUE}>
