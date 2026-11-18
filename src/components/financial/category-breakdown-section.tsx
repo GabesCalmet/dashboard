@@ -1,14 +1,14 @@
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CategoryPieChart } from "@/components/financial/category-pie-chart";
-import { formatCurrency, chargeCategoryBadgeClassName } from "@/lib/labels";
+import { formatCurrency, chargeCategoryChartColor } from "@/lib/labels";
 import type { CategoryBreakdownRow } from "@/server/queries/financial";
 
-// Pie chart (student count by tier) plus one card per Categoria tier
-// (including "Sem categoria" when relevant) on the Financeiro page — how
-// many currently active students are in that tier and their average
-// profit this month (own cobrança revenue minus what their teacher is
-// contracted to earn from them) — see getCategoryBreakdownForMonth.
+// Pie chart (student count by tier) plus a plain, unboxed legend row on
+// the Financeiro page — how many currently active students are in each
+// tier and their average profit this month (own cobrança revenue minus
+// what their teacher is contracted to earn from them) — see
+// getCategoryBreakdownForMonth. Mirrors the PDF report's own legend
+// style rather than a grid of individual cards.
 export function CategoryBreakdownSection({ rows }: { rows: CategoryBreakdownRow[] }) {
   if (rows.length === 0) return null;
 
@@ -19,24 +19,21 @@ export function CategoryBreakdownSection({ rows }: { rows: CategoryBreakdownRow[
       </CardHeader>
       <CardContent>
         <CategoryPieChart rows={rows} />
-        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="mt-4 flex flex-wrap justify-center gap-x-8 gap-y-4">
           {rows.map((r) => (
-            <Card key={r.label}>
-              <CardContent className="space-y-1.5 p-4">
-                {r.category ? (
-                  <Badge variant="outline" className={chargeCategoryBadgeClassName[r.category]}>
-                    {r.label}
-                  </Badge>
-                ) : (
-                  <Badge variant="outline">{r.label}</Badge>
-                )}
-                <p className="text-2xl font-semibold">{r.studentCount}</p>
+            <div key={r.label} className="flex items-start gap-2">
+              <span
+                className="mt-1 size-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: r.category ? chargeCategoryChartColor[r.category] : "var(--color-muted-foreground)" }}
+              />
+              <div>
+                <p className="text-sm font-medium">{r.label}</p>
                 <p className="text-xs text-muted-foreground">
-                  {r.studentCount === 1 ? "aluno" : "alunos"}
+                  {r.studentCount} {r.studentCount === 1 ? "aluno" : "alunos"}
                 </p>
-                <p className="text-sm font-medium">Lucro médio: {formatCurrency(r.avgProfit)}</p>
-              </CardContent>
-            </Card>
+                <p className="text-xs text-muted-foreground">Lucro médio: {formatCurrency(r.avgProfit)}</p>
+              </div>
+            </div>
           ))}
         </div>
       </CardContent>

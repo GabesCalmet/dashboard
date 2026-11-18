@@ -89,6 +89,17 @@ export const chargeCategoryBadgeClassName: Record<ChargeCategory, string> = {
   PREMIUM: "border-violet-300 text-violet-700",
 };
 
+// The app's own fixed categorical chart ramp (chart-1..5, already used by
+// YearlyGrowthChart) — shared between CategoryPieChart's slices and the
+// legend beside it, so the colors always match exactly.
+export const chargeCategoryChartColor: Record<ChargeCategory, string> = {
+  STANDARD: "var(--color-chart-5)",
+  BRONZE: "var(--color-chart-4)",
+  SILVER: "var(--color-chart-2)",
+  GOLD: "var(--color-chart-3)",
+  PREMIUM: "var(--color-chart-1)",
+};
+
 export const expenseFrequencyLabel: Record<ExpenseFrequency, string> = {
   ONE_TIME: "Único",
   RECURRING: "Recorrente",
