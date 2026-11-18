@@ -71,6 +71,7 @@ export const bankAccountLabel: Record<BankAccount, string> = {
 };
 
 export const chargeCategoryLabel: Record<ChargeCategory, string> = {
+  STANDARD: "Standard",
   BRONZE: "Bronze",
   SILVER: "Silver",
   GOLD: "Gold",

@@ -567,6 +567,7 @@ model StudentCharge {
 }
 
 enum ChargeCategory {
+  STANDARD
   BRONZE
   SILVER
   GOLD

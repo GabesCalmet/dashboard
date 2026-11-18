@@ -20,7 +20,7 @@ export const studentChargeFormSchema = z
     // the field being absent.
     category: z.preprocess(
       (v) => (v === "" || v === "NONE" ? undefined : v),
-      z.enum(["BRONZE", "SILVER", "GOLD", "PREMIUM"]).optional()
+      z.enum(["STANDARD", "BRONZE", "SILVER", "GOLD", "PREMIUM"]).optional()
     ),
   })
   .refine((data) => data.frequency !== "RECURRING" || data.dueDay, {

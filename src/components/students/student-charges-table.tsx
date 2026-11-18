@@ -46,6 +46,7 @@ export type StudentChargeRow = {
 
 // Purely visual — distinguishes the four tiers at a glance in the table.
 const categoryBadgeClassName: Record<ChargeCategory, string> = {
+  STANDARD: "border-gray-300 text-gray-500",
   BRONZE: "border-amber-300 text-amber-700",
   SILVER: "border-slate-300 text-slate-600",
   GOLD: "border-yellow-400 text-yellow-700",
