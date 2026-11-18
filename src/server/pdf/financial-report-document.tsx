@@ -1,4 +1,5 @@
-import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, View, Text, StyleSheet, Svg, Path } from "@react-pdf/renderer";
+import type { ChargeCategory } from "@prisma/client";
 
 // "Relatório Financeiro Mensal" — a dense, spreadsheet-style internal
 // document (as opposed to the parent-facing MonthlyReportDocument, which
@@ -23,6 +24,19 @@ function statusColor(label: string): string | undefined {
   if (label === "Pendente") return RED;
   return undefined;
 }
+
+// A print-safe parallel to the app's own chart-1..5 ramp (CSS variables
+// don't exist in a PDF) — same fixed category->slot order as
+// CategoryPieChart on the Financeiro page. "Sem categoria" gets a light
+// neutral, distinct from Standard's own neutral.
+const CATEGORY_COLOR: Record<ChargeCategory, string> = {
+  STANDARD: "#9CA3AF",
+  BRONZE: "#B45309",
+  SILVER: "#64748B",
+  GOLD: "#EAB308",
+  PREMIUM: "#7C3AED",
+};
+const NONE_CATEGORY_COLOR = "#D1D5DB";
 
 const styles = StyleSheet.create({
   page: { fontSize: 9, fontFamily: "Helvetica", color: "#1f2937", padding: 28 },
@@ -70,6 +84,13 @@ const styles = StyleSheet.create({
   },
   summaryLabel: { fontSize: 8.5, color: "#374151" },
   summaryValue: { fontSize: 9, fontFamily: "Helvetica-Bold" },
+
+  categoryRow: { flexDirection: "row", alignItems: "center", gap: 20 },
+  categoryLegend: { flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  categoryItem: { flexDirection: "row", alignItems: "center", gap: 5, width: "46%" },
+  categorySwatch: { width: 8, height: 8, borderRadius: 2 },
+  categoryLabel: { fontSize: 8.5, fontFamily: "Helvetica-Bold" },
+  categoryDetail: { fontSize: 8, color: GRAY },
 });
 
 function brl(n: number): string {
@@ -103,6 +124,13 @@ export type PayoutRow = {
   amount: number;
   bankAccountLabel: string;
   date: string;
+};
+
+export type CategoryBreakdownRow = {
+  category: ChargeCategory | null;
+  label: string;
+  studentCount: number;
+  avgProfit: number;
 };
 
 export type BankAccountTotalRow = {
@@ -166,6 +194,59 @@ function Table({
   );
 }
 
+function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
+  const angleRad = ((angleDeg - 90) * Math.PI) / 180;
+  return { x: cx + r * Math.cos(angleRad), y: cy + r * Math.sin(angleRad) };
+}
+
+function describeArc(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
+  const start = polarToCartesian(cx, cy, r, endAngle);
+  const end = polarToCartesian(cx, cy, r, startAngle);
+  const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+  return ["M", cx, cy, "L", start.x, start.y, "A", r, r, 0, largeArcFlag, 0, end.x, end.y, "Z"].join(" ");
+}
+
+// Hand-drawn pie (react-pdf has no chart primitive) — one slice per
+// category with students this month, ordered the same way the cards
+// below it are. A single 100%-share category draws as a full circle
+// instead of a degenerate zero-length arc.
+function CategoryPie({ rows }: { rows: CategoryBreakdownRow[] }) {
+  const total = rows.reduce((sum, r) => sum + r.studentCount, 0);
+  if (total === 0) return null;
+
+  const cx = 45;
+  const cy = 45;
+  const r = 42;
+  const slices = rows
+    .filter((row) => row.studentCount > 0)
+    .reduce<{ color: string; startAngle: number; endAngle: number }[]>((acc, row) => {
+      const startAngle = acc.length > 0 ? acc[acc.length - 1].endAngle : 0;
+      const sweep = (row.studentCount / total) * 360;
+      acc.push({
+        color: row.category ? CATEGORY_COLOR[row.category] : NONE_CATEGORY_COLOR,
+        startAngle,
+        endAngle: startAngle + sweep,
+      });
+      return acc;
+    }, []);
+
+  return (
+    <Svg width={90} height={90} viewBox="0 0 90 90">
+      {slices.map((s, i) =>
+        s.endAngle - s.startAngle >= 359.99 ? (
+          <Path
+            key={i}
+            d={`M ${cx - r} ${cy} A ${r} ${r} 0 1 0 ${cx + r} ${cy} A ${r} ${r} 0 1 0 ${cx - r} ${cy} Z`}
+            fill={s.color}
+          />
+        ) : (
+          <Path key={i} d={describeArc(cx, cy, r, s.startAngle, s.endAngle)} fill={s.color} />
+        )
+      )}
+    </Svg>
+  );
+}
+
 export function FinancialReportDocument({
   monthLabel,
   generatedAt,
@@ -175,6 +256,7 @@ export function FinancialReportDocument({
   teacherPayouts,
   partnerPayouts,
   bankAccountTotals,
+  categoryBreakdown,
 }: {
   monthLabel: string;
   generatedAt: string;
@@ -184,6 +266,7 @@ export function FinancialReportDocument({
   teacherPayouts: PayoutRow[];
   partnerPayouts: PayoutRow[];
   bankAccountTotals: BankAccountTotalRow[];
+  categoryBreakdown: CategoryBreakdownRow[];
 }) {
   return (
     <Document title={`Relatório Financeiro — ${monthLabel}`}>
@@ -192,6 +275,33 @@ export function FinancialReportDocument({
         <Text style={[styles.subtitle, { textTransform: "capitalize" }]}>{monthLabel}</Text>
         <Text style={styles.generatedAt}>Gerado em {generatedAt}</Text>
         <View style={styles.headerRule} />
+
+        {categoryBreakdown.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Alunos por categoria</Text>
+            <View style={styles.categoryRow}>
+              <CategoryPie rows={categoryBreakdown} />
+              <View style={styles.categoryLegend}>
+                {categoryBreakdown.map((r, i) => (
+                  <View key={i} style={styles.categoryItem}>
+                    <View
+                      style={[
+                        styles.categorySwatch,
+                        { backgroundColor: r.category ? CATEGORY_COLOR[r.category] : NONE_CATEGORY_COLOR },
+                      ]}
+                    />
+                    <View>
+                      <Text style={styles.categoryLabel}>
+                        {r.label} — {r.studentCount} {r.studentCount === 1 ? "aluno" : "alunos"}
+                      </Text>
+                      <Text style={styles.categoryDetail}>Lucro médio: {brl(r.avgProfit)}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Resumo do mês</Text>

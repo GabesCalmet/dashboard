@@ -10,7 +10,12 @@ import {
   paymentStatusLabel,
   formatCalendarDate,
 } from "@/lib/labels";
-import { getFinancialSummary, getFinancialOverview, getBankBalances } from "@/server/queries/financial";
+import {
+  getFinancialSummary,
+  getFinancialOverview,
+  getBankBalances,
+  getCategoryBreakdownForMonth,
+} from "@/server/queries/financial";
 import { listExpensesForMonth } from "@/server/queries/expenses";
 import { getTeacherPayoutEntriesByTeacher, getPartnerPayoutEntries } from "@/server/queries/payouts";
 import {
@@ -41,7 +46,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Mês inválido" }, { status: 400 });
   }
 
-  const [summary, overview, expenses, teacherPayoutsByTeacher, joePayouts, gabrielPayouts, bankBalances] =
+  const [summary, overview, expenses, teacherPayoutsByTeacher, joePayouts, gabrielPayouts, bankBalances, categoryBreakdown] =
     await Promise.all([
       getFinancialSummary(year, month),
       getFinancialOverview(year, month),
@@ -53,6 +58,7 @@ export async function GET(request: NextRequest) {
       // "Saldo total atual", as opposed to "Saldo do mês" which is just
       // that month's own received/spent movement.
       getBankBalances(endOfMonth(new Date(year, month, 1))),
+      getCategoryBreakdownForMonth(year, month),
     ]);
   const totalBalanceByAccount = new Map(bankBalances.map((b) => [b.account, b.balance]));
 
@@ -175,6 +181,7 @@ export async function GET(request: NextRequest) {
       teacherPayouts={teacherPayoutRows}
       partnerPayouts={partnerPayoutRows}
       bankAccountTotals={bankAccountTotals}
+      categoryBreakdown={categoryBreakdown}
     />
   );
 
