@@ -88,14 +88,17 @@ export function getChargeSlotsForMonth(
 
     const startMonth = new Date(c.date.getFullYear(), c.date.getMonth(), 1);
     if (startMonth > monthStart) continue;
-    if (c.endDate) {
-      const endMonth = new Date(c.endDate.getFullYear(), c.endDate.getMonth(), 1);
-      if (endMonth < monthStart) continue;
-    }
+    const dueDay = c.dueDay ?? 10;
+    // Compared against this month's actual due date, not just the month
+    // itself — an endDate that falls before this month's due day (e.g.
+    // the student's last day was Nov 7th but the charge is due the 12th)
+    // means this month was never actually owed, so it's excluded too, not
+    // just the months after it.
+    if (c.endDate && c.endDate < dueDateFor(monthStart, dueDay)) continue;
     slots.push({
       payerName: c.payerName,
       amount: c.amount,
-      dueDay: c.dueDay ?? 10,
+      dueDay,
       bankAccount: c.bankAccount,
       category: c.category,
     });
