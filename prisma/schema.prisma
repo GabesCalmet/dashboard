@@ -517,6 +517,10 @@ model Payment {
   // normally-resolved account" (see getBillingSlots/
   // resolveHistoricalBankAccount); doesn't touch bankAccountHistory.
   bankAccountOverride BankAccount?
+  // Same idea as bankAccountOverride, for the charge's Categoria tag —
+  // null means "use whatever the cobrança itself is tagged as" (see
+  // StudentCharge.category), doesn't touch the charge definition.
+  categoryOverride    ChargeCategory?
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 

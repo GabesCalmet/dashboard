@@ -28,6 +28,7 @@ import {
 import { PaymentStatusSelect } from "@/components/financial/payment-status-select";
 import { PaymentOverrideButton } from "@/components/students/payment-override-dialog";
 import { PaymentBankAccountSelect } from "@/components/students/payment-bank-account-select";
+import { PaymentCategorySelect } from "@/components/students/payment-category-select";
 import { deletePayment } from "@/server/actions/payments";
 import {
   formatCurrency,
@@ -36,8 +37,9 @@ import {
   paymentStatusLabel,
   paymentStatusVariant,
   bankAccountLabel,
+  chargeCategoryLabel,
 } from "@/lib/labels";
-import type { PaymentStatus, BankAccount } from "@prisma/client";
+import type { PaymentStatus, BankAccount, ChargeCategory } from "@prisma/client";
 
 export type PaymentHistoryRow = {
   id: string | null;
@@ -52,7 +54,11 @@ export type PaymentHistoryRow = {
   bankAccountOverride: BankAccount | null;
   manualOverride: boolean;
   manualOverrideNote: string | null;
+  category: ChargeCategory | null;
+  effectiveCategory: ChargeCategory | null;
+  categoryOverride: ChargeCategory | null;
 };
+
 
 export function StudentPaymentsTable({
   payments,
@@ -210,6 +216,20 @@ export function StudentPaymentsTable({
               <p className="text-xs text-muted-foreground">{bankAccountLabel[p.effectiveBankAccount]}</p>
             )}
 
+            {editable ? (
+              <PaymentCategorySelect
+                studentId={studentId}
+                payerName={p.payerName}
+                referenceMonth={p.referenceMonth}
+                category={p.category}
+                categoryOverride={p.categoryOverride}
+              />
+            ) : (
+              p.effectiveCategory && (
+                <Badge variant="outline">{chargeCategoryLabel[p.effectiveCategory]}</Badge>
+              )
+            )}
+
             <div className="flex items-center justify-between gap-2">
               {editable ? (
                 <PaymentStatusSelect
@@ -239,6 +259,7 @@ export function StudentPaymentsTable({
               <TableHead>Referência</TableHead>
               <TableHead>Pagador</TableHead>
               <TableHead>Conta</TableHead>
+              <TableHead>Categoria</TableHead>
               <TableHead>Valor</TableHead>
               <TableHead>Vencimento</TableHead>
               <TableHead>Pago em</TableHead>
@@ -266,6 +287,21 @@ export function StudentPaymentsTable({
                     <span className="text-sm text-muted-foreground">
                       {bankAccountLabel[p.effectiveBankAccount]}
                     </span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {editable ? (
+                    <PaymentCategorySelect
+                      studentId={studentId}
+                      payerName={p.payerName}
+                      referenceMonth={p.referenceMonth}
+                      category={p.category}
+                      categoryOverride={p.categoryOverride}
+                    />
+                  ) : (
+                    p.effectiveCategory && (
+                      <Badge variant="outline">{chargeCategoryLabel[p.effectiveCategory]}</Badge>
+                    )
                   )}
                 </TableCell>
                 <TableCell>
@@ -328,7 +364,7 @@ export function StudentPaymentsTable({
             ))}
             {filteredPayments.length === 0 && (
               <TableRow>
-                <TableCell colSpan={editable ? 8 : 7} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={editable ? 9 : 8} className="py-10 text-center text-muted-foreground">
                   Nenhum pagamento registrado neste ano.
                 </TableCell>
               </TableRow>

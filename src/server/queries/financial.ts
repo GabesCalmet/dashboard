@@ -6,7 +6,7 @@ import { resolveSlotStudentName } from "@/server/billing";
 import { getChargeSlotsForMonth, getTotalChargeRevenueForMonth, toChargeLike, type StudentChargeLike } from "@/server/student-charges";
 import { getTeacherPayrollForMonth, getTeacherFeriasForYear } from "@/server/queries/teachers";
 import { getPaidTeacherPayrollTotal, getPartnerPayoutAmount } from "@/server/queries/payouts";
-import type { BankAccount, Expense, PaymentStatus, StudentCharge } from "@prisma/client";
+import type { BankAccount, ChargeCategory, Expense, PaymentStatus, StudentCharge } from "@prisma/client";
 
 // Groups a flat list of StudentCharge rows (already ordered newest-first,
 // e.g. via `orderBy: { createdAt: "desc" }`) by studentId, and converts
@@ -688,6 +688,13 @@ export async function getStudentPaymentHistory(studentId: string) {
     bankAccountOverride: BankAccount | null;
     manualOverride: boolean;
     manualOverrideNote: string | null;
+    // Same "default vs. override" split as bankAccount/effectiveBankAccount
+    // above, for the charge's Categoria tag — category is whatever the
+    // cobrança itself is tagged as (null if none), effectiveCategory is
+    // the override when one's set.
+    category: ChargeCategory | null;
+    effectiveCategory: ChargeCategory | null;
+    categoryOverride: ChargeCategory | null;
   }[] = [];
 
   // Every real Payment row is shown unconditionally, regardless of whether
@@ -719,6 +726,9 @@ export async function getStudentPaymentHistory(studentId: string) {
       bankAccountOverride: real.bankAccountOverride,
       manualOverride: real.manualOverride,
       manualOverrideNote: real.manualOverrideNote,
+      category: slot?.category ?? null,
+      effectiveCategory: real.categoryOverride ?? slot?.category ?? null,
+      categoryOverride: real.categoryOverride,
     });
     claimedKeys.add(`${monthKey}::${real.payerName ?? ""}`);
   }
@@ -759,6 +769,9 @@ export async function getStudentPaymentHistory(studentId: string) {
           bankAccountOverride: null,
           manualOverride: false,
           manualOverrideNote: null,
+          category: slot.category,
+          effectiveCategory: slot.category,
+          categoryOverride: null,
         });
       }
 

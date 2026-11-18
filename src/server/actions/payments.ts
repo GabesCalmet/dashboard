@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
 import { brazilToday } from "@/lib/timezone";
 import { getStudentChargeSlotsForMonth, createMissingPaymentsForMonth } from "@/server/student-charges";
-import type { PaymentStatus, BankAccount } from "@prisma/client";
+import type { PaymentStatus, BankAccount, ChargeCategory } from "@prisma/client";
 import type { ActionState } from "@/server/actions/students";
 
 function dueDateFor(monthStart: Date, day: number) {
@@ -237,6 +237,64 @@ export async function setPaymentBankAccountOverride(
     action: "UPDATE",
     actor,
     changes: { bankAccountOverride: bankAccount, payerName, referenceMonth: monthStart.toISOString() },
+  });
+
+  revalidatePath("/admin/financial");
+  revalidatePath("/admin/financial/receita");
+  revalidatePath(`/admin/students/${studentId}`);
+  revalidatePath(`/coordinator/students/${studentId}`);
+
+  return payment;
+}
+
+// Same idea as setPaymentBankAccountOverride, for the charge's Categoria
+// tag — which account/category this ONE month's cobrança actually shows,
+// without touching the charge definition itself. Picking "Padrão" clears
+// the override.
+export async function setPaymentCategoryOverride(
+  studentId: string,
+  payerName: string | null,
+  referenceMonth: Date,
+  category: ChargeCategory | null
+) {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+
+  const existing = await prisma.payment.findFirst({
+    where: { studentId, referenceMonth: monthStart, payerName },
+  });
+
+  let payment;
+  if (existing) {
+    payment = await prisma.payment.update({
+      where: { id: existing.id },
+      data: { categoryOverride: category },
+    });
+  } else {
+    const slot = (await getStudentChargeSlotsForMonth(studentId, monthStart)).find(
+      (s) => s.payerName === payerName
+    );
+    if (!slot) throw new Error("Cobrança não encontrada para este pagador.");
+    const dueDate = dueDateFor(monthStart, slot.dueDay);
+    payment = await prisma.payment.create({
+      data: {
+        studentId,
+        referenceMonth: monthStart,
+        amount: slot.amount,
+        dueDate,
+        payerName: slot.payerName,
+        status: dueDate < brazilToday() ? "LATE" : "PENDING",
+        categoryOverride: category,
+      },
+    });
+  }
+
+  await recordAudit({
+    entityType: "Payment",
+    entityId: payment.id,
+    action: "UPDATE",
+    actor,
+    changes: { categoryOverride: category, payerName, referenceMonth: monthStart.toISOString() },
   });
 
   revalidatePath("/admin/financial");

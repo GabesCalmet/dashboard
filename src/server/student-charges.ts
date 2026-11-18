@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { brazilToday } from "@/lib/timezone";
 import { dueDateFor } from "@/server/billing";
-import type { BankAccount, ExpenseFrequency, PaymentStatus } from "@prisma/client";
+import type { BankAccount, ChargeCategory, ExpenseFrequency, PaymentStatus } from "@prisma/client";
 
 export type StudentChargeLike = {
   payerName: string | null;
@@ -11,6 +11,7 @@ export type StudentChargeLike = {
   dueDay: number | null;
   endDate: Date | null;
   bankAccount: BankAccount;
+  category: ChargeCategory | null;
 };
 
 type RawChargeRow = {
@@ -21,6 +22,7 @@ type RawChargeRow = {
   dueDay: number | null;
   endDate: Date | null;
   bankAccount: BankAccount;
+  category: ChargeCategory | null;
 };
 
 // Converts a raw StudentCharge row (Decimal amount) into StudentChargeLike
@@ -34,6 +36,7 @@ export function toChargeLike<T extends RawChargeRow>(c: T): StudentChargeLike {
     dueDay: c.dueDay,
     endDate: c.endDate,
     bankAccount: c.bankAccount,
+    category: c.category,
   };
 }
 
@@ -46,6 +49,7 @@ export type ChargeSlot = {
   amount: number;
   dueDay: number;
   bankAccount: BankAccount;
+  category: ChargeCategory | null;
 };
 
 // Resolves which of a student's charges are active for a given reference
@@ -71,7 +75,13 @@ export function getChargeSlotsForMonth(
     if (c.frequency === "ONE_TIME") {
       const chargeMonth = new Date(c.date.getFullYear(), c.date.getMonth(), 1);
       if (chargeMonth.getTime() !== monthStart.getTime()) continue;
-      slots.push({ payerName: c.payerName, amount: c.amount, dueDay: c.date.getDate(), bankAccount: c.bankAccount });
+      slots.push({
+        payerName: c.payerName,
+        amount: c.amount,
+        dueDay: c.date.getDate(),
+        bankAccount: c.bankAccount,
+        category: c.category,
+      });
       seen.add(key);
       continue;
     }
@@ -82,7 +92,13 @@ export function getChargeSlotsForMonth(
       const endMonth = new Date(c.endDate.getFullYear(), c.endDate.getMonth(), 1);
       if (endMonth < monthStart) continue;
     }
-    slots.push({ payerName: c.payerName, amount: c.amount, dueDay: c.dueDay ?? 10, bankAccount: c.bankAccount });
+    slots.push({
+      payerName: c.payerName,
+      amount: c.amount,
+      dueDay: c.dueDay ?? 10,
+      bankAccount: c.bankAccount,
+      category: c.category,
+    });
     seen.add(key);
   }
 
