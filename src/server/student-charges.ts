@@ -159,6 +159,41 @@ export async function getOwnChargeAmountsForMonth(
   return result;
 }
 
+// Same batched "this student's own charge slot this month" lookup as
+// getOwnChargeAmountsForMonth, but returns the whole slot (amount AND
+// category) instead of just the amount — for the Financeiro page's
+// per-Categoria breakdown, which needs both at once per student. Missing
+// from the returned map means "no active own-charge this month."
+export async function getOwnChargeSlotsForMonth(
+  studentIds: string[],
+  referenceMonth: Date
+): Promise<Map<string, ChargeSlot>> {
+  const result = new Map<string, ChargeSlot>();
+  if (studentIds.length === 0) return result;
+
+  const monthStart = new Date(referenceMonth.getFullYear(), referenceMonth.getMonth(), 1);
+  const charges = await prisma.studentCharge.findMany({
+    where: { studentId: { in: studentIds } },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const byStudent = new Map<string, typeof charges>();
+  for (const c of charges) {
+    const bucket = byStudent.get(c.studentId);
+    if (bucket) bucket.push(c);
+    else byStudent.set(c.studentId, [c]);
+  }
+
+  for (const [studentId, list] of byStudent) {
+    const slot = getChargeSlotsForMonth(list.map(toChargeLike), monthStart).find(
+      (s) => s.payerName === null
+    );
+    if (slot) result.set(studentId, slot);
+  }
+
+  return result;
+}
+
 // Creates any Payment row a charge should have produced by `through`
 // (inclusive, capped at the charge's own endDate) that doesn't already
 // exist — one row for a ONE_TIME charge (its own `date` as the due date),

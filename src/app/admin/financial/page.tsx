@@ -15,7 +15,8 @@ import { MigrateChargesButton } from "@/components/financial/migrate-charges-but
 import { FinancialReportButton } from "@/components/financial/financial-report-button";
 import { BankAccountCard } from "@/components/financial/bank-account-card";
 import { YearlyGrowthChart } from "@/components/financial/yearly-growth-chart";
-import { getFinancialSummary, getBankBalances } from "@/server/queries/financial";
+import { CategoryBreakdownSection } from "@/components/financial/category-breakdown-section";
+import { getFinancialSummary, getBankBalances, getCategoryBreakdownForMonth } from "@/server/queries/financial";
 import { getExpenseCategoryTotals } from "@/server/queries/expenses";
 import { parseMonthParam, monthParam } from "@/lib/month-param";
 import { formatCurrency } from "@/lib/labels";
@@ -35,10 +36,11 @@ export default async function AdminFinancialPage({
   const now = new Date();
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
 
-  const [data, bankBalances, categoryTotals] = await Promise.all([
+  const [data, bankBalances, categoryTotals, categoryBreakdown] = await Promise.all([
     getFinancialSummary(year, month),
     getBankBalances(endOfMonth(new Date(year, month, 1))),
     getExpenseCategoryTotals(year, month),
+    getCategoryBreakdownForMonth(year, month),
   ]);
   // Professores/Parceiros are derived elsewhere (teacher payroll, partner
   // split) rather than manually-typed Expense rows — only these three
@@ -290,6 +292,8 @@ export default async function AdminFinancialPage({
           <YearlyGrowthChart data={data.yearlyChart} />
         </CardContent>
       </Card>
+
+      <CategoryBreakdownSection rows={categoryBreakdown} />
     </div>
   );
 }

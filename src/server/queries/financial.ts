@@ -1,10 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
-import { bankAccountLabel } from "@/lib/labels";
+import { bankAccountLabel, chargeCategoryLabel } from "@/lib/labels";
 import { brazilToday, endOfBrazilDay } from "@/lib/timezone";
 import { resolveSlotStudentName } from "@/server/billing";
-import { getChargeSlotsForMonth, getTotalChargeRevenueForMonth, toChargeLike, type StudentChargeLike } from "@/server/student-charges";
-import { getTeacherPayrollForMonth, getTeacherFeriasForYear } from "@/server/queries/teachers";
+import {
+  getChargeSlotsForMonth,
+  getTotalChargeRevenueForMonth,
+  getOwnChargeSlotsForMonth,
+  toChargeLike,
+  type StudentChargeLike,
+} from "@/server/student-charges";
+import { getTeacherPayrollForMonth, getTeacherPayrollDetail, getTeacherFeriasForYear } from "@/server/queries/teachers";
 import { getPaidTeacherPayrollTotal, getPartnerPayoutAmount } from "@/server/queries/payouts";
 import type { BankAccount, ChargeCategory, Expense, PaymentStatus, StudentCharge } from "@prisma/client";
 
@@ -431,6 +437,90 @@ export async function getBankBalances(asOf?: Date) {
     receivedItems: receivedItems[account].sort((a, b) => b.date.localeCompare(a.date)),
     spentItems: spentItems[account].sort((a, b) => b.date.localeCompare(a.date)),
   }));
+}
+
+export type CategoryBreakdownRow = {
+  category: ChargeCategory | null;
+  label: string;
+  studentCount: number;
+  totalRevenue: number;
+  totalTeacherCost: number;
+  totalProfit: number;
+  avgProfit: number;
+};
+
+// Per-Categoria breakdown for the Financeiro page: how many currently
+// ACTIVE students are tagged with each tier (via their own cobrança — see
+// getOwnChargeSlotsForMonth), and the average profit per student in that
+// tier for the viewed month. Revenue is each student's own charge amount
+// (Previsto — stable regardless of who's actually paid yet, same basis
+// every other figure on this page uses); teacher cost is "contratado" —
+// what that student's assigned teacher is contracted to earn from them
+// this month, independent of attendance (see getTeacherPayrollDetail) —
+// so profit here doesn't bounce around with lesson-by-lesson attendance.
+// A student with no category tagged yet lands in a "Sem categoria" (null)
+// bucket, listed last, so totals here stay honest while the five real
+// tiers are still easy to read.
+export async function getCategoryBreakdownForMonth(year: number, month: number) {
+  const monthStart = new Date(year, month, 1);
+
+  const activeStudents = await prisma.studentProfile.findMany({
+    where: { status: "ACTIVE" },
+    select: { id: true, teacherId: true },
+  });
+  const activeStudentIds = activeStudents.map((s) => s.id);
+  const activeStudentIdSet = new Set(activeStudentIds);
+
+  const [ownSlots, ...teacherDetails] = await Promise.all([
+    getOwnChargeSlotsForMonth(activeStudentIds, monthStart),
+    ...[...new Set(activeStudents.map((s) => s.teacherId).filter((id): id is string => id !== null))].map(
+      (teacherId) => getTeacherPayrollDetail(teacherId, year, month)
+    ),
+  ]);
+
+  const teacherCostByStudent = new Map<string, number>();
+  for (const detail of teacherDetails) {
+    if (!detail) continue;
+    for (const s of detail.students) {
+      if (activeStudentIdSet.has(s.studentId)) teacherCostByStudent.set(s.studentId, s.contratado);
+    }
+  }
+
+  const buckets = new Map<
+    ChargeCategory | null,
+    { studentCount: number; totalRevenue: number; totalTeacherCost: number }
+  >();
+  for (const studentId of activeStudentIds) {
+    const slot = ownSlots.get(studentId);
+    const category = slot?.category ?? null;
+    const revenue = slot?.amount ?? 0;
+    const teacherCost = teacherCostByStudent.get(studentId) ?? 0;
+
+    const bucket = buckets.get(category) ?? { studentCount: 0, totalRevenue: 0, totalTeacherCost: 0 };
+    bucket.studentCount += 1;
+    bucket.totalRevenue += revenue;
+    bucket.totalTeacherCost += teacherCost;
+    buckets.set(category, bucket);
+  }
+
+  const order: (ChargeCategory | null)[] = ["STANDARD", "BRONZE", "SILVER", "GOLD", "PREMIUM", null];
+  const rows: CategoryBreakdownRow[] = order
+    .filter((category) => buckets.has(category))
+    .map((category) => {
+      const b = buckets.get(category)!;
+      const totalProfit = b.totalRevenue - b.totalTeacherCost;
+      return {
+        category,
+        label: category ? chargeCategoryLabel[category] : "Sem categoria",
+        studentCount: b.studentCount,
+        totalRevenue: b.totalRevenue,
+        totalTeacherCost: b.totalTeacherCost,
+        totalProfit,
+        avgProfit: b.studentCount > 0 ? totalProfit / b.studentCount : 0,
+      };
+    });
+
+  return rows;
 }
 
 // The Parceiros split for one specific month — previsto is always a live

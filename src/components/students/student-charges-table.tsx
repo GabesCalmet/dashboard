@@ -27,7 +27,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StudentChargeFormDialog } from "@/components/students/student-charge-form-dialog";
 import { deleteStudentCharge, endStudentCharge } from "@/server/actions/student-charges";
-import { formatCurrency, formatCalendarDate, bankAccountLabel, chargeCategoryLabel } from "@/lib/labels";
+import {
+  formatCurrency,
+  formatCalendarDate,
+  bankAccountLabel,
+  chargeCategoryLabel,
+  chargeCategoryBadgeClassName,
+} from "@/lib/labels";
 import { brazilToday } from "@/lib/timezone";
 import type { ExpenseFrequency, BankAccount, ChargeCategory } from "@prisma/client";
 
@@ -44,19 +50,10 @@ export type StudentChargeRow = {
   category: ChargeCategory | null;
 };
 
-// Purely visual — distinguishes the four tiers at a glance in the table.
-const categoryBadgeClassName: Record<ChargeCategory, string> = {
-  STANDARD: "border-gray-300 text-gray-500",
-  BRONZE: "border-amber-300 text-amber-700",
-  SILVER: "border-slate-300 text-slate-600",
-  GOLD: "border-yellow-400 text-yellow-700",
-  PREMIUM: "border-violet-300 text-violet-700",
-};
-
 function CategoryBadge({ category }: { category: ChargeCategory | null }) {
   if (!category) return null;
   return (
-    <Badge variant="outline" className={categoryBadgeClassName[category]}>
+    <Badge variant="outline" className={chargeCategoryBadgeClassName[category]}>
       {chargeCategoryLabel[category]}
     </Badge>
   );

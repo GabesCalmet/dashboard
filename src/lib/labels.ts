@@ -78,6 +78,17 @@ export const chargeCategoryLabel: Record<ChargeCategory, string> = {
   PREMIUM: "Premium",
 };
 
+// Purely visual — distinguishes the five tiers at a glance wherever a
+// Categoria badge is shown (the cobranças table, the Financeiro page's
+// per-category breakdown).
+export const chargeCategoryBadgeClassName: Record<ChargeCategory, string> = {
+  STANDARD: "border-gray-300 text-gray-500",
+  BRONZE: "border-amber-300 text-amber-700",
+  SILVER: "border-slate-300 text-slate-600",
+  GOLD: "border-yellow-400 text-yellow-700",
+  PREMIUM: "border-violet-300 text-violet-700",
+};
+
 export const expenseFrequencyLabel: Record<ExpenseFrequency, string> = {
   ONE_TIME: "Único",
   RECURRING: "Recorrente",
