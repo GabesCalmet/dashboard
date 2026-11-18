@@ -27,9 +27,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StudentChargeFormDialog } from "@/components/students/student-charge-form-dialog";
 import { deleteStudentCharge, endStudentCharge } from "@/server/actions/student-charges";
-import { formatCurrency, formatCalendarDate, bankAccountLabel } from "@/lib/labels";
+import { formatCurrency, formatCalendarDate, bankAccountLabel, chargeCategoryLabel } from "@/lib/labels";
 import { brazilToday } from "@/lib/timezone";
-import type { ExpenseFrequency, BankAccount } from "@prisma/client";
+import type { ExpenseFrequency, BankAccount, ChargeCategory } from "@prisma/client";
 
 export type StudentChargeRow = {
   id: string;
@@ -41,7 +41,25 @@ export type StudentChargeRow = {
   dueDay: number | null;
   endDate: Date | null;
   bankAccount: BankAccount;
+  category: ChargeCategory | null;
 };
+
+// Purely visual — distinguishes the four tiers at a glance in the table.
+const categoryBadgeClassName: Record<ChargeCategory, string> = {
+  BRONZE: "border-amber-300 text-amber-700",
+  SILVER: "border-slate-300 text-slate-600",
+  GOLD: "border-yellow-400 text-yellow-700",
+  PREMIUM: "border-violet-300 text-violet-700",
+};
+
+function CategoryBadge({ category }: { category: ChargeCategory | null }) {
+  if (!category) return null;
+  return (
+    <Badge variant="outline" className={categoryBadgeClassName[category]}>
+      {chargeCategoryLabel[category]}
+    </Badge>
+  );
+}
 
 // The "+" list on a student's Financeiro tab — every cobrança definition
 // (see StudentCharge), independent from the cadastro, mirroring the Gastos
@@ -146,6 +164,7 @@ export function StudentChargesTable({
                   <Badge variant="outline">{c.frequency === "RECURRING" ? "Recorrente" : "Único"}</Badge>
                   {c.frequency === "RECURRING" && <span>dia {c.dueDay}</span>}
                   {ended && <Badge variant="outline">Encerrada</Badge>}
+                  <CategoryBadge category={c.category} />
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {c.frequency === "RECURRING"
@@ -167,6 +186,7 @@ export function StudentChargesTable({
                         dueDay: c.dueDay,
                         endDate: c.endDate?.toISOString().slice(0, 10),
                         bankAccount: c.bankAccount,
+                        category: c.category,
                       }}
                     />
                     {c.frequency === "RECURRING" && !ended && endButton(c)}
@@ -191,6 +211,7 @@ export function StudentChargesTable({
                 <TableHead>Valor</TableHead>
                 <TableHead>Conta</TableHead>
                 <TableHead>Tipo</TableHead>
+                <TableHead>Categoria</TableHead>
                 <TableHead>Vigência</TableHead>
                 {editable && <TableHead className="text-right">Ações</TableHead>}
               </TableRow>
@@ -217,6 +238,9 @@ export function StudentChargesTable({
                           dia {c.dueDay}
                         </span>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <CategoryBadge category={c.category} />
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {c.frequency === "RECURRING" ? (
@@ -249,6 +273,7 @@ export function StudentChargesTable({
                               dueDay: c.dueDay,
                               endDate: c.endDate?.toISOString().slice(0, 10),
                               bankAccount: c.bankAccount,
+                              category: c.category,
                             }}
                           />
                           {c.frequency === "RECURRING" && !ended && endButton(c)}
@@ -261,7 +286,7 @@ export function StudentChargesTable({
               })}
               {charges.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={editable ? 7 : 6} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={editable ? 8 : 7} className="py-8 text-center text-muted-foreground">
                     Nenhuma cobrança cadastrada.
                   </TableCell>
                 </TableRow>

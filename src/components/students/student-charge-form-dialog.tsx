@@ -24,8 +24,8 @@ import {
 } from "@/components/ui/select";
 import { createStudentCharge, updateStudentCharge } from "@/server/actions/student-charges";
 import { useActionToast } from "@/hooks/use-action-toast";
-import { bankAccountLabel } from "@/lib/labels";
-import type { ExpenseFrequency, BankAccount } from "@prisma/client";
+import { bankAccountLabel, chargeCategoryLabel } from "@/lib/labels";
+import type { ExpenseFrequency, BankAccount, ChargeCategory } from "@prisma/client";
 
 type ChargeDefaults = {
   id: string;
@@ -37,6 +37,7 @@ type ChargeDefaults = {
   dueDay: number | null;
   endDate?: string;
   bankAccount: BankAccount;
+  category: ChargeCategory | null;
 };
 
 // "Adicionar cobrança" — mirrors ExpenseFormDialog exactly (see
@@ -116,6 +117,23 @@ export function StudentChargeFormDialog({
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(bankAccountLabel).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Categoria (opcional)</Label>
+            <Select name="category" defaultValue={charge?.category ?? "NONE"}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="NONE">Nenhuma</SelectItem>
+                {Object.entries(chargeCategoryLabel).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}
                   </SelectItem>

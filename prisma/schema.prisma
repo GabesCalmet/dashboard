@@ -552,11 +552,21 @@ model StudentCharge {
   dueDay      Int? // RECURRING only: day of month it's due, 1-31
   endDate     DateTime? // RECURRING only: when it stops — null means still ongoing
   bankAccount BankAccount      @default(JOE)
+  // Purely a classification tag on the charge itself — doesn't affect
+  // amount, billing, or anything else. Null means uncategorized.
+  category    ChargeCategory?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
   @@index([studentId])
   @@map("student_charges")
+}
+
+enum ChargeCategory {
+  BRONZE
+  SILVER
+  GOLD
+  PREMIUM
 }
 
 enum ExpenseCategory {

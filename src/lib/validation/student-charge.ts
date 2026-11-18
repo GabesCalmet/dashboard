@@ -15,6 +15,13 @@ export const studentChargeFormSchema = z
     dueDay: z.coerce.number().int().min(1).max(31).optional(),
     endDate: z.string().optional(),
     bankAccount: z.enum(["GABES", "JOE", "ASAAS"]).default("JOE"),
+    // Purely a classification tag — no selection is a valid "uncategorized"
+    // state, so an empty string (nothing picked) is treated the same as
+    // the field being absent.
+    category: z.preprocess(
+      (v) => (v === "" || v === "NONE" ? undefined : v),
+      z.enum(["BRONZE", "SILVER", "GOLD", "PREMIUM"]).optional()
+    ),
   })
   .refine((data) => data.frequency !== "RECURRING" || data.dueDay, {
     message: "Informe o dia de vencimento para cobranças recorrentes",

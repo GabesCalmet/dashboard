@@ -4,6 +4,7 @@ import type {
   PaymentStatus,
   StudentStatus,
   BankAccount,
+  ChargeCategory,
   ExpenseFrequency,
   ExpenseCategory,
   AuditAction,
@@ -67,6 +68,13 @@ export const bankAccountLabel: Record<BankAccount, string> = {
   GABES: "Gabriel",
   JOE: "Joe",
   ASAAS: "Asaas",
+};
+
+export const chargeCategoryLabel: Record<ChargeCategory, string> = {
+  BRONZE: "Bronze",
+  SILVER: "Silver",
+  GOLD: "Gold",
+  PREMIUM: "Premium",
 };
 
 export const expenseFrequencyLabel: Record<ExpenseFrequency, string> = {

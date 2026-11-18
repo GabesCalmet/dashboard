@@ -46,6 +46,7 @@ export async function createStudentCharge(_prev: ActionState, formData: FormData
       dueDay: data.frequency === "RECURRING" ? data.dueDay : null,
       endDate,
       bankAccount: data.bankAccount,
+      category: data.category ?? null,
     },
   });
 
@@ -107,6 +108,7 @@ export async function updateStudentCharge(
       dueDay: data.frequency === "RECURRING" ? data.dueDay : null,
       endDate,
       bankAccount: data.bankAccount,
+      category: data.category ?? null,
     },
   });
 

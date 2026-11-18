@@ -50,6 +50,7 @@ export default async function AdminStudentDetailPage({
         dueDay: c.dueDay,
         endDate: c.endDate,
         bankAccount: c.bankAccount,
+        category: c.category,
       }))}
       initialTab={tab}
       rescheduleAlert={rescheduleAlert}
