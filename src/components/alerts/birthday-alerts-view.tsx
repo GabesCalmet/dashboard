@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Cake } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
+import { BirthdayCardDialog } from "@/components/alerts/birthday-card-dialog";
 import { formatCalendarDate } from "@/lib/labels";
 import type { BirthdayAlert } from "@/server/queries/alerts";
 
@@ -33,7 +34,7 @@ export function BirthdayAlertsView({
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-success/15 text-success">
                   <Cake className="size-4.5" />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <Link href={`${studentsBasePath}/${alert.studentId}`} className="font-medium hover:underline">
                     {alert.studentName}
                   </Link>
@@ -41,6 +42,9 @@ export function BirthdayAlertsView({
                     Completando {alert.turningAge} anos hoje
                   </p>
                   <p className="text-xs text-muted-foreground">{formatCalendarDate(alert.birthDate)}</p>
+                  <div className="mt-3">
+                    <BirthdayCardDialog studentName={alert.studentName} />
+                  </div>
                 </div>
               </CardContent>
             </Card>
