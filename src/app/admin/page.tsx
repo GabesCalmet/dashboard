@@ -52,55 +52,13 @@ export default async function AdminDashboardPage({
         actions={<SweepLatePaymentsButton />}
       />
 
-      <div className="mb-4">
-        <MonthNav basePath="/admin" year={year} month={month} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Alunos ativos"
-          value={String(data.activeStudents)}
-          icon={GraduationCap}
-          accent
-          href="/admin/students?status=ACTIVE"
-        />
-        <StatCard
-          label="Alunos pausados"
-          value={String(data.pausedStudents)}
-          icon={PauseCircle}
-          href="/admin/students?status=PAUSED"
-          tone={data.pausedContactDue > 0 ? "warning" : undefined}
-        />
-        <StatCard
-          label="Alunos cancelados"
-          value={String(data.canceledStudents)}
-          icon={UserX}
-          href="/admin/students?status=CANCELED"
-        />
-        <StatCard
-          label="Professores"
-          value={String(data.totalTeachers)}
-          icon={UsersRound}
-          href="/admin/teachers"
-        />
-
-        <StatCard
-          label="Aulas realizadas (mês)"
-          value={String(data.lessonsThisMonth)}
-          icon={CalendarCheck2}
-        />
-        <StatCard label="Horas lecionadas (mês)" value={`${data.hoursTaught}h`} icon={Clock} />
-        <StatCard
-          label="Cancelamentos (mês)"
-          value={String(data.cancellationsThisMonth)}
-          icon={Ban}
-          href={`/admin/reports/lessons?month=${viewedMonth}&statuses=CANCELED_BY_STUDENT,CANCELED_BY_STUDENT_NO_MAKEUP,CANCELED_BY_TEACHER,CANCELED_LATE,CANCELED_HOLIDAY,NO_SHOW`}
-        />
-        <StatCard
-          label="Reposições (mês)"
-          value={String(data.makeupsThisMonth)}
-          icon={Repeat}
-          href={`/admin/reports/lessons?month=${viewedMonth}&statuses=MAKEUP`}
+          label="Pagamentos atrasados"
+          value={String(data.latePaymentsCount)}
+          icon={CircleAlert}
+          tone={data.latePaymentsCount > 0 ? "danger" : undefined}
+          href="/admin/financial/atrasados"
         />
         <StatCard
           label="Alertas de frequência"
@@ -110,33 +68,83 @@ export default async function AdminDashboardPage({
           href="/admin/alerts"
         />
         <StatCard
-          label="Pagamentos atrasados"
-          value={String(data.latePaymentsCount)}
-          icon={CircleAlert}
-          tone={data.latePaymentsCount > 0 ? "danger" : undefined}
-          href="/admin/financial/atrasados"
-        />
-        <StatCard
           label="Aniversários hoje"
           value={String(birthdayAlerts.length)}
           icon={Cake}
           tone={birthdayAlerts.length > 0 ? "success" : undefined}
           href="/admin/alerts/birthdays"
         />
+        <StatCard
+          label="Aulas/aluno (média)"
+          value={data.avgLessonsPerStudent.toFixed(1)}
+          icon={BarChart3}
+        />
+      </div>
 
+      <div className="mb-4">
+        <MonthNav basePath="/admin" year={year} month={month} />
+      </div>
+
+      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard label="Receita anual" value={formatCurrency(data.annualRevenue)} icon={TrendingUp} />
         <StatCard
           label="Receita mensal"
           value={formatCurrency(data.monthlyRevenue)}
           icon={Wallet}
           accent
         />
-        <StatCard label="Receita anual" value={formatCurrency(data.annualRevenue)} icon={TrendingUp} />
         <StatCard label="Ticket médio" value={formatCurrency(data.avgTicket)} icon={Receipt} />
-        <StatCard
-          label="Aulas/aluno (média)"
-          value={data.avgLessonsPerStudent.toFixed(1)}
-          icon={BarChart3}
-        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="flex flex-col gap-4">
+          <StatCard
+            label="Alunos ativos"
+            value={String(data.activeStudents)}
+            icon={GraduationCap}
+            accent
+            href="/admin/students?status=ACTIVE"
+          />
+          <StatCard
+            label="Alunos pausados"
+            value={String(data.pausedStudents)}
+            icon={PauseCircle}
+            href="/admin/students?status=PAUSED"
+            tone={data.pausedContactDue > 0 ? "warning" : undefined}
+          />
+          <StatCard
+            label="Alunos cancelados"
+            value={String(data.canceledStudents)}
+            icon={UserX}
+            href="/admin/students?status=CANCELED"
+          />
+          <StatCard
+            label="Professores"
+            value={String(data.totalTeachers)}
+            icon={UsersRound}
+            href="/admin/teachers"
+          />
+        </div>
+        <div className="flex flex-col gap-4">
+          <StatCard
+            label="Aulas realizadas (mês)"
+            value={String(data.lessonsThisMonth)}
+            icon={CalendarCheck2}
+          />
+          <StatCard label="Horas lecionadas (mês)" value={`${data.hoursTaught}h`} icon={Clock} />
+          <StatCard
+            label="Cancelamentos (mês)"
+            value={String(data.cancellationsThisMonth)}
+            icon={Ban}
+            href={`/admin/reports/lessons?month=${viewedMonth}&statuses=CANCELED_BY_STUDENT,CANCELED_BY_STUDENT_NO_MAKEUP,CANCELED_BY_TEACHER,CANCELED_LATE,CANCELED_HOLIDAY,NO_SHOW`}
+          />
+          <StatCard
+            label="Reposições (mês)"
+            value={String(data.makeupsThisMonth)}
+            icon={Repeat}
+            href={`/admin/reports/lessons?month=${viewedMonth}&statuses=MAKEUP`}
+          />
+        </div>
       </div>
 
       <Card className="mt-6">
