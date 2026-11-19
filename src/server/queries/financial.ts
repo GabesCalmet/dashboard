@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
+import { startOfMonth, endOfMonth, subMonths, addDays, differenceInCalendarDays, format } from "date-fns";
 import { bankAccountLabel, chargeCategoryLabel } from "@/lib/labels";
 import { brazilToday, endOfBrazilDay } from "@/lib/timezone";
 import { resolveSlotStudentName } from "@/server/billing";
@@ -912,6 +912,51 @@ export async function getLatePayments() {
       payerName: p.payerName,
       amount: Number(p.amount),
       dueDate: p.dueDate,
+      referenceMonth: p.referenceMonth,
+      bankAccount: p.bankAccountOverride ?? slot?.bankAccount ?? p.student.bankAccount,
+    };
+  });
+}
+
+// "Cobranças" — the dashboard's own heads-up-before-due-date alert
+// (getAdminDashboardData.upcomingChargesCount): every still-PENDING
+// payment due anywhere from today through 5 days out. Mirrors
+// getLatePayments exactly, just PENDING + the due-date window instead of
+// LATE — mutually exclusive with it, never both.
+export async function getUpcomingCharges() {
+  const now = brazilToday();
+  const payments = await prisma.payment.findMany({
+    where: { status: "PENDING", dueDate: { gte: now, lte: addDays(now, 5) }, student: { status: "ACTIVE" } },
+    include: {
+      student: {
+        include: { user: true, teacher: { include: { user: true } }, groupMembers: { include: { user: true } } },
+      },
+    },
+    orderBy: { dueDate: "asc" },
+  });
+
+  const studentIds = [...new Set(payments.map((p) => p.studentId))];
+  const charges = studentIds.length
+    ? await prisma.studentCharge.findMany({
+        where: { studentId: { in: studentIds } },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
+  const chargesByStudent = groupChargesByStudent(charges);
+
+  return payments.map((p) => {
+    const slot = getChargeSlotsForMonth(chargesByStudent.get(p.studentId) ?? [], p.referenceMonth).find(
+      (s) => s.payerName === p.payerName
+    );
+    return {
+      id: p.id,
+      studentId: p.studentId,
+      studentName: resolveSlotStudentName(p.payerName, p.student),
+      teacherName: p.student.teacher?.user.name ?? null,
+      payerName: p.payerName,
+      amount: Number(p.amount),
+      dueDate: p.dueDate,
+      daysUntilDue: differenceInCalendarDays(p.dueDate, now),
       referenceMonth: p.referenceMonth,
       bankAccount: p.bankAccountOverride ?? slot?.bankAccount ?? p.student.bankAccount,
     };

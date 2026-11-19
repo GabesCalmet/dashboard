@@ -62,7 +62,7 @@ export default async function AdminDashboardPage({
           value={String(data.upcomingChargesCount)}
           icon={CalendarClock}
           tone={data.upcomingChargesCount > 0 ? "warning" : undefined}
-          href="/admin/financial/receita"
+          href="/admin/financial/cobrancas"
         />
         <StatCard
           label="Pagamentos atrasados"
@@ -134,7 +134,11 @@ export default async function AdminDashboardPage({
             icon={UsersRound}
             href="/admin/teachers"
           />
-          <StatCard label="Ticket médio" value={formatCurrency(data.avgTicket)} icon={Receipt} />
+          <StatCard
+            label="Aulas/aluno (média)"
+            value={data.avgLessonsPerStudent.toFixed(1)}
+            icon={BarChart3}
+          />
         </div>
         <div className="flex flex-col gap-4">
           <StatCard
@@ -155,11 +159,7 @@ export default async function AdminDashboardPage({
             icon={Repeat}
             href={`/admin/reports/lessons?month=${viewedMonth}&statuses=MAKEUP`}
           />
-          <StatCard
-            label="Aulas/aluno (média)"
-            value={data.avgLessonsPerStudent.toFixed(1)}
-            icon={BarChart3}
-          />
+          <StatCard label="Ticket médio" value={formatCurrency(data.avgTicket)} icon={Receipt} />
         </div>
       </div>
 
