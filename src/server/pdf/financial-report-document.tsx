@@ -85,12 +85,19 @@ const styles = StyleSheet.create({
   summaryLabel: { fontSize: 8.5, color: "#374151" },
   summaryValue: { fontSize: 9, fontFamily: "Helvetica-Bold" },
 
-  categoryRow: { flexDirection: "row", alignItems: "center", gap: 20 },
+  categorySplit: { flexDirection: "row", gap: 24 },
+  categoryPieCol: { flex: 1, flexDirection: "row", alignItems: "center", gap: 16 },
   categoryLegend: { flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 10 },
   categoryItem: { flexDirection: "row", alignItems: "center", gap: 5, width: "46%" },
   categorySwatch: { width: 8, height: 8, borderRadius: 2 },
   categoryLabel: { fontSize: 8.5, fontFamily: "Helvetica-Bold" },
-  categoryDetail: { fontSize: 8, color: GRAY },
+
+  categoryBarsCol: { flex: 1 },
+  categoryBarsHeading: { fontSize: 9, fontFamily: "Helvetica-Bold", color: NAVY, textAlign: "center", marginBottom: 10 },
+  barsContainer: { flexDirection: "row", alignItems: "flex-end", justifyContent: "center", height: 90, gap: 12 },
+  barColumn: { flexDirection: "column", alignItems: "center", justifyContent: "flex-end" },
+  barValue: { fontSize: 6.5, fontFamily: "Helvetica-Bold", marginBottom: 3 },
+  barRect: { width: 16, borderRadius: 2 },
 });
 
 function brl(n: number): string {
@@ -247,6 +254,32 @@ function CategoryPie({ rows }: { rows: CategoryBreakdownRow[] }) {
   );
 }
 
+const MAX_BAR_HEIGHT = 90;
+
+// Simple hand-drawn bar chart (react-pdf has no chart primitive, same as
+// CategoryPie) comparing average profit across tiers — mirrors the web
+// page's own CategoryProfitChart. No tier names under the bars; identity
+// is already carried by the matching colors in the pie's legend beside it.
+function CategoryProfitBars({ rows }: { rows: CategoryBreakdownRow[] }) {
+  const maxProfit = Math.max(...rows.map((r) => r.avgProfit), 0);
+  if (maxProfit <= 0) return null;
+
+  return (
+    <View style={styles.barsContainer}>
+      {rows.map((r, i) => {
+        const height = Math.max(2, (r.avgProfit / maxProfit) * MAX_BAR_HEIGHT);
+        const color = r.category ? CATEGORY_COLOR[r.category] : NONE_CATEGORY_COLOR;
+        return (
+          <View key={i} style={styles.barColumn}>
+            <Text style={styles.barValue}>{brl(r.avgProfit)}</Text>
+            <View style={[styles.barRect, { height, backgroundColor: color }]} />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 export function FinancialReportDocument({
   monthLabel,
   generatedAt,
@@ -279,25 +312,28 @@ export function FinancialReportDocument({
         {categoryBreakdown.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Alunos por categoria</Text>
-            <View style={styles.categoryRow}>
-              <CategoryPie rows={categoryBreakdown} />
-              <View style={styles.categoryLegend}>
-                {categoryBreakdown.map((r, i) => (
-                  <View key={i} style={styles.categoryItem}>
-                    <View
-                      style={[
-                        styles.categorySwatch,
-                        { backgroundColor: r.category ? CATEGORY_COLOR[r.category] : NONE_CATEGORY_COLOR },
-                      ]}
-                    />
-                    <View>
+            <View style={styles.categorySplit}>
+              <View style={styles.categoryPieCol}>
+                <CategoryPie rows={categoryBreakdown} />
+                <View style={styles.categoryLegend}>
+                  {categoryBreakdown.map((r, i) => (
+                    <View key={i} style={styles.categoryItem}>
+                      <View
+                        style={[
+                          styles.categorySwatch,
+                          { backgroundColor: r.category ? CATEGORY_COLOR[r.category] : NONE_CATEGORY_COLOR },
+                        ]}
+                      />
                       <Text style={styles.categoryLabel}>
                         {r.label} — {r.studentCount} {r.studentCount === 1 ? "aluno" : "alunos"}
                       </Text>
-                      <Text style={styles.categoryDetail}>Lucro médio: {brl(r.avgProfit)}</Text>
                     </View>
-                  </View>
-                ))}
+                  ))}
+                </View>
+              </View>
+              <View style={styles.categoryBarsCol}>
+                <Text style={styles.categoryBarsHeading}>Lucro médio por categoria</Text>
+                <CategoryProfitBars rows={categoryBreakdown} />
               </View>
             </View>
           </View>
