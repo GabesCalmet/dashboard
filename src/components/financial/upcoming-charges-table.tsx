@@ -31,6 +31,7 @@ type Row = {
   studentName: string;
   teacherName: string | null;
   bankAccount: BankAccount;
+  status: PaymentStatus;
 };
 
 function dueInLabel(days: number) {
@@ -84,7 +85,7 @@ export function UpcomingChargesTable({ payments }: { payments: Row[] }) {
             <PaymentStatusSelect
               studentId={p.studentId}
               payerName={p.payerName}
-              status={"PENDING" as PaymentStatus}
+              status={p.status}
               paidAt={null}
               referenceMonth={p.referenceMonth}
             />
@@ -133,7 +134,7 @@ export function UpcomingChargesTable({ payments }: { payments: Row[] }) {
                   <PaymentStatusSelect
                     studentId={p.studentId}
                     payerName={p.payerName}
-                    status={"PENDING" as PaymentStatus}
+                    status={p.status}
                     paidAt={null}
                     referenceMonth={p.referenceMonth}
                   />

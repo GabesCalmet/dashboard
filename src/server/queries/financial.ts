@@ -919,14 +919,19 @@ export async function getLatePayments() {
 }
 
 // "Cobranças" — the dashboard's own heads-up-before-due-date alert
-// (getAdminDashboardData.upcomingChargesCount): every still-PENDING
-// payment due anywhere from today through 5 days out. Mirrors
-// getLatePayments exactly, just PENDING + the due-date window instead of
-// LATE — mutually exclusive with it, never both.
+// (getAdminDashboardData.upcomingChargesCount): every still-PENDING or
+// INVOICED (already sent the invoice, still unpaid) payment due anywhere
+// from today through 5 days out. Mirrors getLatePayments exactly, just
+// PENDING/INVOICED + the due-date window instead of LATE — mutually
+// exclusive with it, never both.
 export async function getUpcomingCharges() {
   const now = brazilToday();
   const payments = await prisma.payment.findMany({
-    where: { status: "PENDING", dueDate: { gte: now, lte: addDays(now, 5) }, student: { status: "ACTIVE" } },
+    where: {
+      status: { in: ["PENDING", "INVOICED"] },
+      dueDate: { gte: now, lte: addDays(now, 5) },
+      student: { status: "ACTIVE" },
+    },
     include: {
       student: {
         include: { user: true, teacher: { include: { user: true } }, groupMembers: { include: { user: true } } },
@@ -959,6 +964,9 @@ export async function getUpcomingCharges() {
       daysUntilDue: differenceInCalendarDays(p.dueDate, now),
       referenceMonth: p.referenceMonth,
       bankAccount: p.bankAccountOverride ?? slot?.bankAccount ?? p.student.bankAccount,
+      // PENDING or INVOICED — never assume one, unlike getLatePayments
+      // (always LATE by definition of its own filter).
+      status: p.status,
     };
   });
 }

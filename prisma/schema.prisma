@@ -72,6 +72,12 @@ enum LessonStatus {
 
 enum PaymentStatus {
   PENDING
+  // Invoice/reminder already sent to the payer — still unpaid, still
+  // counts as owed/billable everywhere PENDING does (expected revenue,
+  // the daily LATE sweep), purely a manual "already followed up on
+  // this one" flag. Payment-side only — never offered on an
+  // ExpenseOccurrence (see ExpenseOccurrenceStatusSelect).
+  INVOICED
   PAID
   LATE
   PAUSED // course paused that month — nothing owed, not late

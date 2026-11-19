@@ -78,14 +78,19 @@ export async function getAdminDashboardData(referenceMonth?: { year: number; mon
     // Only ACTIVE students, matching the Atrasados page this box links to.
     prisma.payment.count({ where: { status: "LATE", student: { status: "ACTIVE" } } }),
     // "Cobranças" — a heads-up for a charge due soon but not yet overdue:
-    // still PENDING, with its due date landing anywhere from today through
+    // still PENDING or INVOICED (already sent the invoice, still
+    // unpaid), with its due date landing anywhere from today through
     // 5 days out (a due date on the 20th starts showing here on the
     // 15th). Always as of real "today", not the browsed month — same
     // "regardless of which month is on screen" reasoning as
-    // latePaymentsCount, and mutually exclusive with it (PENDING here,
-    // LATE there).
+    // latePaymentsCount, and mutually exclusive with it (PENDING/INVOICED
+    // here, LATE there).
     prisma.payment.count({
-      where: { status: "PENDING", dueDate: { gte: now, lte: addDays(now, 5) }, student: { status: "ACTIVE" } },
+      where: {
+        status: { in: ["PENDING", "INVOICED"] },
+        dueDate: { gte: now, lte: addDays(now, 5) },
+        student: { status: "ACTIVE" },
+      },
     }),
   ]);
 

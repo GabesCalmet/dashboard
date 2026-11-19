@@ -272,6 +272,7 @@ export const lessonStatusBadgeVariant: Record<
 
 export const paymentStatusLabel: Record<PaymentStatus, string> = {
   PENDING: "Pendente",
+  INVOICED: "Cobrado",
   PAID: "Pago",
   LATE: "Atrasado",
   PAUSED: "Pausado",
@@ -279,9 +280,10 @@ export const paymentStatusLabel: Record<PaymentStatus, string> = {
 
 export const paymentStatusVariant: Record<
   PaymentStatus,
-  "success" | "warning" | "destructive" | "outline"
+  "success" | "warning" | "destructive" | "outline" | "accent"
 > = {
   PENDING: "warning",
+  INVOICED: "accent",
   PAID: "success",
   LATE: "destructive",
   PAUSED: "outline",

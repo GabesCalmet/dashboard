@@ -68,11 +68,16 @@ export function ExpenseOccurrenceStatusSelect({
           {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <SelectValue />}
         </SelectTrigger>
         <SelectContent>
-          {Object.entries(paymentStatusLabel).map(([value, label]) => (
-            <SelectItem key={value} value={value}>
-              {label}
-            </SelectItem>
-          ))}
+          {/* Cobrado ("invoice sent") is a payment-side-only status — an
+              Expense isn't invoiced to anyone, so it's excluded here even
+              though the enum is shared with Payment. */}
+          {Object.entries(paymentStatusLabel)
+            .filter(([value]) => value !== "INVOICED")
+            .map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
         </SelectContent>
       </Select>
 

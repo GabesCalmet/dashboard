@@ -17,10 +17,11 @@ import { createMissingPaymentsForMonth } from "@/server/student-charges";
 //    Atrasados page even once overdue — only the student's own Financeiro
 //    tab showed it, as a live, never-persisted placeholder.
 // 2. A cobrança's status is only ever set once, at creation — nothing else
-//    flips an already-created "Pendente" row to "Atrasado" once its due
-//    date passes. This sweeps every real PENDING payment whose due date
-//    has passed and marks it LATE, so cobranças generated ahead of time
-//    don't stay stuck on Pendente forever.
+//    flips an already-created "Pendente"/"Cobrado" row to "Atrasado" once
+//    its due date passes. This sweeps every real PENDING or INVOICED
+//    payment whose due date has passed and marks it LATE, so cobranças
+//    generated ahead of time (or already invoiced) don't stay stuck
+//    there forever.
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
   const generated = await createMissingPaymentsForMonth(brazilToday());
 
   const { count: markedLate } = await prisma.payment.updateMany({
-    where: { status: "PENDING", dueDate: { lt: brazilToday() } },
+    where: { status: { in: ["PENDING", "INVOICED"] }, dueDate: { lt: brazilToday() } },
     data: { status: "LATE" },
   });
 
