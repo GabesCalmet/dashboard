@@ -9,10 +9,12 @@ import {
   Repeat,
   Wallet,
   TrendingUp,
+  TrendingDown,
   Receipt,
   BarChart3,
   AlertTriangle,
   CircleAlert,
+  CalendarClock,
   Cake,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
@@ -23,6 +25,7 @@ import { MonthNav } from "@/components/financial/month-nav";
 import { SweepLatePaymentsButton } from "@/components/financial/sweep-late-payments-button";
 import { getAdminDashboardData } from "@/server/queries/dashboard";
 import { getAttendanceAlerts, getBirthdayAlerts } from "@/server/queries/alerts";
+import { getFinancialSummary } from "@/server/queries/financial";
 import { formatCurrency } from "@/lib/labels";
 import { monthParam, parseMonthParam } from "@/lib/month-param";
 
@@ -33,10 +36,11 @@ export default async function AdminDashboardPage({
 }) {
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
-  const [data, alerts, birthdayAlerts] = await Promise.all([
+  const [data, alerts, birthdayAlerts, financialSummary] = await Promise.all([
     getAdminDashboardData({ year, month }),
     getAttendanceAlerts(),
     getBirthdayAlerts(),
+    getFinancialSummary(year, month),
   ]);
   const hasRedAlert = alerts.some((a) => a.severity === "RED");
   const viewedMonth = monthParam(year, month);
@@ -53,6 +57,13 @@ export default async function AdminDashboardPage({
       />
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Cobranças"
+          value={String(data.upcomingChargesCount)}
+          icon={CalendarClock}
+          tone={data.upcomingChargesCount > 0 ? "warning" : undefined}
+          href="/admin/financial/receita"
+        />
         <StatCard
           label="Pagamentos atrasados"
           value={String(data.latePaymentsCount)}
@@ -74,11 +85,6 @@ export default async function AdminDashboardPage({
           tone={birthdayAlerts.length > 0 ? "success" : undefined}
           href="/admin/alerts/birthdays"
         />
-        <StatCard
-          label="Aulas/aluno (média)"
-          value={data.avgLessonsPerStudent.toFixed(1)}
-          icon={BarChart3}
-        />
       </div>
 
       <div className="mb-4">
@@ -93,7 +99,11 @@ export default async function AdminDashboardPage({
           icon={Wallet}
           accent
         />
-        <StatCard label="Ticket médio" value={formatCurrency(data.avgTicket)} icon={Receipt} />
+        <StatCard
+          label="Gastos mensal"
+          value={formatCurrency(financialSummary.expenseRealized)}
+          icon={TrendingDown}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -124,6 +134,7 @@ export default async function AdminDashboardPage({
             icon={UsersRound}
             href="/admin/teachers"
           />
+          <StatCard label="Ticket médio" value={formatCurrency(data.avgTicket)} icon={Receipt} />
         </div>
         <div className="flex flex-col gap-4">
           <StatCard
@@ -143,6 +154,11 @@ export default async function AdminDashboardPage({
             value={String(data.makeupsThisMonth)}
             icon={Repeat}
             href={`/admin/reports/lessons?month=${viewedMonth}&statuses=MAKEUP`}
+          />
+          <StatCard
+            label="Aulas/aluno (média)"
+            value={data.avgLessonsPerStudent.toFixed(1)}
+            icon={BarChart3}
           />
         </div>
       </div>

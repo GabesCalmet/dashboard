@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
+import { startOfMonth, endOfMonth, subMonths, addDays, format } from "date-fns";
 import { brazilToday } from "@/lib/timezone";
 import { getTotalChargeRevenueForMonth } from "@/server/student-charges";
 
@@ -27,6 +27,7 @@ export async function getAdminDashboardData(referenceMonth?: { year: number; mon
     annualRevenue,
     completedLessonsAgg,
     latePaymentsCount,
+    upcomingChargesCount,
   ] = await Promise.all([
     prisma.studentProfile.count(),
     prisma.studentProfile.count({ where: { status: "ACTIVE" } }),
@@ -76,6 +77,16 @@ export async function getAdminDashboardData(referenceMonth?: { year: number; mon
     // still needs chasing down regardless of which month is on screen.
     // Only ACTIVE students, matching the Atrasados page this box links to.
     prisma.payment.count({ where: { status: "LATE", student: { status: "ACTIVE" } } }),
+    // "Cobranças" — a heads-up for a charge due soon but not yet overdue:
+    // still PENDING, with its due date landing anywhere from today through
+    // 5 days out (a due date on the 20th starts showing here on the
+    // 15th). Always as of real "today", not the browsed month — same
+    // "regardless of which month is on screen" reasoning as
+    // latePaymentsCount, and mutually exclusive with it (PENDING here,
+    // LATE there).
+    prisma.payment.count({
+      where: { status: "PENDING", dueDate: { gte: now, lte: addDays(now, 5) }, student: { status: "ACTIVE" } },
+    }),
   ]);
 
   // Ticket médio = each course's real total this month (own portion +
@@ -132,6 +143,7 @@ export async function getAdminDashboardData(referenceMonth?: { year: number; mon
     monthlyRevenue: Number(monthlyRevenue._sum.amount ?? 0),
     annualRevenue: Number(annualRevenue._sum.amount ?? 0),
     latePaymentsCount,
+    upcomingChargesCount,
     avgTicket: Number(avgTicket),
     avgLessonsPerStudent: Number(avgLessonsPerStudent),
     hoursTaught: Math.round((completedLessonsAgg._sum.durationMin ?? 0) / 60),
