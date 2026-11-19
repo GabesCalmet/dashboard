@@ -61,6 +61,20 @@ function parseAvailabilityQuery(raw: string): { weekday?: number; start: string;
   return { weekday, start, end };
 }
 
+// Builds the Agenda filter href for a Professor/Disponível result —
+// accumulating onto whatever teacherIds are already in the URL when
+// already on that exact Agenda page (so a second search adds a second
+// filter chip instead of replacing the first one), starting fresh
+// otherwise (arriving at the Agenda from somewhere else entirely).
+function teacherFilterHref(base: string, currentPathname: string, newTeacherId: string): string {
+  const onSameAgenda = currentPathname === base;
+  const currentIds = onSameAgenda
+    ? (new URLSearchParams(window.location.search).get("teacherIds")?.split(",").filter(Boolean) ?? [])
+    : [];
+  const ids = currentIds.includes(newTeacherId) ? currentIds : [...currentIds, newTeacherId];
+  return `${base}?teacherIds=${ids.join(",")}`;
+}
+
 export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -166,9 +180,9 @@ export function GlobalSearch() {
                     r.type === "Aluno" && inFinancialSection
                       ? `${r.href}?tab=financial`
                       : r.type === "Professor" && agendaBasePath
-                        ? `${agendaBasePath}?teacherId=${r.href.split("/").pop()}`
+                        ? teacherFilterHref(agendaBasePath, pathname, r.href.split("/").pop()!)
                         : r.type === "Disponível"
-                          ? `${roleBase ?? "/admin"}/agenda?teacherId=${r.href.split("/").pop()}`
+                          ? teacherFilterHref(`${roleBase ?? "/admin"}/agenda`, pathname, r.href.split("/").pop()!)
                           : r.href;
                   router.push(href);
                 }}

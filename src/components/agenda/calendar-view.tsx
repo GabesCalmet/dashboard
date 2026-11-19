@@ -38,14 +38,14 @@ export type CalendarLessonEvent = {
 export function CalendarView({
   canManageLessons,
   isTeacherView,
-  teacherId,
+  teacherIds,
 }: {
   canManageLessons: boolean;
   isTeacherView: boolean;
-  // Admin/coordinator only — scopes the calendar to one teacher's lessons
-  // instead of the whole school's, e.g. arriving from a Professor search
-  // result.
-  teacherId?: string;
+  // Admin/coordinator only — scopes the calendar to one or more teachers'
+  // lessons instead of the whole school's, e.g. accumulated from several
+  // Professor search results.
+  teacherIds?: string[];
 }) {
   const [selected, setSelected] = useState<CalendarLessonEvent | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<BlockedSlotDetail | null>(null);
@@ -116,7 +116,7 @@ export function CalendarView({
         // same as Google Calendar — ticks on its own every minute.
         nowIndicator
         events={(info, success, failure) => {
-          const teacherParam = teacherId ? `&teacherId=${teacherId}` : "";
+          const teacherParam = teacherIds && teacherIds.length > 0 ? `&teacherIds=${teacherIds.join(",")}` : "";
           fetch(`/api/lessons?start=${info.startStr}&end=${info.endStr}${teacherParam}`)
             .then((r) => r.json())
             .then((data) => success(data.events))

@@ -57,13 +57,17 @@ export async function GET(request: NextRequest) {
   } else if (user.role === "STUDENT" && user.studentProfile) {
     where.studentId = user.studentProfile.id;
   } else if (user.role === "ADMIN" || user.role === "COORDINATOR") {
-    // Optional — lets the admin/coordinator Agenda scope down to one
-    // teacher (e.g. arriving from a Professor search result), instead of
-    // always showing every teacher's lessons at once.
-    const teacherId = request.nextUrl.searchParams.get("teacherId");
-    if (teacherId) {
-      where.teacherId = teacherId;
-      blockedSlotsTeacherId = teacherId;
+    // Optional — lets the admin/coordinator Agenda scope down to one or
+    // more teachers (e.g. accumulated from several Professor search
+    // results), instead of always showing every teacher's lessons at
+    // once.
+    const teacherIdsParam = request.nextUrl.searchParams.get("teacherIds");
+    const teacherIds = teacherIdsParam ? teacherIdsParam.split(",").filter(Boolean) : [];
+    if (teacherIds.length > 0) {
+      where.teacherId = { in: teacherIds };
+      // Only when exactly one teacher is filtered — see the comment
+      // above blockedSlotsTeacherId.
+      if (teacherIds.length === 1) blockedSlotsTeacherId = teacherIds[0];
     }
   }
 
