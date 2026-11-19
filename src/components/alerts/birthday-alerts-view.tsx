@@ -18,6 +18,7 @@ export function BirthdayAlertsView({
       <PageHeader
         title="Aniversários"
         description="Alunos ativos fazendo aniversário hoje."
+        actions={<BirthdayCardDialog studentName="" triggerLabel="Pré-visualizar cartão" triggerVariant="default" />}
       />
 
       {alerts.length === 0 ? (

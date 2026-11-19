@@ -21,7 +21,18 @@ import { BirthdayCard, birthdayMessage } from "@/components/alerts/birthday-card
 // Lets an admin/coordinator preview and export the student's birthday
 // card — the name shown on the card is editable here (a nickname,
 // different casing, etc.) without touching the student's own cadastro.
-export function BirthdayCardDialog({ studentName }: { studentName: string }) {
+// triggerLabel/triggerVariant let the same dialog double as a standing
+// "Pré-visualizar cartão" button (studentName="") independent of any
+// real birthday alert, without changing the default per-alert usage.
+export function BirthdayCardDialog({
+  studentName,
+  triggerLabel = "Ver cartão",
+  triggerVariant = "outline",
+}: {
+  studentName: string;
+  triggerLabel?: string;
+  triggerVariant?: "outline" | "default";
+}) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(studentName);
   const [isExporting, setIsExporting] = useState(false);
@@ -55,8 +66,8 @@ export function BirthdayCardDialog({ studentName }: { studentName: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          <Cake /> Ver cartão
+        <Button size="sm" variant={triggerVariant}>
+          <Cake /> {triggerLabel}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-xl">
