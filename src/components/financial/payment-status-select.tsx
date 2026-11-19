@@ -16,6 +16,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { setCobrancaStatus } from "@/server/actions/payments";
 import { paymentStatusLabel } from "@/lib/labels";
 import { toBrazilDateString } from "@/lib/timezone";
+import { cn } from "@/lib/utils";
 import type { PaymentStatus } from "@prisma/client";
 
 // paidAt is already a date-only value (UTC midnight for its calendar
@@ -66,7 +67,10 @@ export function PaymentStatusSelect({
         disabled={isPending}
         onValueChange={(value) => updateStatus(value as PaymentStatus)}
       >
-        <SelectTrigger size="sm" className="w-[130px]">
+        <SelectTrigger
+          size="sm"
+          className={cn("w-[130px]", status === "INVOICED" && "border-success text-success")}
+        >
           {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <SelectValue />}
         </SelectTrigger>
         <SelectContent>
