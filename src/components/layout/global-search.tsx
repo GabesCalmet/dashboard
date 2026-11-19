@@ -65,14 +65,16 @@ function parseAvailabilityQuery(raw: string): { weekday?: number; start: string;
 // accumulating onto whatever teacherIds are already in the URL when
 // already on that exact Agenda page (so a second search adds a second
 // filter chip instead of replacing the first one), starting fresh
-// otherwise (arriving at the Agenda from somewhere else entirely).
+// otherwise (arriving at the Agenda from somewhere else entirely). The
+// newly searched teacher always becomes the active one shown on the
+// calendar — the others stay as chips to switch back to.
 function teacherFilterHref(base: string, currentPathname: string, newTeacherId: string): string {
   const onSameAgenda = currentPathname === base;
   const currentIds = onSameAgenda
     ? (new URLSearchParams(window.location.search).get("teacherIds")?.split(",").filter(Boolean) ?? [])
     : [];
   const ids = currentIds.includes(newTeacherId) ? currentIds : [...currentIds, newTeacherId];
-  return `${base}?teacherIds=${ids.join(",")}`;
+  return `${base}?teacherIds=${ids.join(",")}&active=${newTeacherId}`;
 }
 
 export function GlobalSearch() {
