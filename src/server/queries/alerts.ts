@@ -328,3 +328,39 @@ export async function getAlertHistory(): Promise<StudentAlertHistory[]> {
 
   return [...byStudent.values()].sort((a, b) => a.studentName.localeCompare(b.studentName, "pt-BR"));
 }
+
+export type BirthdayAlert = {
+  studentId: string;
+  studentName: string;
+  birthDate: Date;
+  // Age they're turning today.
+  turningAge: number;
+};
+
+// Students whose birthDate's month/day matches today — month/day only,
+// the birth year never factors into whether today IS the birthday.
+// birthDate is always constructed as UTC midnight of the intended
+// calendar day (see formatCalendarDate's comment), so this compares with
+// the UTC getters, never the server's local ones, to avoid an off-by-one
+// day near midnight. ACTIVE students only — matches every other
+// dashboard "who to look at today" figure.
+export async function getBirthdayAlerts(): Promise<BirthdayAlert[]> {
+  const today = brazilToday();
+  const todayMonth = today.getUTCMonth();
+  const todayDate = today.getUTCDate();
+
+  const students = await prisma.studentProfile.findMany({
+    where: { status: "ACTIVE", birthDate: { not: null } },
+    include: { user: true },
+  });
+
+  return students
+    .filter((s) => s.birthDate!.getUTCMonth() === todayMonth && s.birthDate!.getUTCDate() === todayDate)
+    .map((s) => ({
+      studentId: s.id,
+      studentName: s.user.name,
+      birthDate: s.birthDate!,
+      turningAge: today.getUTCFullYear() - s.birthDate!.getUTCFullYear(),
+    }))
+    .sort((a, b) => a.studentName.localeCompare(b.studentName, "pt-BR"));
+}

@@ -13,6 +13,7 @@ import {
   BarChart3,
   AlertTriangle,
   CircleAlert,
+  Cake,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -21,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MonthNav } from "@/components/financial/month-nav";
 import { SweepLatePaymentsButton } from "@/components/financial/sweep-late-payments-button";
 import { getAdminDashboardData } from "@/server/queries/dashboard";
-import { getAttendanceAlerts } from "@/server/queries/alerts";
+import { getAttendanceAlerts, getBirthdayAlerts } from "@/server/queries/alerts";
 import { formatCurrency } from "@/lib/labels";
 import { monthParam, parseMonthParam } from "@/lib/month-param";
 
@@ -32,9 +33,10 @@ export default async function AdminDashboardPage({
 }) {
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
-  const [data, alerts] = await Promise.all([
+  const [data, alerts, birthdayAlerts] = await Promise.all([
     getAdminDashboardData({ year, month }),
     getAttendanceAlerts(),
+    getBirthdayAlerts(),
   ]);
   const hasRedAlert = alerts.some((a) => a.severity === "RED");
   const viewedMonth = monthParam(year, month);
@@ -113,6 +115,13 @@ export default async function AdminDashboardPage({
           icon={CircleAlert}
           tone={data.latePaymentsCount > 0 ? "danger" : undefined}
           href="/admin/financial/atrasados"
+        />
+        <StatCard
+          label="Aniversários hoje"
+          value={String(birthdayAlerts.length)}
+          icon={Cake}
+          tone={birthdayAlerts.length > 0 ? "success" : undefined}
+          href="/admin/alerts/birthdays"
         />
 
         <StatCard

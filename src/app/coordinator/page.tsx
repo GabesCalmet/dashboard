@@ -1,13 +1,17 @@
-import { Users, GraduationCap, UsersRound, CalendarCheck2, Ban, Repeat, AlertTriangle } from "lucide-react";
+import { Users, GraduationCap, UsersRound, CalendarCheck2, Ban, Repeat, AlertTriangle, Cake } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { GrowthChart } from "@/components/shared/growth-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAdminDashboardData } from "@/server/queries/dashboard";
-import { getAttendanceAlerts } from "@/server/queries/alerts";
+import { getAttendanceAlerts, getBirthdayAlerts } from "@/server/queries/alerts";
 
 export default async function CoordinatorDashboardPage() {
-  const [data, alerts] = await Promise.all([getAdminDashboardData(), getAttendanceAlerts()]);
+  const [data, alerts, birthdayAlerts] = await Promise.all([
+    getAdminDashboardData(),
+    getAttendanceAlerts(),
+    getBirthdayAlerts(),
+  ]);
   const hasRedAlert = alerts.some((a) => a.severity === "RED");
 
   return (
@@ -27,6 +31,13 @@ export default async function CoordinatorDashboardPage() {
           icon={AlertTriangle}
           tone={alerts.length === 0 ? undefined : hasRedAlert ? "danger" : "warning"}
           href="/coordinator/alerts"
+        />
+        <StatCard
+          label="Aniversários hoje"
+          value={String(birthdayAlerts.length)}
+          icon={Cake}
+          tone={birthdayAlerts.length > 0 ? "success" : undefined}
+          href="/coordinator/alerts/birthdays"
         />
       </div>
 

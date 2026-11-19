@@ -18,7 +18,7 @@ export function StatCard({
   icon: LucideIcon;
   trend?: { value: string; positive?: boolean };
   accent?: boolean;
-  tone?: "warning" | "danger";
+  tone?: "warning" | "danger" | "success";
   href?: string;
   // Smaller padding/text — for a dense grid of many cards side by side
   // (e.g. a student's lesson-status breakdown) where the default size
@@ -32,6 +32,7 @@ export function StatCard({
         compact ? "py-3" : "py-5",
         tone === "warning" && "border-warning/40 bg-warning/5",
         tone === "danger" && "border-destructive/40 bg-destructive/5",
+        tone === "success" && "border-success/40 bg-success/5",
         href && "transition-colors hover:border-accent/50"
       )}
     >
@@ -65,9 +66,11 @@ export function StatCard({
                 ? "bg-warning/15 text-warning"
                 : tone === "danger"
                   ? "bg-destructive/15 text-destructive"
-                  : accent
-                    ? "bg-accent/15 text-accent"
-                    : "bg-secondary text-muted-foreground"
+                  : tone === "success"
+                    ? "bg-success/15 text-success"
+                    : accent
+                      ? "bg-accent/15 text-accent"
+                      : "bg-secondary text-muted-foreground"
             )}
           >
             <Icon className="size-4.5" />
