@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -49,11 +49,36 @@ export function CalendarView({
 }) {
   const [selected, setSelected] = useState<CalendarLessonEvent | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<BlockedSlotDetail | null>(null);
+  // Starts false (matching the server-rendered markup) so hydration never
+  // mismatches — the real value is only known client-side, after mount.
+  const [isMobile, setIsMobile] = useState(false);
   const calendarRef = useRef<FullCalendar>(null);
 
   function refetchCalendar() {
     calendarRef.current?.getApi().refetchEvents();
   }
+
+  // A 7-day week grid has no room to breathe at phone width (every
+  // column ends up a sliver, event text overlapping/truncated) — Dia
+  // gives one column the full width instead, switched once right after
+  // mount. The toolbar layout (isMobile) stays responsive to later
+  // resizes/orientation changes too, but the view itself is only ever
+  // switched this one time, so rotating the phone or resizing a browser
+  // window later never yanks the view out from under whatever the
+  // person is actually looking at.
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 640px)");
+    // Classic SSR-safe client-only check: server and the first client
+    // render must match (both assume desktop), so the real value can
+    // only be known once mounted.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsMobile(mql.matches);
+    if (mql.matches) calendarRef.current?.getApi().changeView("timeGridDay");
+
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
 
   function handleEventClick(arg: EventClickArg) {
     const props = arg.event.extendedProps;
@@ -102,11 +127,17 @@ export function CalendarView({
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
         initialView="timeGridWeek"
         locale={ptBrLocale}
-        headerToolbar={{
-          left: "prev,next today",
-          center: "title",
-          right: "timeGridWeek,dayGridMonth,timeGridDay,listWeek",
-        }}
+        // On a phone, nav + title + all 4 view buttons crammed into one
+        // row was wrapping onto itself unreadably — split the view
+        // switcher onto its own row below instead, same as the day/week/
+        // month/list choice is still there, just not fighting the title
+        // for space.
+        headerToolbar={
+          isMobile
+            ? { left: "prev,next today", center: "title", right: "" }
+            : { left: "prev,next today", center: "title", right: "timeGridWeek,dayGridMonth,timeGridDay,listWeek" }
+        }
+        footerToolbar={isMobile ? { left: "", center: "timeGridDay,timeGridWeek,dayGridMonth,listWeek", right: "" } : undefined}
         height="auto"
         // The week/day time-grid views start at midnight by default, which
         // is mostly empty scroll space — classes never happen before 7am,

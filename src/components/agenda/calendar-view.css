@@ -55,3 +55,35 @@
 .upfront-calendar .fc-daygrid-event-dot {
   display: none;
 }
+
+.upfront-calendar .fc-footer-toolbar {
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .upfront-calendar {
+    font-size: 0.7rem;
+  }
+
+  .upfront-calendar .fc-toolbar-title {
+    font-size: 0.9rem;
+  }
+
+  .upfront-calendar .fc-button {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .upfront-calendar .fc-col-header-cell-cushion {
+    font-size: 0.7rem;
+  }
+
+  .upfront-calendar .fc-timegrid-slot-label-cushion {
+    font-size: 0.65rem;
+  }
+
+  .upfront-calendar .fc-event {
+    font-size: 0.65rem;
+    padding: 0 2px;
+  }
+}
