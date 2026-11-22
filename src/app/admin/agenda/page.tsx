@@ -2,8 +2,7 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { CalendarView } from "@/components/agenda/calendar-view";
-import { ScheduleLessonDialog } from "@/components/agenda/schedule-lesson-dialog";
-import { listStudents, listActiveTeachersForSelect } from "@/server/queries/students";
+import { listActiveTeachersForSelect } from "@/server/queries/students";
 import { cn } from "@/lib/utils";
 
 export default async function AdminAgendaPage({
@@ -13,10 +12,7 @@ export default async function AdminAgendaPage({
 }) {
   const { teacherIds: teacherIdsParam, active } = await searchParams;
   const teacherIds = teacherIdsParam ? teacherIdsParam.split(",").filter(Boolean) : [];
-  const [students, teachers] = await Promise.all([
-    listStudents(),
-    listActiveTeachersForSelect(),
-  ]);
+  const teachers = await listActiveTeachersForSelect();
   const filteredTeachers = teacherIds
     .map((id) => teachers.find((t) => t.id === id))
     .filter((t): t is NonNullable<typeof t> => Boolean(t));
@@ -32,12 +28,6 @@ export default async function AdminAgendaPage({
       <PageHeader
         title="Agenda"
         description={activeTeacher ? `Aulas de ${activeTeacher.user.name}.` : "Todas as aulas da escola, em tempo real."}
-        actions={
-          <ScheduleLessonDialog
-            students={students.map((s) => ({ id: s.id, label: s.user.name }))}
-            teachers={teachers.map((t) => ({ id: t.id, label: t.user.name }))}
-          />
-        }
       />
       {filteredTeachers.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">

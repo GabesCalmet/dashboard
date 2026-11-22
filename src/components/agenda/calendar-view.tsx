@@ -128,16 +128,18 @@ export function CalendarView({
         initialView="timeGridWeek"
         locale={ptBrLocale}
         // On a phone, nav + title + all 4 view buttons crammed into one
-        // row was wrapping onto itself unreadably — split the view
-        // switcher onto its own row below instead, same as the day/week/
-        // month/list choice is still there, just not fighting the title
-        // for space.
+        // row was wrapping onto itself unreadably — the view switcher
+        // moves to its own row instead (styled in calendar-view.css to sit
+        // right under the nav/title row, above the grid, rather than at
+        // the very bottom where it'd need scrolling past the whole week to
+        // reach), same day/week/month/list choice, just not fighting the
+        // title for space.
         headerToolbar={
           isMobile
             ? { left: "prev,next today", center: "title", right: "" }
             : { left: "prev,next today", center: "title", right: "timeGridWeek,dayGridMonth,timeGridDay,listWeek" }
         }
-        footerToolbar={isMobile ? { left: "", center: "timeGridDay,timeGridWeek,dayGridMonth,listWeek", right: "" } : undefined}
+        footerToolbar={isMobile ? { left: "", center: "timeGridWeek,dayGridMonth,timeGridDay,listWeek", right: "" } : undefined}
         height="auto"
         // The week/day time-grid views start at midnight by default, which
         // is mostly empty scroll space — classes never happen before 7am,

@@ -56,11 +56,22 @@
   display: none;
 }
 
-.upfront-calendar .fc-footer-toolbar {
-  margin-top: 0.75rem;
-}
-
 @media (max-width: 640px) {
+  /* FullCalendar's root (.fc) is a flex column with the header toolbar,
+     grid, and footer toolbar as siblings in that DOM order — the footer
+     only exists on mobile (the view switcher), and without this it
+     renders below the whole week grid, forcing a scroll to reach it.
+     Reordering it ahead of the grid instead puts it right under the
+     nav/title row, where it's actually visible without scrolling. */
+  .upfront-calendar .fc-footer-toolbar {
+    order: 1;
+    margin: 0 0 0.75rem;
+  }
+
+  .upfront-calendar .fc-view-harness {
+    order: 2;
+  }
+
   .upfront-calendar {
     font-size: 0.7rem;
   }
