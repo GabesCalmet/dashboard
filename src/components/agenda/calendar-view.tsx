@@ -58,14 +58,9 @@ export function CalendarView({
     calendarRef.current?.getApi().refetchEvents();
   }
 
-  // A 7-day week grid has no room to breathe at phone width (every
-  // column ends up a sliver, event text overlapping/truncated) — Dia
-  // gives one column the full width instead, switched once right after
-  // mount. The toolbar layout (isMobile) stays responsive to later
-  // resizes/orientation changes too, but the view itself is only ever
-  // switched this one time, so rotating the phone or resizing a browser
-  // window later never yanks the view out from under whatever the
-  // person is actually looking at.
+  // Only the toolbar layout adapts to phone width — Semana stays the
+  // default view everywhere (matching initialView), it just renders with
+  // a more compact toolbar under the breakpoint.
   useEffect(() => {
     const mql = window.matchMedia("(max-width: 640px)");
     // Classic SSR-safe client-only check: server and the first client
@@ -73,7 +68,6 @@ export function CalendarView({
     // only be known once mounted.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMobile(mql.matches);
-    if (mql.matches) calendarRef.current?.getApi().changeView("timeGridDay");
 
     const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mql.addEventListener("change", onChange);
