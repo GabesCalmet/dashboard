@@ -39,6 +39,7 @@ export function CalendarView({
   canManageLessons,
   isTeacherView,
   teacherIds,
+  showViewSwitcher = true,
 }: {
   canManageLessons: boolean;
   isTeacherView: boolean;
@@ -46,6 +47,11 @@ export function CalendarView({
   // lessons instead of the whole school's, e.g. accumulated from several
   // Professor search results.
   teacherIds?: string[];
+  // False for a small embedded "just show the week" view (e.g. a
+  // teacher's own profile page) where Mês/Dia/Lista add nothing — only
+  // the nav/title row renders, and there's no footer row to place a view
+  // switcher in either.
+  showViewSwitcher?: boolean;
 }) {
   const [selected, setSelected] = useState<CalendarLessonEvent | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<BlockedSlotDetail | null>(null);
@@ -129,11 +135,15 @@ export function CalendarView({
         // reach), same day/week/month/list choice, just not fighting the
         // title for space.
         headerToolbar={
-          isMobile
+          !showViewSwitcher || isMobile
             ? { left: "prev,next today", center: "title", right: "" }
             : { left: "prev,next today", center: "title", right: "timeGridWeek,dayGridMonth,timeGridDay,listWeek" }
         }
-        footerToolbar={isMobile ? { left: "", center: "timeGridWeek,dayGridMonth,timeGridDay,listWeek", right: "" } : undefined}
+        footerToolbar={
+          showViewSwitcher && isMobile
+            ? { left: "", center: "timeGridWeek,dayGridMonth,timeGridDay,listWeek", right: "" }
+            : undefined
+        }
         height="auto"
         // The week/day time-grid views start at midnight by default, which
         // is mostly empty scroll space — classes never happen before 7am,

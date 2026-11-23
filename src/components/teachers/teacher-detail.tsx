@@ -10,6 +10,7 @@ import { DeleteTeacherButton } from "@/components/teachers/delete-teacher-button
 import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
 import { SetPasswordButton } from "@/components/shared/set-password-button";
 import { TeacherActiveSwitch } from "@/components/teachers/teacher-active-switch";
+import { CalendarView } from "@/components/agenda/calendar-view";
 import { TeacherPayTrendChart } from "@/components/teachers/teacher-pay-trend-chart";
 import { TeacherLessonsChart } from "@/components/teachers/teacher-lessons-chart";
 import { TeacherActiveStudentsChart } from "@/components/teachers/teacher-active-students-chart";
@@ -99,6 +100,16 @@ export function TeacherDetailView({
           <ViewCredentialsButton userId={teacher.userId} />
           {canManage && <SetPasswordButton userId={teacher.userId} />}
         </div>
+      </div>
+
+      <div className="mb-6">
+        <h2 className="mb-3 text-sm font-medium text-muted-foreground">Disponibilidade</h2>
+        <CalendarView
+          canManageLessons={canManage}
+          isTeacherView={false}
+          teacherIds={[teacher.id]}
+          showViewSwitcher={false}
+        />
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
