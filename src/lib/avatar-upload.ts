@@ -1,4 +1,3 @@
-import type { ClipboardEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 // Shared by every place a picture gets uploaded to someone's avatar — the
@@ -30,22 +29,11 @@ export async function uploadAvatarImage(
   return { url: data.publicUrl };
 }
 
-// Pulls the first pasted image out of a clipboard event, if any — a copied
-// screenshot or an image copied from a web page both land here as a
-// File-like Blob, same shape as one picked from the file input. Only ever
-// fires on a native Ctrl+V/Cmd+V while the right element happens to be
-// focused — easy to miss, so this is the fallback, not the only path.
-export function getImageFromClipboard(e: ClipboardEvent): File | null {
-  const item = Array.from(e.clipboardData.items).find((i) => i.type.startsWith("image/"));
-  return item?.getAsFile() ?? null;
-}
-
-// The explicit, click-a-button version — reads the clipboard directly via
-// the Clipboard API instead of waiting for a paste keystroke, so there's
-// an actual visible "Colar imagem" affordance rather than a hidden
-// keyboard shortcut. Needs a real click to fire (browsers refuse
-// clipboard.read() without one) and isn't supported everywhere (notably
-// older Safari), hence the explicit error instead of failing silently.
+// Reads an image directly off the clipboard via the Clipboard API, from a
+// "Colar imagem" menu item click — needs a real click to fire (browsers
+// refuse clipboard.read() without one) and isn't supported everywhere
+// (notably older Safari), hence the explicit error instead of failing
+// silently.
 export async function readImageFromClipboard(): Promise<{ file: File } | { error: string }> {
   if (!navigator.clipboard?.read) {
     return { error: "Este navegador não permite colar imagens diretamente. Use o upload de arquivo." };

@@ -1,25 +1,26 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Camera, ClipboardPaste, Loader2 } from "lucide-react";
+import { Camera, ClipboardPaste, Loader2, Upload } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  uploadAvatarImage,
-  getImageFromClipboard,
-  readImageFromClipboard,
-} from "@/lib/avatar-upload";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { uploadAvatarImage, readImageFromClipboard } from "@/lib/avatar-upload";
 import { updateStudentAvatar } from "@/server/actions/students";
 
-// Clicking the avatar itself (rather than a separate "Alterar foto"
-// button, as in the settings page's own AvatarUploader) opens the file
-// picker — only wired up when the viewer can edit this student at all,
-// otherwise it's the same plain avatar as before. A small "Colar imagem"
-// button underneath is the actual discoverable way to paste a copied
-// image; Ctrl+V while the avatar itself has focus also still works, as a
-// bonus for anyone who already knows that shortcut, but it's easy to
-// miss on its own.
+// Clicking the avatar opens a small menu instead of jumping straight to
+// the file picker — "Enviar foto" (file picker), "Colar imagem" (reads
+// the clipboard directly), and, phone-only, "Tirar foto" (opens the
+// camera via a second file input with capture="environment" — desktop
+// browsers ignore that attribute, so there's no point showing it there).
+// Only wired up at all when the viewer can edit this student; otherwise
+// it's the same plain avatar as before.
 export function StudentAvatarUpload({
   userId,
   name,
@@ -33,8 +34,22 @@ export function StudentAvatarUpload({
 }) {
   const [preview, setPreview] = useState(avatarUrl ?? undefined);
   const [isPending, startTransition] = useTransition();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 640px)");
+    // Classic SSR-safe client-only check: server and the first client
+    // render must match, so the real value can only be known once
+    // mounted.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsMobile(mql.matches);
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
 
   async function handleFile(file: File) {
     startTransition(async () => {
@@ -51,15 +66,6 @@ export function StudentAvatarUpload({
     });
   }
 
-  const avatar = (
-    <Avatar className="size-16">
-      {preview && <AvatarImage src={preview} />}
-      <AvatarFallback className="text-lg">{name.slice(0, 2).toUpperCase()}</AvatarFallback>
-    </Avatar>
-  );
-
-  if (!editable) return avatar;
-
   async function handlePasteClick() {
     startTransition(async () => {
       const result = await readImageFromClipboard();
@@ -71,43 +77,68 @@ export function StudentAvatarUpload({
     });
   }
 
+  const avatar = (
+    <Avatar className="size-16">
+      {preview && <AvatarImage src={preview} />}
+      <AvatarFallback className="text-lg">{name.slice(0, 2).toUpperCase()}</AvatarFallback>
+    </Avatar>
+  );
+
+  if (!editable) return avatar;
+
   return (
-    <div className="flex flex-col items-center gap-1">
+    <>
       <input
-        ref={inputRef}
+        ref={fileInputRef}
         type="file"
         accept="image/*"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) handleFile(file);
+          e.target.value = "";
         }}
       />
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        onPaste={(e) => {
-          const file = getImageFromClipboard(e);
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
           if (file) handleFile(file);
+          e.target.value = "";
         }}
-        disabled={isPending}
-        aria-label="Alterar foto do aluno"
-        title="Clique para enviar uma foto"
-        className="group relative block rounded-full"
-      >
-        {avatar}
-        <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 text-transparent transition-colors group-hover:bg-black/40 group-hover:text-white">
-          {isPending ? <Loader2 className="size-5 animate-spin" /> : <Camera className="size-5" />}
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={handlePasteClick}
-        disabled={isPending}
-        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
-      >
-        <ClipboardPaste className="size-3" /> Colar imagem
-      </button>
-    </div>
+      />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            disabled={isPending}
+            aria-label="Alterar foto do aluno"
+            className="group relative block rounded-full"
+          >
+            {avatar}
+            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 text-transparent transition-colors group-hover:bg-black/40 group-hover:text-white">
+              {isPending ? <Loader2 className="size-5 animate-spin" /> : <Camera className="size-5" />}
+            </span>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem onSelect={() => fileInputRef.current?.click()}>
+            <Upload /> Enviar foto
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={handlePasteClick}>
+            <ClipboardPaste /> Colar imagem
+          </DropdownMenuItem>
+          {isMobile && (
+            <DropdownMenuItem onSelect={() => cameraInputRef.current?.click()}>
+              <Camera /> Tirar foto
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 }
