@@ -236,6 +236,25 @@ export async function updateStudent(
   return { success: "Aluno atualizado." };
 }
 
+// Standalone too, same reasoning as updateStudentStatus below — set by
+// clicking the student's own avatar circle on their detail page, not
+// bundled into the "Editar aluno" form.
+export async function updateStudentAvatar(userId: string, avatarUrl: string) {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+  await prisma.user.update({ where: { id: userId }, data: { avatarUrl } });
+
+  await recordAudit({
+    entityType: "User",
+    entityId: userId,
+    action: "UPDATE",
+    actor,
+    changes: { avatarUrl: [undefined, avatarUrl] },
+  });
+
+  revalidatePath("/admin/students");
+  revalidatePath("/coordinator/students");
+}
+
 // Ativo/Pausado/Cancelado, standalone — moved out of the cadastro edit
 // form entirely onto its own selector next to the student's name (see
 // StudentStatusSelect), so it can be changed without opening "Editar

@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { resolveHistoricalAmount, dueDateFor, earliestHistoryFrom } from "@/server/billing";
 import { brazilToday, toBrazilDateString } from "@/lib/timezone";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StudentAvatarUpload } from "@/components/students/student-avatar-upload";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -240,12 +240,12 @@ export function StudentDetailView({
 
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Avatar className="size-16">
-            {student.user.avatarUrl && <AvatarImage src={student.user.avatarUrl} />}
-            <AvatarFallback className="text-lg">
-              {student.user.name.slice(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <StudentAvatarUpload
+            userId={student.userId}
+            name={student.user.name}
+            avatarUrl={student.user.avatarUrl}
+            editable={permissions.canEdit}
+          />
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-semibold">{student.groupName ?? student.user.name}</h1>
