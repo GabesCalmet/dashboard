@@ -3,18 +3,23 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera, ClipboardPaste, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { uploadAvatarImage, getImageFromClipboard } from "@/lib/avatar-upload";
+import {
+  uploadAvatarImage,
+  getImageFromClipboard,
+  readImageFromClipboard,
+} from "@/lib/avatar-upload";
 import { updateStudentAvatar } from "@/server/actions/students";
 
 // Clicking the avatar itself (rather than a separate "Alterar foto"
-// button, as in the settings page's own AvatarUploader) — only wired up
-// to actually open the file picker when the viewer can edit this student
-// at all; otherwise it's the same plain avatar as before. Also accepts a
-// pasted image (Ctrl+V/Cmd+V) once the avatar has focus — clicking it to
-// open the file picker, then cancelling, leaves it focused for exactly
-// that.
+// button, as in the settings page's own AvatarUploader) opens the file
+// picker — only wired up when the viewer can edit this student at all,
+// otherwise it's the same plain avatar as before. A small "Colar imagem"
+// button underneath is the actual discoverable way to paste a copied
+// image; Ctrl+V while the avatar itself has focus also still works, as a
+// bonus for anyone who already knows that shortcut, but it's easy to
+// miss on its own.
 export function StudentAvatarUpload({
   userId,
   name,
@@ -55,8 +60,19 @@ export function StudentAvatarUpload({
 
   if (!editable) return avatar;
 
+  async function handlePasteClick() {
+    startTransition(async () => {
+      const result = await readImageFromClipboard();
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      await handleFile(result.file);
+    });
+  }
+
   return (
-    <>
+    <div className="flex flex-col items-center gap-1">
       <input
         ref={inputRef}
         type="file"
@@ -76,7 +92,7 @@ export function StudentAvatarUpload({
         }}
         disabled={isPending}
         aria-label="Alterar foto do aluno"
-        title="Clique para enviar uma foto, ou cole uma imagem (Ctrl+V)"
+        title="Clique para enviar uma foto"
         className="group relative block rounded-full"
       >
         {avatar}
@@ -84,6 +100,14 @@ export function StudentAvatarUpload({
           {isPending ? <Loader2 className="size-5 animate-spin" /> : <Camera className="size-5" />}
         </span>
       </button>
-    </>
+      <button
+        type="button"
+        onClick={handlePasteClick}
+        disabled={isPending}
+        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
+      >
+        <ClipboardPaste className="size-3" /> Colar imagem
+      </button>
+    </div>
   );
 }

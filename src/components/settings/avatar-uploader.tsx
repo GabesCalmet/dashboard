@@ -3,10 +3,14 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera, ClipboardPaste, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { uploadAvatarImage, getImageFromClipboard } from "@/lib/avatar-upload";
+import {
+  uploadAvatarImage,
+  getImageFromClipboard,
+  readImageFromClipboard,
+} from "@/lib/avatar-upload";
 import { updateProfile } from "@/server/actions/profile";
 
 export function AvatarUploader({
@@ -42,13 +46,24 @@ export function AvatarUploader({
     });
   }
 
+  async function handlePasteClick() {
+    startTransition(async () => {
+      const result = await readImageFromClipboard();
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      await handleFile(result.file);
+    });
+  }
+
   return (
     <div className="flex items-center gap-4">
       <Avatar className="size-16">
         {preview && <AvatarImage src={preview} />}
         <AvatarFallback className="text-lg">{name.slice(0, 2).toUpperCase()}</AvatarFallback>
       </Avatar>
-      <div>
+      <div className="flex flex-wrap items-center gap-2">
         <input
           ref={inputRef}
           type="file"
@@ -69,10 +84,13 @@ export function AvatarUploader({
             const file = getImageFromClipboard(e);
             if (file) handleFile(file);
           }}
-          title="Clique para enviar uma foto, ou cole uma imagem (Ctrl+V)"
+          title="Clique para enviar uma foto"
         >
           {isPending ? <Loader2 className="animate-spin" /> : <Camera />}
           Alterar foto
+        </Button>
+        <Button type="button" variant="ghost" size="sm" disabled={isPending} onClick={handlePasteClick}>
+          <ClipboardPaste /> Colar imagem
         </Button>
       </div>
     </div>
