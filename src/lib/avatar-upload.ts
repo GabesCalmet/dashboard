@@ -1,3 +1,4 @@
+import type { ClipboardEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 // Shared by every place a picture gets uploaded to someone's avatar — the
@@ -27,4 +28,12 @@ export async function uploadAvatarImage(
 
   const { data } = supabase.storage.from("avatars").getPublicUrl(path);
   return { url: data.publicUrl };
+}
+
+// Pulls the first pasted image out of a clipboard event, if any — a copied
+// screenshot or an image copied from a web page both land here as a
+// File-like Blob, same shape as one picked from the file input.
+export function getImageFromClipboard(e: ClipboardEvent): File | null {
+  const item = Array.from(e.clipboardData.items).find((i) => i.type.startsWith("image/"));
+  return item?.getAsFile() ?? null;
 }

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Camera, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { uploadAvatarImage } from "@/lib/avatar-upload";
+import { uploadAvatarImage, getImageFromClipboard } from "@/lib/avatar-upload";
 import { updateProfile } from "@/server/actions/profile";
 
 export function AvatarUploader({
@@ -65,6 +65,11 @@ export function AvatarUploader({
           size="sm"
           disabled={isPending}
           onClick={() => inputRef.current?.click()}
+          onPaste={(e) => {
+            const file = getImageFromClipboard(e);
+            if (file) handleFile(file);
+          }}
+          title="Clique para enviar uma foto, ou cole uma imagem (Ctrl+V)"
         >
           {isPending ? <Loader2 className="animate-spin" /> : <Camera />}
           Alterar foto

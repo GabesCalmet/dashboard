@@ -5,13 +5,16 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Camera, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { uploadAvatarImage } from "@/lib/avatar-upload";
+import { uploadAvatarImage, getImageFromClipboard } from "@/lib/avatar-upload";
 import { updateStudentAvatar } from "@/server/actions/students";
 
 // Clicking the avatar itself (rather than a separate "Alterar foto"
 // button, as in the settings page's own AvatarUploader) — only wired up
 // to actually open the file picker when the viewer can edit this student
-// at all; otherwise it's the same plain avatar as before.
+// at all; otherwise it's the same plain avatar as before. Also accepts a
+// pasted image (Ctrl+V/Cmd+V) once the avatar has focus — clicking it to
+// open the file picker, then cancelling, leaves it focused for exactly
+// that.
 export function StudentAvatarUpload({
   userId,
   name,
@@ -67,8 +70,13 @@ export function StudentAvatarUpload({
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
+        onPaste={(e) => {
+          const file = getImageFromClipboard(e);
+          if (file) handleFile(file);
+        }}
         disabled={isPending}
         aria-label="Alterar foto do aluno"
+        title="Clique para enviar uma foto, ou cole uma imagem (Ctrl+V)"
         className="group relative block rounded-full"
       >
         {avatar}
