@@ -28,27 +28,3 @@ export async function uploadAvatarImage(
   const { data } = supabase.storage.from("avatars").getPublicUrl(path);
   return { url: data.publicUrl };
 }
-
-// Reads an image directly off the clipboard via the Clipboard API, from a
-// "Colar imagem" menu item click — needs a real click to fire (browsers
-// refuse clipboard.read() without one) and isn't supported everywhere
-// (notably older Safari), hence the explicit error instead of failing
-// silently.
-export async function readImageFromClipboard(): Promise<{ file: File } | { error: string }> {
-  if (!navigator.clipboard?.read) {
-    return { error: "Este navegador não permite colar imagens diretamente. Use o upload de arquivo." };
-  }
-  try {
-    const items = await navigator.clipboard.read();
-    for (const item of items) {
-      const imageType = item.types.find((t) => t.startsWith("image/"));
-      if (imageType) {
-        const blob = await item.getType(imageType);
-        return { file: new File([blob], "pasted-image", { type: imageType }) };
-      }
-    }
-    return { error: "Nenhuma imagem encontrada na área de transferência." };
-  } catch {
-    return { error: "Não foi possível acessar a área de transferência." };
-  }
-}

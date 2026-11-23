@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Camera, ClipboardPaste, Loader2, Upload } from "lucide-react";
+import { Camera, Image as ImageIcon, Loader2, Upload } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,14 +12,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { uploadAvatarImage, readImageFromClipboard } from "@/lib/avatar-upload";
+import { uploadAvatarImage } from "@/lib/avatar-upload";
 import { updateProfile } from "@/server/actions/profile";
 
-// "Alterar foto" opens a small menu — "Enviar foto" (file picker), "Colar
-// imagem" (reads the clipboard directly), and, phone-only, "Tirar foto"
-// (opens the camera via a second file input with capture="environment" —
-// desktop browsers ignore that attribute, so there's no point showing it
-// there).
+// On desktop, "Alterar foto" jumps straight to the file picker — only
+// one real choice there. On a phone there's an actual decision to make,
+// so it opens a small menu instead: Enviar foto (the same plain file
+// picker), Tirar foto (opens the camera directly, via a second file
+// input with capture="environment" — desktop browsers ignore that
+// attribute, which is why it's phone-only), and Acessar galeria (the
+// same picker as Enviar foto, as its own clearly-labeled entry).
 export function AvatarUploader({
   userId,
   name,
@@ -67,16 +69,12 @@ export function AvatarUploader({
     });
   }
 
-  async function handlePasteClick() {
-    startTransition(async () => {
-      const result = await readImageFromClipboard();
-      if ("error" in result) {
-        toast.error(result.error);
-        return;
-      }
-      await handleFile(result.file);
-    });
-  }
+  const triggerButton = (
+    <Button type="button" variant="outline" size="sm" disabled={isPending}>
+      {isPending ? <Loader2 className="animate-spin" /> : <Camera />}
+      Alterar foto
+    </Button>
+  );
 
   return (
     <div className="flex items-center gap-4">
@@ -108,27 +106,24 @@ export function AvatarUploader({
             e.target.value = "";
           }}
         />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" variant="outline" size="sm" disabled={isPending}>
-              {isPending ? <Loader2 className="animate-spin" /> : <Camera />}
-              Alterar foto
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onSelect={() => fileInputRef.current?.click()}>
-              <Upload /> Enviar foto
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={handlePasteClick}>
-              <ClipboardPaste /> Colar imagem
-            </DropdownMenuItem>
-            {isMobile && (
+        {isMobile ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>{triggerButton}</DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onSelect={() => fileInputRef.current?.click()}>
+                <Upload /> Enviar foto
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => cameraInputRef.current?.click()}>
                 <Camera /> Tirar foto
               </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <DropdownMenuItem onSelect={() => fileInputRef.current?.click()}>
+                <ImageIcon /> Acessar galeria
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <span onClick={() => fileInputRef.current?.click()}>{triggerButton}</span>
+        )}
       </div>
     </div>
   );

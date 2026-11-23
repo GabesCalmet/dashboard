@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Camera, ClipboardPaste, Loader2, Upload } from "lucide-react";
+import { Camera, Image as ImageIcon, Loader2, Upload } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -11,14 +11,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { uploadAvatarImage, readImageFromClipboard } from "@/lib/avatar-upload";
+import { uploadAvatarImage } from "@/lib/avatar-upload";
 import { updateStudentAvatar } from "@/server/actions/students";
 
-// Clicking the avatar opens a small menu instead of jumping straight to
-// the file picker — "Enviar foto" (file picker), "Colar imagem" (reads
-// the clipboard directly), and, phone-only, "Tirar foto" (opens the
-// camera via a second file input with capture="environment" — desktop
-// browsers ignore that attribute, so there's no point showing it there).
+// On desktop, clicking the avatar jumps straight to the file picker —
+// there's only ever one real choice there. On a phone there's an actual
+// decision to make, so it opens a small menu instead: Enviar foto (the
+// same plain file picker), Tirar foto (opens the camera directly, via a
+// second file input with capture="environment" — desktop browsers ignore
+// that attribute, which is why it's phone-only), and Acessar galeria
+// (the same picker as Enviar foto, as its own clearly-labeled entry).
 // Only wired up at all when the viewer can edit this student; otherwise
 // it's the same plain avatar as before.
 export function StudentAvatarUpload({
@@ -66,17 +68,6 @@ export function StudentAvatarUpload({
     });
   }
 
-  async function handlePasteClick() {
-    startTransition(async () => {
-      const result = await readImageFromClipboard();
-      if ("error" in result) {
-        toast.error(result.error);
-        return;
-      }
-      await handleFile(result.file);
-    });
-  }
-
   const avatar = (
     <Avatar className="size-16">
       {preview && <AvatarImage src={preview} />}
@@ -85,6 +76,20 @@ export function StudentAvatarUpload({
   );
 
   if (!editable) return avatar;
+
+  const triggerButton = (
+    <button
+      type="button"
+      disabled={isPending}
+      aria-label="Alterar foto do aluno"
+      className="group relative block rounded-full"
+    >
+      {avatar}
+      <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 text-transparent transition-colors group-hover:bg-black/40 group-hover:text-white">
+        {isPending ? <Loader2 className="size-5 animate-spin" /> : <Camera className="size-5" />}
+      </span>
+    </button>
+  );
 
   return (
     <>
@@ -111,34 +116,24 @@ export function StudentAvatarUpload({
           e.target.value = "";
         }}
       />
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            disabled={isPending}
-            aria-label="Alterar foto do aluno"
-            className="group relative block rounded-full"
-          >
-            {avatar}
-            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 text-transparent transition-colors group-hover:bg-black/40 group-hover:text-white">
-              {isPending ? <Loader2 className="size-5 animate-spin" /> : <Camera className="size-5" />}
-            </span>
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuItem onSelect={() => fileInputRef.current?.click()}>
-            <Upload /> Enviar foto
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={handlePasteClick}>
-            <ClipboardPaste /> Colar imagem
-          </DropdownMenuItem>
-          {isMobile && (
+      {isMobile ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>{triggerButton}</DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onSelect={() => fileInputRef.current?.click()}>
+              <Upload /> Enviar foto
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => cameraInputRef.current?.click()}>
               <Camera /> Tirar foto
             </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <DropdownMenuItem onSelect={() => fileInputRef.current?.click()}>
+              <ImageIcon /> Acessar galeria
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <span onClick={() => fileInputRef.current?.click()}>{triggerButton}</span>
+      )}
     </>
   );
 }
