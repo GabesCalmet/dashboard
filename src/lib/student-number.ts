@@ -20,3 +20,20 @@ export function nextStudentNumber(names: (string | null | undefined)[]): number 
   if (numbers.length === 0) return null;
   return Math.max(...numbers) + 1;
 }
+
+// The same trailing "LABEL-number" token (e.g. "VIP-144", "GRU-23") as a
+// standalone piece, for display — splits it off the end of the name
+// instead of showing it folded into the person's actual name. The label
+// itself isn't fixed (see above), so this only requires the last
+// whitespace-separated word to end in a number; a plain surname never
+// matches (no digits), so a student with no such suffix is untouched.
+const ID_SUFFIX_RE = /^[A-Za-zÀ-ÿ]+-?\d+$/;
+
+export function splitStudentIdSuffix(name: string): { displayName: string; idSuffix: string | null } {
+  const parts = name.trim().split(/\s+/);
+  const last = parts[parts.length - 1];
+  if (parts.length < 2 || !last || !ID_SUFFIX_RE.test(last)) {
+    return { displayName: name, idSuffix: null };
+  }
+  return { displayName: parts.slice(0, -1).join(" "), idSuffix: last };
+}

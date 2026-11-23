@@ -16,14 +16,16 @@ import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
 import { getStudentDashboardData } from "@/server/queries/student-dashboard";
 import { formatDateTime, levelLabel } from "@/lib/labels";
+import { splitStudentIdSuffix } from "@/lib/student-number";
 
 export default async function StudentDashboardPage() {
   const user = await requireRole("STUDENT");
   const data = await getStudentDashboardData(user.studentProfile!.id);
+  const { displayName, idSuffix } = splitStudentIdSuffix(user.name);
 
   return (
     <div>
-      <PageHeader title={`Olá, ${user.name.split(" ")[0]}`} description="Seu painel de estudos." />
+      <PageHeader title={`Olá, ${displayName.split(" ")[0]}`} description="Seu painel de estudos." />
 
       <Card className="mb-6">
         <CardContent className="flex flex-wrap items-center gap-4 pt-6">
@@ -32,7 +34,8 @@ export default async function StudentDashboardPage() {
             <AvatarFallback className="text-lg">{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
-            <p className="text-lg font-semibold">{user.name}</p>
+            <p className="text-lg font-semibold">{displayName}</p>
+            {idSuffix && <p className="text-xs text-muted-foreground">ID: {idSuffix}</p>}
             <p className="text-sm text-muted-foreground">
               {data.student.course?.name ?? "Curso não definido"} · Prof.{" "}
               {data.student.teacher?.user.name ?? "não atribuído"}
@@ -46,6 +49,14 @@ export default async function StudentDashboardPage() {
         </CardContent>
       </Card>
 
+      {data.nextLesson && data.nextLessonMeetLink && (
+        <Button asChild className="mb-4">
+          <a href={data.nextLessonMeetLink} target="_blank" rel="noopener noreferrer">
+            <Video /> Entrar na próxima aula
+          </a>
+        </Button>
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Próxima aula"
@@ -57,14 +68,6 @@ export default async function StudentDashboardPage() {
         <StatCard label="Aulas realizadas (total)" value={String(data.completedTotal)} icon={CheckCircle2} />
         <StatCard label="Aulas no mês" value={String(data.completedThisMonth)} icon={GraduationCap} />
       </div>
-
-      {data.nextLesson && data.nextLessonMeetLink && (
-        <Button asChild className="mt-4">
-          <a href={data.nextLessonMeetLink} target="_blank" rel="noopener noreferrer">
-            <Video /> Entrar na próxima aula
-          </a>
-        </Button>
-      )}
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
