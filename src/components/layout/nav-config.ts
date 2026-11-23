@@ -47,7 +47,7 @@ export const navByRole: Record<Role, NavItem[]> = {
     { label: "Configurações", href: "/teacher/settings", icon: Settings },
   ],
   STUDENT: [
-    { label: "Dashboard", href: "/student", icon: LayoutDashboard },
+    { label: "Dados gerais", href: "/student", icon: LayoutDashboard },
     { label: "Meu Progresso", href: "/student/progress", icon: LineChart },
     { label: "Histórico de Aulas", href: "/student/history", icon: History },
     { label: "Materiais", href: "/student/materials", icon: BookOpenCheck },
