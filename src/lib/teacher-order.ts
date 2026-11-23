@@ -24,3 +24,14 @@ export function teacherOrderIndex(teacherName: string): number {
   const i = TEACHER_DISPLAY_ORDER.indexOf(teacherName);
   return i === -1 ? TEACHER_DISPLAY_ORDER.length : i;
 }
+
+// Several of the names above literally carry the word "Teacher" (as a
+// prefix or a suffix) in the real cadastro — fine for telling teachers
+// apart on the Professores admin pages, but it reads oddly wherever a
+// teacher is mentioned as someone else's "Prof. ___" (a student's
+// dashboard, a lesson/payment/alert row, ...). This strips just that
+// standalone word, case-insensitively, wherever it falls — the
+// Professores pages themselves keep the real stored name untouched.
+export function stripTeacherWord(name: string): string {
+  return name.replace(/\bteacher\b/gi, "").replace(/\s+/g, " ").trim();
+}

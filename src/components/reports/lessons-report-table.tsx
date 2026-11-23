@@ -21,6 +21,7 @@ import { MakeupRescheduleButton } from "@/components/lessons/makeup-reschedule-b
 import { LessonSummaryEditor } from "@/components/lessons/lesson-summary-editor";
 import { LessonRescheduleEditor } from "@/components/lessons/lesson-reschedule-editor";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
+import { stripTeacherWord } from "@/lib/teacher-order";
 import type { Lesson, LessonStatus } from "@prisma/client";
 
 type ReportLesson = Lesson & {
@@ -69,7 +70,7 @@ export function LessonsReportTable({
             <TableRow key={l.id}>
               <TableCell>{formatDateTime(l.scheduledAt)}</TableCell>
               {showStudent && <TableCell>{l.student.user.name}</TableCell>}
-              {showTeacher && <TableCell>{l.teacher.user.name}</TableCell>}
+              {showTeacher && <TableCell>{stripTeacherWord(l.teacher.user.name)}</TableCell>}
               <TableCell>{l.durationMin} min</TableCell>
               <TableCell>
                 {l.isMakeup ? (

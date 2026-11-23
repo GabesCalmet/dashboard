@@ -40,6 +40,7 @@ import { SetPasswordButton } from "@/components/shared/set-password-button";
 import { AuditTrail } from "@/components/shared/audit-trail";
 import { StudentRescheduleAlert } from "@/components/alerts/student-reschedule-alert";
 import { studentStatusLabel, studentStatusVariant, formatDate } from "@/lib/labels";
+import { stripTeacherWord } from "@/lib/teacher-order";
 import type { getStudentDetail } from "@/server/queries/students";
 import type { TeacherRescheduleAlert } from "@/server/queries/alerts";
 
@@ -272,7 +273,7 @@ export function StudentDetailView({
             )}
             <p className="text-sm text-muted-foreground">
               {student.course?.name ?? "Curso não definido"} · Prof.{" "}
-              {student.teacher?.user.name ?? "não atribuído"}
+              {student.teacher ? stripTeacherWord(student.teacher.user.name) : "não atribuído"}
             </p>
           </div>
         </div>

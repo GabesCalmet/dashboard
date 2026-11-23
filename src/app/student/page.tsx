@@ -17,6 +17,7 @@ import { requireRole } from "@/lib/auth";
 import { getStudentDashboardData } from "@/server/queries/student-dashboard";
 import { formatDateTime, levelLabel } from "@/lib/labels";
 import { splitStudentIdSuffix } from "@/lib/student-number";
+import { stripTeacherWord } from "@/lib/teacher-order";
 
 export default async function StudentDashboardPage() {
   const user = await requireRole("STUDENT");
@@ -37,8 +38,8 @@ export default async function StudentDashboardPage() {
             <p className="text-lg font-semibold">{displayName}</p>
             {idSuffix && <p className="text-xs text-muted-foreground">ID: {idSuffix}</p>}
             <p className="text-sm text-muted-foreground">
-              {data.student.course?.name ?? "Curso não definido"} · Prof.{" "}
-              {data.student.teacher?.user.name ?? "não atribuído"}
+              Prof.{" "}
+              {data.student.teacher ? stripTeacherWord(data.student.teacher.user.name) : "não atribuído"}
             </p>
             <div className="mt-2 flex items-center gap-2">
               <span className="text-sm font-medium">{data.student.level}</span>

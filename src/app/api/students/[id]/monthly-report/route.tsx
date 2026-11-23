@@ -6,6 +6,7 @@ import { lessonStatusDisplayLabel } from "@/lib/labels";
 import { toBrazilDateString, toBrazilTimeString } from "@/lib/timezone";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
 import { resolveHistoricalAmount, dueDateFor } from "@/server/billing";
+import { stripTeacherWord } from "@/lib/teacher-order";
 import {
   MonthlyReportDocument,
   type MonthlyReportRow,
@@ -162,7 +163,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     <MonthlyReportDocument
       studentName={studentName}
       period={period}
-      teacherName={student.teacher?.user.name ?? "Não atribuído"}
+      teacherName={student.teacher ? stripTeacherWord(student.teacher.user.name) : "Não atribuído"}
       aulasContratadas={aulasContratadas}
       aulasRealizadas={aulasRealizadas}
       aulasReagendadas={aulasReagendadas}

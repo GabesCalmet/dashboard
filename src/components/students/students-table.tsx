@@ -27,6 +27,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { markStudentContacted } from "@/server/actions/students";
 import { levelLabel, studentStatusLabel, studentStatusVariant, formatCalendarDate } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+import { stripTeacherWord } from "@/lib/teacher-order";
 import type { CourseLevel, StudentStatus } from "@prisma/client";
 
 type Row = {
@@ -180,7 +181,7 @@ export function StudentsTable({
                   <Badge variant="outline">{levelLabel[r.level].split(" —")[0]}</Badge>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {r.teacherName ?? "—"}
+                  {r.teacherName ? stripTeacherWord(r.teacherName) : "—"}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {r.courseName ?? "—"}

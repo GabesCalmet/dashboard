@@ -17,6 +17,7 @@ import {
   bankAccountLabel,
 } from "@/lib/labels";
 import { PaymentStatusSelect } from "@/components/financial/payment-status-select";
+import { stripTeacherWord } from "@/lib/teacher-order";
 import type { PaymentStatus, BankAccount } from "@prisma/client";
 
 type Row = {
@@ -63,7 +64,9 @@ export function LatePaymentsTable({ payments }: { payments: Row[] }) {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate font-medium">{p.studentName}</p>
-                <p className="text-xs text-muted-foreground">Prof. {p.teacherName ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">
+                  Prof. {p.teacherName ? stripTeacherWord(p.teacherName) : "—"}
+                </p>
               </div>
               <p className="shrink-0 font-medium">{formatCurrency(p.amount)}</p>
             </div>
@@ -106,7 +109,9 @@ export function LatePaymentsTable({ payments }: { payments: Row[] }) {
               <TableRow key={p.id}>
                 <TableCell className="capitalize">{formatCalendarMonthYear(p.referenceMonth)}</TableCell>
                 <TableCell>{p.studentName}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{p.teacherName ?? "—"}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {p.teacherName ? stripTeacherWord(p.teacherName) : "—"}
+                </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {p.payerName ?? p.studentName}
                 </TableCell>

@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { resolveStudentAlert } from "@/server/actions/alerts";
 import { formatDateTime, lessonStatusLabel } from "@/lib/labels";
+import { stripTeacherWord } from "@/lib/teacher-order";
 import type { AttendanceAlert } from "@/server/queries/alerts";
 
 export function AttendanceAlertRow({
@@ -51,7 +52,7 @@ export function AttendanceAlertRow({
               {alert.studentName}
             </Link>
             {alert.teacherName && (
-              <p className="text-xs text-muted-foreground">Prof. {alert.teacherName}</p>
+              <p className="text-xs text-muted-foreground">Prof. {stripTeacherWord(alert.teacherName)}</p>
             )}
           </div>
           <Badge variant={alert.severity === "RED" ? "destructive" : "warning"}>

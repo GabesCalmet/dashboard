@@ -16,6 +16,7 @@ import { LessonHistoryButton } from "@/components/lessons/lesson-history-button"
 import { lessonStatusBadgeVariant } from "@/lib/labels";
 import type { CalendarLessonEvent } from "@/components/agenda/calendar-view";
 import { formatDateTime } from "@/lib/labels";
+import { stripTeacherWord } from "@/lib/teacher-order";
 
 export function LessonDetailDialog({
   lesson,
@@ -43,7 +44,7 @@ export function LessonDetailDialog({
             </Badge>
           </DialogTitle>
           <DialogDescription>
-            Prof. {lesson.teacherName} · {formatDateTime(lesson.start)} · {lesson.durationMin} min
+            Prof. {stripTeacherWord(lesson.teacherName)} · {formatDateTime(lesson.start)} · {lesson.durationMin} min
           </DialogDescription>
         </DialogHeader>
 
