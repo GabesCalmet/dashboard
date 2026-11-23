@@ -10,6 +10,9 @@ import { DeleteTeacherButton } from "@/components/teachers/delete-teacher-button
 import { ViewCredentialsButton } from "@/components/shared/view-credentials-button";
 import { SetPasswordButton } from "@/components/shared/set-password-button";
 import { TeacherActiveSwitch } from "@/components/teachers/teacher-active-switch";
+import { TeacherPayTrendChart } from "@/components/teachers/teacher-pay-trend-chart";
+import { TeacherLessonsChart } from "@/components/teachers/teacher-lessons-chart";
+import { TeacherActiveStudentsChart } from "@/components/teachers/teacher-active-students-chart";
 import {
   studentStatusLabel,
   studentStatusVariant,
@@ -17,19 +20,25 @@ import {
   formatDate,
   blockTypeLabel,
 } from "@/lib/labels";
-import type { getTeacherDetail } from "@/server/queries/teachers";
+import type { getTeacherDetail, getTeacherMonthlyTrend } from "@/server/queries/teachers";
 
 type Teacher = NonNullable<Awaited<ReturnType<typeof getTeacherDetail>>>;
+type Trend = Awaited<ReturnType<typeof getTeacherMonthlyTrend>>;
 
 export function TeacherDetailView({
   teacher,
+  trend,
   basePath,
   studentsBasePath,
   canManage,
 }: {
   teacher: Teacher;
+  trend: Trend;
   basePath: string;
   studentsBasePath: string;
+  // Also doubles as "can see this teacher's financial data" — the only
+  // two pages rendering this view today (admin vs. coordinator) line up
+  // exactly that way, and coordinators have no Financeiro section at all.
   canManage: boolean;
 }) {
   return (
@@ -130,6 +139,35 @@ export function TeacherDetailView({
           value={String(teacher.completedTotal)}
           icon={GraduationCap}
         />
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {canManage && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Previsto vs. acumulado (6 meses)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TeacherPayTrendChart data={trend} />
+            </CardContent>
+          </Card>
+        )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Aulas agendadas vs. dadas (6 meses)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TeacherLessonsChart data={trend} />
+          </CardContent>
+        </Card>
+        <Card className={canManage ? "lg:col-span-2" : undefined}>
+          <CardHeader>
+            <CardTitle>Alunos ativos ao longo do tempo</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TeacherActiveStudentsChart data={trend} />
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

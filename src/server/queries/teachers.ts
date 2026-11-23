@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { startOfMonth, endOfMonth } from "date-fns";
+import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { brazilDateTime, brazilToday, endOfBrazilDay, toBrazilDateString } from "@/lib/timezone";
 import { resolveHistoricalAmount, pickLatestOverlap } from "@/server/billing";
 import { getOwnChargeAmountsForMonth } from "@/server/student-charges";
@@ -424,7 +424,7 @@ function equivalentHourlyRate(
 // and F count here the same as NC: not the teacher's fault the slot didn't
 // happen (the slot was still held for it, or unfillable in time), so
 // they're still paid for it.
-const REALIZED_STATUSES = [
+export const REALIZED_STATUSES = [
   "COMPLETED",
   "NO_SHOW",
   "CANCELED_LATE",
@@ -690,6 +690,135 @@ export async function getTeacherPayrollForMonth(year: number, month: number) {
   );
 
   return { rows, totals };
+}
+
+// Same "did this lesson actually not happen" list the admin dashboard's
+// own cancellationsThisMonth tile uses — kept local here since it's only
+// ever read alongside getTeacherPayrollForMonth's rows below.
+const CANCELLATION_STATUSES: LessonStatus[] = [
+  "CANCELED_BY_STUDENT",
+  "CANCELED_BY_STUDENT_NO_MAKEUP",
+  "CANCELED_BY_TEACHER",
+  "CANCELED_LATE",
+  "CANCELED_HOLIDAY",
+  "NO_SHOW",
+];
+
+// One month's cross-teacher snapshot for the Professores list page's
+// charts — pay (from getTeacherPayrollForMonth, so it's the exact same
+// "Acumulado" figure as Gastos > Professores) alongside lesson-volume,
+// hours, and cancellation/reposição stats for every active teacher, all
+// computed from a single groupBy instead of one query per teacher.
+export async function getTeacherMonthlyPerformance(year: number, month: number) {
+  const monthStart = new Date(year, month, 1);
+  const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
+
+  const [{ rows: payrollRows }, lessonStats] = await Promise.all([
+    getTeacherPayrollForMonth(year, month),
+    prisma.lesson.groupBy({
+      by: ["teacherId", "status"],
+      where: { scheduledAt: { gte: monthStart, lte: monthEnd } },
+      _count: { _all: true },
+      _sum: { durationMin: true },
+    }),
+  ]);
+
+  const statsByTeacher = new Map<
+    string,
+    { totalLessons: number; hoursTaught: number; cancellations: number; makeups: number }
+  >();
+  for (const g of lessonStats) {
+    const entry = statsByTeacher.get(g.teacherId) ?? {
+      totalLessons: 0,
+      hoursTaught: 0,
+      cancellations: 0,
+      makeups: 0,
+    };
+    entry.totalLessons += g._count._all;
+    if ((REALIZED_STATUSES as readonly string[]).includes(g.status)) {
+      entry.hoursTaught += (g._sum.durationMin ?? 0) / 60;
+    }
+    if (CANCELLATION_STATUSES.includes(g.status)) entry.cancellations += g._count._all;
+    if (g.status === "MAKEUP") entry.makeups += g._count._all;
+    statsByTeacher.set(g.teacherId, entry);
+  }
+
+  const totalRealizado = payrollRows.reduce((sum, r) => sum + r.realizado, 0);
+
+  return payrollRows.map((r) => {
+    const stats = statsByTeacher.get(r.teacherId) ?? {
+      totalLessons: 0,
+      hoursTaught: 0,
+      cancellations: 0,
+      makeups: 0,
+    };
+    return {
+      teacherId: r.teacherId,
+      teacherName: r.teacherName,
+      previsto: r.previsto,
+      realizado: r.realizado,
+      shareOfTotal: totalRealizado > 0 ? (r.realizado / totalRealizado) * 100 : 0,
+      hoursTaught: stats.hoursTaught,
+      totalLessons: stats.totalLessons,
+      cancellations: stats.cancellations,
+      makeups: stats.makeups,
+      cancellationRate: stats.totalLessons > 0 ? (stats.cancellations / stats.totalLessons) * 100 : 0,
+      makeupRate: stats.totalLessons > 0 ? (stats.makeups / stats.totalLessons) * 100 : 0,
+    };
+  });
+}
+
+export type TeacherMonthlyPerformanceRow = Awaited<ReturnType<typeof getTeacherMonthlyPerformance>>[number];
+
+// One teacher's own history over the last `monthsBack` months (oldest
+// first) for the detail page's trend charts. "Esperadas" is every lesson
+// that was ever on the calendar that month regardless of status (what was
+// actually booked, not today's active-roster contract projected
+// backward) so past months stay accurate even after students changed
+// teachers or canceled — "Dadas" is the REALIZED_STATUSES subset of that
+// same set. "Alunos ativos" is the distinct students that had at least one
+// lesson with this teacher that month, the same lesson-driven-activity
+// proxy, for the same reason: there's no stored history of who was active
+// as of a past month, only who is active today.
+export async function getTeacherMonthlyTrend(teacherId: string, monthsBack = 6) {
+  const now = brazilToday();
+  const buckets = Array.from({ length: monthsBack }).map((_, i) => {
+    const d = subMonths(now, monthsBack - 1 - i);
+    return {
+      start: startOfMonth(d),
+      end: endOfMonth(d),
+      year: d.getFullYear(),
+      month: d.getMonth(),
+      label: format(d, "MMM"),
+    };
+  });
+
+  const [payrolls, lessons] = await Promise.all([
+    Promise.all(buckets.map((b) => getTeacherPayrollForMonth(b.year, b.month))),
+    prisma.lesson.findMany({
+      where: {
+        teacherId,
+        scheduledAt: { gte: buckets[0].start, lte: buckets[buckets.length - 1].end },
+      },
+      select: { scheduledAt: true, status: true, studentId: true },
+    }),
+  ]);
+
+  return buckets.map((b, i) => {
+    const payrollRow = payrolls[i].rows.find((r) => r.teacherId === teacherId);
+    const monthLessons = lessons.filter((l) => l.scheduledAt >= b.start && l.scheduledAt <= b.end);
+    const givenLessons = monthLessons.filter((l) =>
+      (REALIZED_STATUSES as readonly string[]).includes(l.status)
+    ).length;
+    return {
+      month: b.label,
+      previsto: payrollRow?.previsto ?? 0,
+      realizado: payrollRow?.realizado ?? 0,
+      expectedLessons: monthLessons.length,
+      givenLessons,
+      activeStudents: new Set(monthLessons.map((l) => l.studentId)).size,
+    };
+  });
 }
 
 // Férias provision — 8,3% (≈1/12) of each teacher's Contratado total
