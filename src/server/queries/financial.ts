@@ -873,16 +873,24 @@ export async function getStudentPaymentHistory(studentId: string) {
   return rows.sort((a, b) => b.referenceMonth.getTime() - a.referenceMonth.getTime());
 }
 
-// Every real cobrança currently marked LATE, across every student and
-// month — the "you need to chase these down" list, as opposed to the
-// Receita page's Cobranças table which only ever shows one month at a
-// time. Kept up to date by the daily mark-late-payments cron (see
-// /api/cron/mark-late-payments) plus whatever's set by hand. Only ACTIVE
+// Every real cobrança that's overdue and still unpaid, across every
+// student and month — the "you need to chase these down" list, as
+// opposed to the Receita page's Cobranças table which only ever shows one
+// month at a time. Defined by due date, not just the LATE status itself
+// (status could still read PENDING if the daily mark-late-payments cron
+// hasn't run yet today, or INVOICED if someone's marked it "Cobrado" —
+// marking Cobrado is a flag, not a real status change, and must never be
+// how a payment escapes this list; only PAID does that). Only ACTIVE
 // students — once someone's canceled or paused, whatever they still owe is
 // tracked elsewhere, not chased down on this list.
 export async function getLatePayments() {
+  const now = brazilToday();
   const payments = await prisma.payment.findMany({
-    where: { status: "LATE", student: { status: "ACTIVE" } },
+    where: {
+      status: { notIn: ["PAID", "PAUSED"] },
+      dueDate: { lt: now },
+      student: { status: "ACTIVE" },
+    },
     include: {
       student: {
         include: { user: true, teacher: { include: { user: true } }, groupMembers: { include: { user: true } } },
@@ -914,6 +922,9 @@ export async function getLatePayments() {
       dueDate: p.dueDate,
       referenceMonth: p.referenceMonth,
       bankAccount: p.bankAccountOverride ?? slot?.bankAccount ?? p.student.bankAccount,
+      // PENDING, INVOICED, or LATE — never assume LATE, now that an
+      // overdue-but-not-yet-swept PENDING/INVOICED row can land here too.
+      status: p.status,
     };
   });
 }

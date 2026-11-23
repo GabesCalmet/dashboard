@@ -30,6 +30,9 @@ type Row = {
   studentName: string;
   teacherName: string | null;
   bankAccount: BankAccount;
+  // PENDING, INVOICED, or LATE — this list is defined by due date, not
+  // just the LATE status, so never assume LATE here.
+  status: PaymentStatus;
 };
 
 export function LatePaymentsTable({ payments }: { payments: Row[] }) {
@@ -78,7 +81,7 @@ export function LatePaymentsTable({ payments }: { payments: Row[] }) {
             <PaymentStatusSelect
               studentId={p.studentId}
               payerName={p.payerName}
-              status={"LATE" as PaymentStatus}
+              status={p.status}
               paidAt={null}
               referenceMonth={p.referenceMonth}
             />
@@ -124,7 +127,7 @@ export function LatePaymentsTable({ payments }: { payments: Row[] }) {
                   <PaymentStatusSelect
                     studentId={p.studentId}
                     payerName={p.payerName}
-                    status={"LATE" as PaymentStatus}
+                    status={p.status}
                     paidAt={null}
                     referenceMonth={p.referenceMonth}
                   />
