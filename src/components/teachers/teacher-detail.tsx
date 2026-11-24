@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, CalendarCheck2, GraduationCap, Users, XCircle, Repeat, Clock } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { TeacherAvatarUpload } from "@/components/teachers/teacher-avatar-upload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/shared/stat-card";
 import { TeacherFormDialog } from "@/components/teachers/teacher-form-dialog";
@@ -53,12 +53,12 @@ export function TeacherDetailView({
 
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Avatar className="size-16">
-            {teacher.user.avatarUrl && <AvatarImage src={teacher.user.avatarUrl} />}
-            <AvatarFallback className="text-lg">
-              {teacher.user.name.slice(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <TeacherAvatarUpload
+            userId={teacher.userId}
+            name={teacher.user.name}
+            avatarUrl={teacher.user.avatarUrl}
+            editable={canManage}
+          />
           <div>
             <h1 className="text-xl font-semibold">{teacher.user.name}</h1>
             <p className="text-sm text-muted-foreground">@{teacher.user.username}</p>

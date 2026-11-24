@@ -141,6 +141,26 @@ export async function updateTeacher(
   return { success: "Professor atualizado." };
 }
 
+// Standalone, same reasoning as the student-side updateStudentAvatar — set
+// by clicking the teacher's own avatar circle on their detail page, not
+// bundled into the "Editar professor" form. Admin-only, matching
+// createTeacher/updateTeacher/deleteTeacher above (coordinator can view a
+// teacher's profile but not edit it).
+export async function updateTeacherAvatar(userId: string, avatarUrl: string) {
+  const actor = await requireRole("ADMIN");
+  await prisma.user.update({ where: { id: userId }, data: { avatarUrl } });
+
+  await recordAudit({
+    entityType: "User",
+    entityId: userId,
+    action: "UPDATE",
+    actor,
+    changes: { avatarUrl: [undefined, avatarUrl] },
+  });
+
+  revalidatePath("/admin/teachers");
+}
+
 // A teacher editing their own blocked-time windows — visual-only for now
 // (shown on their Agenda and on their admin profile), never enforced
 // against scheduling. Scoped to the caller's own profile; there's no
