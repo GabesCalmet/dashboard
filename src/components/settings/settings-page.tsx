@@ -38,15 +38,19 @@ export function SettingsPage({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Segurança</CardTitle>
-            <CardDescription>Altere sua senha de acesso.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChangePasswordForm />
-          </CardContent>
-        </Card>
+        {/* Teacher/student passwords are admin-set from their own cadastro
+            (SetPasswordButton) — self-service change isn't needed for now. */}
+        {role !== "TEACHER" && role !== "STUDENT" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Segurança</CardTitle>
+              <CardDescription>Altere sua senha de acesso.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChangePasswordForm />
+            </CardContent>
+          </Card>
+        )}
 
         {role === "ADMIN" && <BackupCard />}
       </div>
