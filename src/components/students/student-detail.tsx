@@ -272,8 +272,7 @@ export function StudentDetailView({
               </>
             )}
             <p className="text-sm text-muted-foreground">
-              {student.course?.name ?? "Curso não definido"} · Prof.{" "}
-              {student.teacher ? stripTeacherWord(student.teacher.user.name) : "não atribuído"}
+              Teacher {student.teacher ? stripTeacherWord(student.teacher.user.name) : "não atribuído"}
             </p>
           </div>
         </div>
