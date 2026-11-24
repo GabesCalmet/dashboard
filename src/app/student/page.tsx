@@ -28,7 +28,7 @@ export default async function StudentDashboardPage() {
       <PageHeader title={`Olá, ${displayName.split(" ")[0]}`} description="Seu painel de estudos." />
 
       <Card className="mb-6">
-        <CardContent className="flex flex-wrap items-center gap-4 pt-6">
+        <CardContent className="flex flex-wrap items-center gap-4 py-6">
           <Avatar className="size-16">
             {user.avatarUrl && <AvatarImage src={user.avatarUrl} />}
             <AvatarFallback className="text-lg">{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
