@@ -283,6 +283,11 @@ export const studentFormSchema = z.object({
   cpf: z.string().optional(),
   phone: z.string().optional(),
   birthDate: z.string().optional(),
+  // "true"/"false" from DateInput's companion hidden input (yearOptional)
+  // — many parents don't know the exact birth year, so the day/month can
+  // be recorded alone, with the real date's year component meaningless
+  // whenever this is true.
+  birthDateYearUnknown: z.string().optional(),
   courseId: z.string().optional(),
   courseHistory: selectHistoryField,
   planId: z.string().optional(),

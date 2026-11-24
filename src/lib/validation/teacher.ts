@@ -42,6 +42,10 @@ export const teacherFormSchema = z.object({
     }),
   admissionDate: z.string().optional(),
   endDate: z.string().optional(),
+  birthDate: z.string().optional(),
+  // "true"/"false" from DateInput's companion hidden input (yearOptional)
+  // — see the matching field on the student schema for why.
+  birthDateYearUnknown: z.string().optional(),
   pixKey: z.string().optional(),
   notes: z.string().optional(),
 });

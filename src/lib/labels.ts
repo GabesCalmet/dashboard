@@ -314,6 +314,15 @@ export function formatCalendarDate(date: Date | string) {
   );
 }
 
+// Same UTC-pinned reasoning as formatCalendarDate, for a birthDate whose
+// year is a placeholder (DateInput's yearOptional, PARTIAL_DATE_YEAR) and
+// so isn't meaningful to show.
+export function formatCalendarDayMonth(date: Date | string) {
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "UTC" }).format(
+    new Date(date)
+  );
+}
+
 export function formatCalendarMonthYear(date: Date | string) {
   return new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(
     new Date(date)

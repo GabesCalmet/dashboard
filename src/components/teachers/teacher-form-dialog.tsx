@@ -34,6 +34,8 @@ type TeacherDefaults = {
   hourlyRateHistory?: ValueHistoryEntry[];
   admissionDate?: string;
   endDate?: string;
+  birthDate?: string;
+  birthDateYearUnknown?: boolean;
   pixKey?: string | null;
   notes?: string | null;
 };
@@ -113,6 +115,19 @@ export function TeacherFormDialog({ teacher }: { teacher?: TeacherDefaults }) {
           <div className="space-y-1.5">
             <Label htmlFor="endDate">Data de término (opcional)</Label>
             <DateInput id="endDate" name="endDate" defaultValue={teacher?.endDate} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="birthDate">Data de nascimento (opcional)</Label>
+            <DateInput
+              id="birthDate"
+              name="birthDate"
+              defaultValue={teacher?.birthDate}
+              yearOptional
+              defaultYearUnknown={teacher?.birthDateYearUnknown}
+            />
+            <p className="text-xs text-muted-foreground">
+              Não sabe o ano? Digite só dia e mês (ex: 1704).
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="pixKey">PIX</Label>

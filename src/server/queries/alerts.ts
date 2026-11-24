@@ -333,8 +333,11 @@ export type BirthdayAlert = {
   studentId: string;
   studentName: string;
   birthDate: Date;
-  // Age they're turning today.
-  turningAge: number;
+  birthDateYearUnknown: boolean;
+  // Age they're turning today — null whenever the birth year itself is
+  // unknown (birthDate then carries DateInput's placeholder year, which
+  // would make this meaningless).
+  turningAge: number | null;
 };
 
 // Students whose birthDate's month/day matches today — month/day only,
@@ -360,7 +363,8 @@ export async function getBirthdayAlerts(): Promise<BirthdayAlert[]> {
       studentId: s.id,
       studentName: s.user.name,
       birthDate: s.birthDate!,
-      turningAge: today.getUTCFullYear() - s.birthDate!.getUTCFullYear(),
+      birthDateYearUnknown: s.birthDateYearUnknown,
+      turningAge: s.birthDateYearUnknown ? null : today.getUTCFullYear() - s.birthDate!.getUTCFullYear(),
     }))
     .sort((a, b) => a.studentName.localeCompare(b.studentName, "pt-BR"));
 }

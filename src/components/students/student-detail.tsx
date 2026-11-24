@@ -314,6 +314,7 @@ export function StudentDetailView({
                   cpf: student.cpf,
                   phone: student.user.phone,
                   birthDate: student.birthDate?.toISOString().slice(0, 10),
+                  birthDateYearUnknown: student.birthDateYearUnknown,
                   courseId: student.courseId,
                   courseHistory: parseSelectHistory(student.courseHistory),
                   planId: student.planId,

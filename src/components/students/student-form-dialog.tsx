@@ -52,6 +52,7 @@ type StudentDefaults = {
   cpf?: string | null;
   phone?: string | null;
   birthDate?: string;
+  birthDateYearUnknown?: boolean;
   courseId?: string | null;
   courseHistory?: SelectHistoryEntry[];
   planId?: string | null;
@@ -231,7 +232,16 @@ export function StudentFormDialog({
 
             <div className="space-y-1.5">
               <Label htmlFor="birthDate">Data de nascimento</Label>
-              <DateInput id="birthDate" name="birthDate" defaultValue={student?.birthDate} />
+              <DateInput
+                id="birthDate"
+                name="birthDate"
+                defaultValue={student?.birthDate}
+                yearOptional
+                defaultYearUnknown={student?.birthDateYearUnknown}
+              />
+              <p className="text-xs text-muted-foreground">
+                Não sabe o ano? Digite só dia e mês (ex: 1704).
+              </p>
             </div>
           </div>
 

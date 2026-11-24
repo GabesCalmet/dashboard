@@ -3,7 +3,7 @@ import { Cake } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { BirthdayCardDialog } from "@/components/alerts/birthday-card-dialog";
-import { formatCalendarDate } from "@/lib/labels";
+import { formatCalendarDate, formatCalendarDayMonth } from "@/lib/labels";
 import type { BirthdayAlert } from "@/server/queries/alerts";
 
 export function BirthdayAlertsView({
@@ -40,9 +40,13 @@ export function BirthdayAlertsView({
                     {alert.studentName}
                   </Link>
                   <p className="text-sm text-muted-foreground">
-                    Completando {alert.turningAge} anos hoje
+                    {alert.turningAge !== null ? `Completando ${alert.turningAge} anos hoje` : "Aniversário hoje"}
                   </p>
-                  <p className="text-xs text-muted-foreground">{formatCalendarDate(alert.birthDate)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {alert.birthDateYearUnknown
+                      ? formatCalendarDayMonth(alert.birthDate)
+                      : formatCalendarDate(alert.birthDate)}
+                  </p>
                   <div className="mt-3">
                     <BirthdayCardDialog studentName={alert.studentName} />
                   </div>

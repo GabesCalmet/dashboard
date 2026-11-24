@@ -201,6 +201,11 @@ model TeacherProfile {
   admissionDate     DateTime
   // Optional — this teacher's employment end date, if known.
   endDate           DateTime?
+  birthDate         DateTime?
+  // True when birthDate's year is a placeholder (not a real birth year) —
+  // many cadastros only have the day/month. See the matching field on
+  // StudentProfile below.
+  birthDateYearUnknown Boolean @default(false)
   // PIX key for paying this teacher — purely informational, display only.
   pixKey            String?
   notes             String?
@@ -224,6 +229,12 @@ model StudentProfile {
   groupName              String?
   cpf                    String?         @unique
   birthDate              DateTime?
+  // True when birthDate's year is a placeholder (not a real birth year) —
+  // DateInput's yearOptional mode, for a parent who only knows day/month.
+  // getBirthdayAlerts still matches on month/day regardless either way;
+  // only a display that would show the year (or compute an age from it)
+  // needs to check this first.
+  birthDateYearUnknown   Boolean         @default(false)
   address                String?
   // Google Meet (or any video call) link for this student's classes — set
   // once on the cadastro instead of per lesson, shown as a "Entrar na aula"

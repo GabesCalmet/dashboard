@@ -19,6 +19,8 @@ import {
   studentStatusVariant,
   formatCurrency,
   formatDate,
+  formatCalendarDate,
+  formatCalendarDayMonth,
   blockTypeLabel,
 } from "@/lib/labels";
 import type { getTeacherDetail, getTeacherMonthlyTrend } from "@/server/queries/teachers";
@@ -90,6 +92,8 @@ export function TeacherDetailView({
                   hourlyRateHistory: parseValueHistory(teacher.hourlyRateHistory),
                   admissionDate: teacher.admissionDate.toISOString().slice(0, 10),
                   endDate: teacher.endDate?.toISOString().slice(0, 10),
+                  birthDate: teacher.birthDate?.toISOString().slice(0, 10),
+                  birthDateYearUnknown: teacher.birthDateYearUnknown,
                   pixKey: teacher.pixKey,
                   notes: teacher.notes,
                 }}
@@ -212,6 +216,16 @@ export function TeacherDetailView({
           <CardContent className="space-y-3 text-sm">
             <Row label="Admissão" value={formatDate(teacher.admissionDate)} />
             <Row label="Término" value={teacher.endDate ? formatDate(teacher.endDate) : "—"} />
+            <Row
+              label="Data de nascimento"
+              value={
+                teacher.birthDate
+                  ? teacher.birthDateYearUnknown
+                    ? formatCalendarDayMonth(teacher.birthDate)
+                    : formatCalendarDate(teacher.birthDate)
+                  : "—"
+              }
+            />
             <Row label="Observações" value={teacher.notes || "—"} />
           </CardContent>
         </Card>
