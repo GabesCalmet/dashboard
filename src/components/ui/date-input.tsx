@@ -53,7 +53,11 @@ export function DateInput({
   name?: string;
   value?: string; // ISO yyyy-mm-dd — controlled when provided
   defaultValue?: string; // ISO yyyy-mm-dd — uncontrolled initial value
-  onChange?: (isoValue: string) => void;
+  // yearUnknown is always passed too (true only when yearOptional and
+  // exactly dd/MM was entered) — safe for every existing caller to
+  // ignore, since JS/TS both allow a callback to declare fewer params
+  // than it's invoked with.
+  onChange?: (isoValue: string, yearUnknown: boolean) => void;
   required?: boolean;
   disabled?: boolean;
   placeholder?: string;
@@ -86,7 +90,7 @@ export function DateInput({
     setYearUnknown(false);
     setText(isoToDisplay(iso, false));
     if (!isControlled) setUncontrolledIso(iso);
-    onChange?.(iso);
+    onChange?.(iso, false);
   }
 
   function handleTextChange(raw: string) {
@@ -111,7 +115,7 @@ export function DateInput({
     setSyncedIso(iso);
     setYearUnknown(unknown);
     if (!isControlled) setUncontrolledIso(iso);
-    onChange?.(iso);
+    onChange?.(iso, unknown);
   }
 
   function handleCalendarSelect(day: Date | undefined) {

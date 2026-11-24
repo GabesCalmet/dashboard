@@ -146,6 +146,8 @@ const groupMemberUpdatesField = z
           name: typeof e.name === "string" ? e.name.trim() : "",
           email: typeof e.email === "string" && e.email ? e.email : undefined,
           phone: typeof e.phone === "string" && e.phone ? e.phone : undefined,
+          birthDate: typeof e.birthDate === "string" && e.birthDate ? e.birthDate : undefined,
+          birthDateYearUnknown: e.birthDateYearUnknown === true,
         }))
         .filter((e) => e.name.length >= 2);
     } catch {

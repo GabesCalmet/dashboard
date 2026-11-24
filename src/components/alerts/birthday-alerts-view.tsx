@@ -30,7 +30,7 @@ export function BirthdayAlertsView({
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {alerts.map((alert) => (
-            <Card key={alert.studentId} className="border-success/40 bg-success/5">
+            <Card key={alert.id} className="border-success/40 bg-success/5">
               <CardContent className="flex items-start gap-3 pt-6">
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-success/15 text-success">
                   <Cake className="size-4.5" />

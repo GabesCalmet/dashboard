@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DateInput } from "@/components/ui/date-input";
 import { StudentAvatarUpload } from "@/components/students/student-avatar-upload";
 
 export type GroupMemberFields = {
@@ -12,6 +13,8 @@ export type GroupMemberFields = {
   email: string | null;
   phone: string | null;
   avatarUrl?: string | null;
+  birthDate?: string | null;
+  birthDateYearUnknown?: boolean;
 };
 
 // Lets every group participant's own name/email/telefone be edited right
@@ -33,16 +36,35 @@ export function GroupMemberFieldsEditor({
   fieldName?: string;
 }) {
   const [entries, setEntries] = useState(
-    members.map((m) => ({ ...m, email: m.email ?? "", phone: m.phone ?? "" }))
+    members.map((m) => ({
+      ...m,
+      email: m.email ?? "",
+      phone: m.phone ?? "",
+      birthDate: m.birthDate ?? "",
+      birthDateYearUnknown: m.birthDateYearUnknown ?? false,
+    }))
   );
 
   function update(userId: string, field: "name" | "email" | "phone", value: string) {
     setEntries((prev) => prev.map((e) => (e.userId === userId ? { ...e, [field]: value } : e)));
   }
 
+  function updateBirthDate(userId: string, birthDate: string, birthDateYearUnknown: boolean) {
+    setEntries((prev) =>
+      prev.map((e) => (e.userId === userId ? { ...e, birthDate, birthDateYearUnknown } : e))
+    );
+  }
+
   if (entries.length === 0) return null;
 
-  const value = entries.map(({ userId, name, email, phone }) => ({ userId, name, email, phone }));
+  const value = entries.map(({ userId, name, email, phone, birthDate, birthDateYearUnknown }) => ({
+    userId,
+    name,
+    email,
+    phone,
+    birthDate,
+    birthDateYearUnknown,
+  }));
 
   return (
     <div className="space-y-4 sm:col-span-2">
@@ -82,6 +104,19 @@ export function GroupMemberFieldsEditor({
           <div className="space-y-1.5 sm:col-span-2">
             <Label>Telefone</Label>
             <Input value={entry.phone} onChange={(e) => update(entry.userId, "phone", e.target.value)} />
+          </div>
+
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Data de nascimento</Label>
+            <DateInput
+              value={entry.birthDate}
+              onChange={(iso, yearUnknown) => updateBirthDate(entry.userId, iso, yearUnknown)}
+              yearOptional
+              defaultYearUnknown={entry.birthDateYearUnknown}
+            />
+            <p className="text-xs text-muted-foreground">
+              Não sabe o ano? Digite só dia e mês (ex: 1704).
+            </p>
           </div>
 
           <p className="text-xs text-muted-foreground sm:col-span-2">

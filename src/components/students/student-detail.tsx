@@ -309,6 +309,8 @@ export function StudentDetailView({
                     email: m.user.email,
                     phone: m.user.phone,
                     avatarUrl: m.user.avatarUrl,
+                    birthDate: m.birthDate?.toISOString().slice(0, 10),
+                    birthDateYearUnknown: m.birthDateYearUnknown,
                   })),
                   email: student.user.email,
                   cpf: student.cpf,

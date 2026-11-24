@@ -400,6 +400,11 @@ model StudentGroupMember {
   dueDay              Int            @default(10)
   dueDayHistory       Json           @default("[]")
   bankAccount         BankAccount    @default(JOE)
+  // This participant's own birthday — the group's one StudentProfile only
+  // ever holds the primary member's, same reasoning as every other
+  // per-participant field above.
+  birthDate              DateTime?
+  birthDateYearUnknown   Boolean     @default(false)
   createdAt           DateTime       @default(now())
 
   @@map("student_group_members")

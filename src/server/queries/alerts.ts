@@ -330,6 +330,11 @@ export async function getAlertHistory(): Promise<StudentAlertHistory[]> {
 }
 
 export type BirthdayAlert = {
+  // Unique per alert (the birthday person's own userId) — two different
+  // people in the same group can each have a birthday today, and both
+  // then share the same studentId (the group's), so this is what a list
+  // keys on, not studentId.
+  id: string;
   studentId: string;
   studentName: string;
   birthDate: Date;
@@ -340,31 +345,56 @@ export type BirthdayAlert = {
   turningAge: number | null;
 };
 
-// Students whose birthDate's month/day matches today — month/day only,
-// the birth year never factors into whether today IS the birthday.
-// birthDate is always constructed as UTC midnight of the intended
-// calendar day (see formatCalendarDate's comment), so this compares with
-// the UTC getters, never the server's local ones, to avoid an off-by-one
-// day near midnight. ACTIVE students only — matches every other
-// dashboard "who to look at today" figure.
+// Students (and group members, who each have their own birthDate — see
+// StudentGroupMember) whose birthDate's month/day matches today —
+// month/day only, the birth year never factors into whether today IS the
+// birthday. birthDate is always constructed as UTC midnight of the
+// intended calendar day (see formatCalendarDate's comment), so this
+// compares with the UTC getters, never the server's local ones, to avoid
+// an off-by-one day near midnight. ACTIVE students only — matches every
+// other dashboard "who to look at today" figure; a group member's own
+// alert goes through the group's shared studentId link (there's no
+// separate profile page per member), gated on the group's own status
+// since a member has none of its own.
 export async function getBirthdayAlerts(): Promise<BirthdayAlert[]> {
   const today = brazilToday();
   const todayMonth = today.getUTCMonth();
   const todayDate = today.getUTCDate();
 
-  const students = await prisma.studentProfile.findMany({
-    where: { status: "ACTIVE", birthDate: { not: null } },
-    include: { user: true },
-  });
+  const [students, groupMembers] = await Promise.all([
+    prisma.studentProfile.findMany({
+      where: { status: "ACTIVE", birthDate: { not: null } },
+      include: { user: true },
+    }),
+    prisma.studentGroupMember.findMany({
+      where: { birthDate: { not: null }, studentProfile: { status: "ACTIVE" } },
+      include: { user: true },
+    }),
+  ]);
 
-  return students
+  const fromStudents = students
     .filter((s) => s.birthDate!.getUTCMonth() === todayMonth && s.birthDate!.getUTCDate() === todayDate)
     .map((s) => ({
+      id: s.userId,
       studentId: s.id,
       studentName: s.user.name,
       birthDate: s.birthDate!,
       birthDateYearUnknown: s.birthDateYearUnknown,
       turningAge: s.birthDateYearUnknown ? null : today.getUTCFullYear() - s.birthDate!.getUTCFullYear(),
-    }))
-    .sort((a, b) => a.studentName.localeCompare(b.studentName, "pt-BR"));
+    }));
+
+  const fromGroupMembers = groupMembers
+    .filter((m) => m.birthDate!.getUTCMonth() === todayMonth && m.birthDate!.getUTCDate() === todayDate)
+    .map((m) => ({
+      id: m.userId,
+      studentId: m.studentProfileId,
+      studentName: m.user.name,
+      birthDate: m.birthDate!,
+      birthDateYearUnknown: m.birthDateYearUnknown,
+      turningAge: m.birthDateYearUnknown ? null : today.getUTCFullYear() - m.birthDate!.getUTCFullYear(),
+    }));
+
+  return [...fromStudents, ...fromGroupMembers].sort((a, b) =>
+    a.studentName.localeCompare(b.studentName, "pt-BR")
+  );
 }
