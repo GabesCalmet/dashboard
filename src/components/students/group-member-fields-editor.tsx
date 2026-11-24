@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { StudentAvatarUpload } from "@/components/students/student-avatar-upload";
 
 export type GroupMemberFields = {
   userId: string;
@@ -10,6 +11,7 @@ export type GroupMemberFields = {
   username: string | null;
   email: string | null;
   phone: string | null;
+  avatarUrl?: string | null;
 };
 
 // Lets every group participant's own name/email/telefone be edited right
@@ -49,6 +51,15 @@ export function GroupMemberFieldsEditor({
 
       {entries.map((entry) => (
         <div key={entry.userId} className="grid grid-cols-1 gap-4 rounded-lg border p-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <StudentAvatarUpload
+              userId={entry.userId}
+              name={entry.name}
+              avatarUrl={members.find((m) => m.userId === entry.userId)?.avatarUrl}
+              editable
+            />
+          </div>
+
           <div className="space-y-1.5 sm:col-span-2">
             <Label>Nome completo</Label>
             <Input value={entry.name} onChange={(e) => update(entry.userId, "name", e.target.value)} />
