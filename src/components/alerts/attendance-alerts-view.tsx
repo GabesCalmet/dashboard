@@ -2,19 +2,33 @@ import Link from "next/link";
 import { History } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AttendanceAlertRow } from "@/components/alerts/attendance-alert-row";
+import { TeacherCountPieChart } from "@/components/alerts/teacher-count-pie-chart";
+import { stripTeacherWord } from "@/lib/teacher-order";
 import type { AttendanceAlert } from "@/server/queries/alerts";
+import type { getTeacherCancellationBreakdown } from "@/server/queries/teachers";
 
 export function AttendanceAlertsView({
   alerts,
+  cancellationBreakdown,
   studentsBasePath,
   historyBasePath,
 }: {
   alerts: AttendanceAlert[];
+  cancellationBreakdown: Awaited<ReturnType<typeof getTeacherCancellationBreakdown>>;
   studentsBasePath: string;
   historyBasePath: string;
 }) {
+  const breakdown = cancellationBreakdown.map((r) => ({
+    ...r,
+    teacherName: stripTeacherWord(r.teacherName),
+  }));
+  const noShowData = breakdown.map((r) => ({ name: r.teacherName, value: r.noShow }));
+  const canceledLateData = breakdown.map((r) => ({ name: r.teacherName, value: r.canceledLate }));
+  const canceledByStudentData = breakdown.map((r) => ({ name: r.teacherName, value: r.canceledByStudent }));
+  const canceledByTeacherData = breakdown.map((r) => ({ name: r.teacherName, value: r.canceledByTeacher }));
+
   return (
     <div>
       <PageHeader
@@ -37,7 +51,7 @@ export function AttendanceAlertsView({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {alerts.map((alert) => (
             <AttendanceAlertRow
               key={alert.studentId}
@@ -48,6 +62,42 @@ export function AttendanceAlertsView({
           ))}
         </div>
       )}
+
+      <h2 className="mt-8 mb-4 text-lg font-semibold">Cancelamentos por professor (mês)</h2>
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Não compareceu</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TeacherCountPieChart rows={noShowData} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Cancelamento tarde</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TeacherCountPieChart rows={canceledLateData} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Cancelamento do aluno</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TeacherCountPieChart rows={canceledByStudentData} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Cancelamento do professor</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TeacherCountPieChart rows={canceledByTeacherData} />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

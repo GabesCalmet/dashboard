@@ -821,6 +821,63 @@ export async function getTeacherMonthlyTrend(teacherId: string, monthsBack = 6) 
   });
 }
 
+// Per-teacher counts of the four lesson outcomes the Alertas de
+// frequência page cares about (NC, CT, CA, CP — see the LessonStatus
+// enum's own comments), for the current month across every active
+// teacher — the "who's this actually happening with" breakdown behind
+// that page's per-student alert cards, which only ever show the
+// students already over the alert threshold, not the full distribution.
+export async function getTeacherCancellationBreakdown(year: number, month: number) {
+  const monthStart = new Date(year, month, 1);
+  const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
+
+  const [teachers, stats] = await Promise.all([
+    prisma.teacherProfile.findMany({
+      where: { user: { active: true } },
+      include: { user: true },
+    }),
+    prisma.lesson.groupBy({
+      by: ["teacherId", "status"],
+      where: {
+        scheduledAt: { gte: monthStart, lte: monthEnd },
+        status: { in: ["NO_SHOW", "CANCELED_LATE", "CANCELED_BY_STUDENT", "CANCELED_BY_TEACHER"] },
+      },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const countsByTeacher = new Map<
+    string,
+    { noShow: number; canceledLate: number; canceledByStudent: number; canceledByTeacher: number }
+  >();
+  for (const g of stats) {
+    const entry = countsByTeacher.get(g.teacherId) ?? {
+      noShow: 0,
+      canceledLate: 0,
+      canceledByStudent: 0,
+      canceledByTeacher: 0,
+    };
+    if (g.status === "NO_SHOW") entry.noShow += g._count._all;
+    if (g.status === "CANCELED_LATE") entry.canceledLate += g._count._all;
+    if (g.status === "CANCELED_BY_STUDENT") entry.canceledByStudent += g._count._all;
+    if (g.status === "CANCELED_BY_TEACHER") entry.canceledByTeacher += g._count._all;
+    countsByTeacher.set(g.teacherId, entry);
+  }
+
+  return teachers
+    .map((t) => ({
+      teacherId: t.id,
+      teacherName: t.user.name,
+      ...(countsByTeacher.get(t.id) ?? {
+        noShow: 0,
+        canceledLate: 0,
+        canceledByStudent: 0,
+        canceledByTeacher: 0,
+      }),
+    }))
+    .sort((a, b) => teacherOrderIndex(a.teacherName) - teacherOrderIndex(b.teacherName));
+}
+
 // Férias provision — 8,3% (≈1/12) of each teacher's Contratado total
 // (real weekly-schedule occurrences × class length × rate for HOURLY, the
 // flat amount for MONTHLY — see contratadoFerias on

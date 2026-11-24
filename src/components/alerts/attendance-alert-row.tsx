@@ -45,22 +45,24 @@ export function AttendanceAlertRow({
 
   return (
     <Card>
-      <CardContent className="space-y-3 pt-6">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <Link href={studentHref} className="font-medium hover:underline">
+      <CardContent className="space-y-2 p-3 text-sm">
+        <div className="flex flex-wrap items-start justify-between gap-1.5">
+          <div className="min-w-0">
+            <Link href={studentHref} className="truncate font-medium hover:underline">
               {alert.studentName}
             </Link>
             {alert.teacherName && (
-              <p className="text-xs text-muted-foreground">Prof. {stripTeacherWord(alert.teacherName)}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                Prof. {stripTeacherWord(alert.teacherName)}
+              </p>
             )}
           </div>
-          <Badge variant={alert.severity === "RED" ? "destructive" : "warning"}>
+          <Badge variant={alert.severity === "RED" ? "destructive" : "warning"} className="shrink-0">
             {alert.severity === "RED" ? "Crítico" : "Atenção"}
           </Badge>
         </div>
 
-        <p className="text-sm">{alert.reason}</p>
+        <p className="text-xs">{alert.reason}</p>
 
         <ul className="space-y-0.5 text-xs text-muted-foreground">
           {alert.lessons.map((l) => (
@@ -75,17 +77,18 @@ export function AttendanceAlertRow({
           onChange={(e) => setNote(e.target.value)}
           placeholder="O que aconteceu?"
           rows={2}
+          className="text-xs"
         />
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           <Button size="sm" variant="outline" onClick={resolve} disabled={isPending}>
             {isPending && <Loader2 className="animate-spin" />}
-            Resolver alerta
+            Resolver
           </Button>
           <Button size="sm" variant="ghost" asChild>
             <Link href={historyHref}>
               <History />
-              Histórico de alertas
+              Histórico
             </Link>
           </Button>
         </div>
