@@ -1,6 +1,6 @@
 "use client";
 
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LabelList } from "recharts";
 
 type Row = { name: string; value: number };
 
@@ -44,12 +44,19 @@ export function TeacherCountBarChart({ rows }: { rows: Row[] }) {
           type="category"
           dataKey="name"
           width={110}
+          // Recharts skips a category tick it guesses would collide with
+          // its neighbor once there are more than a handful — interval={0}
+          // forces every single one to render, which a list this short
+          // always has room for.
+          interval={0}
           tickLine={false}
           axisLine={false}
           className="text-xs fill-muted-foreground"
         />
         <Tooltip content={<CountTooltip />} cursor={{ fill: "var(--secondary)" }} />
-        <Bar dataKey="value" fill="var(--color-chart-1)" radius={[0, 4, 4, 0]} maxBarSize={20} />
+        <Bar dataKey="value" fill="var(--color-chart-1)" radius={[0, 4, 4, 0]} maxBarSize={20}>
+          <LabelList dataKey="value" position="right" className="fill-foreground text-xs" />
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   );
