@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Camera, Image as ImageIcon, Loader2, Upload } from "lucide-react";
+import { Camera, ClipboardPaste, Image as ImageIcon, Loader2, Upload } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -11,18 +11,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { uploadAvatarImage } from "@/lib/avatar-upload";
+import { uploadAvatarImage, readImageFromClipboard } from "@/lib/avatar-upload";
 import { updateStudentAvatar } from "@/server/actions/students";
 
-// On desktop, clicking the avatar jumps straight to the file picker —
-// there's only ever one real choice there. On a phone there's an actual
-// decision to make, so it opens a small menu instead: Enviar foto (the
-// same plain file picker), Tirar foto (opens the camera directly, via a
-// second file input with capture="environment" — desktop browsers ignore
-// that attribute, which is why it's phone-only), and Acessar galeria
-// (the same picker as Enviar foto, as its own clearly-labeled entry).
-// Only wired up at all when the viewer can edit this student; otherwise
-// it's the same plain avatar as before.
+// Clicking the avatar opens a small menu: Enviar foto (file picker) and
+// Colar imagem (reads the clipboard directly) always, plus — phone-only,
+// since capture="environment" does nothing on desktop and clipboard.read()
+// support on mobile browsers is spotty — Tirar foto (opens the camera
+// directly) and Acessar galeria (the same picker as Enviar foto, as its
+// own clearly-labeled entry). Only wired up at all when the viewer can
+// edit this student; otherwise it's the same plain avatar as before.
 export function StudentAvatarUpload({
   userId,
   name,
@@ -65,6 +63,17 @@ export function StudentAvatarUpload({
       await updateStudentAvatar(userId, result.url);
       toast.success("Foto atualizada.");
       router.refresh();
+    });
+  }
+
+  async function handlePasteClick() {
+    startTransition(async () => {
+      const result = await readImageFromClipboard();
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      await handleFile(result.file);
     });
   }
 
@@ -116,24 +125,27 @@ export function StudentAvatarUpload({
           e.target.value = "";
         }}
       />
-      {isMobile ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>{triggerButton}</DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onSelect={() => fileInputRef.current?.click()}>
-              <Upload /> Enviar foto
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => cameraInputRef.current?.click()}>
-              <Camera /> Tirar foto
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => fileInputRef.current?.click()}>
-              <ImageIcon /> Acessar galeria
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : (
-        <span onClick={() => fileInputRef.current?.click()}>{triggerButton}</span>
-      )}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>{triggerButton}</DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem onSelect={() => fileInputRef.current?.click()}>
+            <Upload /> Enviar foto
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={handlePasteClick}>
+            <ClipboardPaste /> Colar imagem
+          </DropdownMenuItem>
+          {isMobile && (
+            <>
+              <DropdownMenuItem onSelect={() => cameraInputRef.current?.click()}>
+                <Camera /> Tirar foto
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => fileInputRef.current?.click()}>
+                <ImageIcon /> Acessar galeria
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </>
   );
 }
