@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AttendanceAlertRow } from "@/components/alerts/attendance-alert-row";
-import { TeacherCountPieChart } from "@/components/alerts/teacher-count-pie-chart";
+import { TeacherCountBarChart } from "@/components/alerts/teacher-count-bar-chart";
 import { stripTeacherWord } from "@/lib/teacher-order";
 import type { AttendanceAlert } from "@/server/queries/alerts";
 import type { getTeacherCancellationBreakdown } from "@/server/queries/teachers";
@@ -70,7 +70,7 @@ export function AttendanceAlertsView({
             <CardTitle className="text-sm">Não compareceu</CardTitle>
           </CardHeader>
           <CardContent>
-            <TeacherCountPieChart rows={noShowData} />
+            <TeacherCountBarChart rows={noShowData} />
           </CardContent>
         </Card>
         <Card>
@@ -78,7 +78,7 @@ export function AttendanceAlertsView({
             <CardTitle className="text-sm">Cancelamento tarde</CardTitle>
           </CardHeader>
           <CardContent>
-            <TeacherCountPieChart rows={canceledLateData} />
+            <TeacherCountBarChart rows={canceledLateData} />
           </CardContent>
         </Card>
         <Card>
@@ -86,7 +86,7 @@ export function AttendanceAlertsView({
             <CardTitle className="text-sm">Cancelamento do aluno</CardTitle>
           </CardHeader>
           <CardContent>
-            <TeacherCountPieChart rows={canceledByStudentData} />
+            <TeacherCountBarChart rows={canceledByStudentData} />
           </CardContent>
         </Card>
         <Card>
@@ -94,7 +94,7 @@ export function AttendanceAlertsView({
             <CardTitle className="text-sm">Cancelamento do professor</CardTitle>
           </CardHeader>
           <CardContent>
-            <TeacherCountPieChart rows={canceledByTeacherData} />
+            <TeacherCountBarChart rows={canceledByTeacherData} />
           </CardContent>
         </Card>
       </div>
