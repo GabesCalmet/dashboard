@@ -11,7 +11,6 @@ import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
 import { getStudentDashboardData } from "@/server/queries/student-dashboard";
@@ -38,14 +37,9 @@ export default async function StudentDashboardPage() {
             <p className="text-lg font-semibold">{displayName}</p>
             {idSuffix && <p className="text-xs text-muted-foreground">ID: {idSuffix}</p>}
             <p className="text-sm text-muted-foreground">
-              Prof.{" "}
+              Teacher{" "}
               {data.student.teacher ? stripTeacherWord(data.student.teacher.user.name) : "não atribuído"}
             </p>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-sm font-medium">{data.student.level}</span>
-              <Progress value={data.student.levelProgress} className="h-1.5 max-w-40" />
-              <span className="text-xs text-muted-foreground">{data.student.levelProgress}%</span>
-            </div>
           </div>
         </CardContent>
       </Card>
