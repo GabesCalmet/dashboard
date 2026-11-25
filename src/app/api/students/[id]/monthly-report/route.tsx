@@ -71,11 +71,12 @@ function observacoesFor(l: {
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
-  if (!user || (user.role !== "ADMIN" && user.role !== "COORDINATOR")) {
+  const { id: studentId } = await context.params;
+  const isSelf = user?.role === "STUDENT" && user.studentProfile?.id === studentId;
+  if (!user || !(user.role === "ADMIN" || user.role === "COORDINATOR" || isSelf)) {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
   }
 
-  const { id: studentId } = await context.params;
   const now = new Date();
   const yearParam = request.nextUrl.searchParams.get("year");
   const monthParam = request.nextUrl.searchParams.get("month");
