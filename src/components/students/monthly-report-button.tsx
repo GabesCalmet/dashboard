@@ -1,29 +1,17 @@
+import Link from "next/link";
 import { FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Opens the "Relatório Mensal de Aulas" PDF for one student/month in a new
-// tab — a plain link (no `download` attribute), so the browser's own PDF
-// viewer shows it first. That viewer has its own download/print controls,
-// which is the "view it, then decide to download" flow this is meant for,
-// as opposed to saving the file immediately on click.
-export function MonthlyReportButton({
-  studentId,
-  year,
-  month,
-}: {
-  studentId: string;
-  year: number;
-  month: number;
-}) {
+// Opens the in-app report viewer page (not the raw PDF directly) — a
+// plain new-tab link to the PDF left someone stuck with no way back and
+// no visible download button inside an installed PWA/app wrapper on a
+// phone. The viewer page has its own explicit "Voltar" and "Baixar PDF".
+export function MonthlyReportButton({ href }: { href: string }) {
   return (
     <Button asChild size="lg">
-      <a
-        href={`/api/students/${studentId}/monthly-report?year=${year}&month=${month}`}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
+      <Link href={href}>
         <FileText className="size-4" /> Visualizar Relatório
-      </a>
+      </Link>
     </Button>
   );
 }

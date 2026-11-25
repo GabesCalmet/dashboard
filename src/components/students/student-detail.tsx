@@ -284,9 +284,7 @@ export function StudentDetailView({
         {permissions.canEdit && (
           <div className="flex flex-1 items-center justify-center">
             <MonthlyReportButton
-              studentId={student.id}
-              year={refMonthDate.getFullYear()}
-              month={refMonthDate.getMonth()}
+              href={`${basePath}/${student.id}/report?year=${refMonthDate.getFullYear()}&month=${refMonthDate.getMonth()}`}
             />
           </div>
         )}

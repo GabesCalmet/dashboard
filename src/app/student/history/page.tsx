@@ -29,7 +29,9 @@ export default async function StudentHistoryPage() {
       <PageHeader title="Histórico de Aulas" description="Todas as suas aulas e estatísticas de estudo." />
 
       <div className="mb-6">
-        <MonthlyReportButton studentId={studentId} year={now.getFullYear()} month={now.getMonth()} />
+        <MonthlyReportButton
+          href={`/student/history/report?year=${now.getFullYear()}&month=${now.getMonth()}`}
+        />
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
