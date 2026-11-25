@@ -362,6 +362,7 @@ model StudentProfile {
   achievements     StudentAchievement[]
   leadInteractions LeadInteraction[]
   alertDismissals  StudentAlertDismissal[]
+  alertActionFlag  StudentAlertActionFlag?
   // Additional people sharing this one course/billing (a "grupo" student) —
   // each gets their own separate login but sees the exact same shared
   // profile (lessons, progress, billing) once signed in. The main
@@ -430,6 +431,22 @@ model StudentAlertDismissal {
 
   @@index([studentId])
   @@map("student_alert_dismissals")
+}
+
+// Marks a live (not yet resolved) attendance alert as "Ação necessária"
+// instead of the default "Pendente" — the Alertas de frequência board's
+// second column. One row per student while it's flagged; deleted the
+// moment it's either reset back to Pendente or the alert itself is
+// resolved (see resolveStudentAlert), so it never outlives the alert it
+// was set on.
+model StudentAlertActionFlag {
+  id        String         @id @default(uuid())
+  studentId String         @unique
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  markedBy  String // actor name snapshot
+  markedAt  DateTime       @default(now())
+
+  @@map("student_alert_action_flags")
 }
 
 model LevelHistory {

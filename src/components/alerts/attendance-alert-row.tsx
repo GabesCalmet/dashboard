@@ -9,10 +9,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { resolveStudentAlert } from "@/server/actions/alerts";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { resolveStudentAlert, setAlertActionNeeded } from "@/server/actions/alerts";
 import { formatDateTime, lessonStatusLabel } from "@/lib/labels";
 import { stripTeacherWord } from "@/lib/teacher-order";
 import type { AttendanceAlert } from "@/server/queries/alerts";
+
+// A live alert is always Pendente or Ação necessária — Resolvido isn't a
+// value this select ever actually sits on, it's a one-way trigger that
+// removes the card from the board entirely (see resolveStudentAlert),
+// so the card disappears the moment it's chosen rather than updating in
+// place like the other two.
+type BoardStatus = "PENDENTE" | "ACAO_NECESSARIA" | "RESOLVIDO";
 
 export function AttendanceAlertRow({
   alert,
@@ -27,18 +35,23 @@ export function AttendanceAlertRow({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  function resolve() {
+  function handleStatusChange(value: BoardStatus) {
     startTransition(async () => {
       try {
-        await resolveStudentAlert(alert.studentId, note, {
-          severity: alert.severity,
-          reason: alert.reason,
-          lessons: alert.lessons,
-        });
-        toast.success("Alerta resolvido.");
+        if (value === "RESOLVIDO") {
+          await resolveStudentAlert(alert.studentId, note, {
+            severity: alert.severity,
+            reason: alert.reason,
+            lessons: alert.lessons,
+          });
+          toast.success("Alerta resolvido.");
+        } else {
+          await setAlertActionNeeded(alert.studentId, value === "ACAO_NECESSARIA");
+          toast.success("Status do alerta atualizado.");
+        }
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Erro ao resolver alerta.");
+        toast.error(err instanceof Error ? err.message : "Erro ao atualizar alerta.");
       }
     });
   }
@@ -83,11 +96,21 @@ export function AttendanceAlertRow({
           className="text-xs"
         />
 
-        <div className="flex flex-wrap gap-1.5">
-          <Button size="sm" variant="outline" onClick={resolve} disabled={isPending}>
-            {isPending && <Loader2 className="animate-spin" />}
-            Resolver
-          </Button>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Select
+            value={alert.actionNeeded ? "ACAO_NECESSARIA" : "PENDENTE"}
+            disabled={isPending}
+            onValueChange={(value) => handleStatusChange(value as BoardStatus)}
+          >
+            <SelectTrigger size="sm" className="w-[150px]">
+              {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <SelectValue />}
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="PENDENTE">Pendente</SelectItem>
+              <SelectItem value="ACAO_NECESSARIA">Ação necessária</SelectItem>
+              <SelectItem value="RESOLVIDO">Resolvido</SelectItem>
+            </SelectContent>
+          </Select>
           <Button size="sm" variant="ghost" asChild>
             <Link href={historyHref}>
               <History />

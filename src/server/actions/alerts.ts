@@ -21,16 +21,21 @@ export async function resolveStudentAlert(
 ) {
   const actor = await requireRole("ADMIN", "COORDINATOR");
 
-  await prisma.studentAlertDismissal.create({
-    data: {
-      studentId,
-      note: note.trim() || null,
-      severity: snapshot.severity,
-      reason: snapshot.reason,
-      lessons: snapshot.lessons,
-      dismissedBy: actor.name,
-    },
-  });
+  await prisma.$transaction([
+    prisma.studentAlertDismissal.create({
+      data: {
+        studentId,
+        note: note.trim() || null,
+        severity: snapshot.severity,
+        reason: snapshot.reason,
+        lessons: snapshot.lessons,
+        dismissedBy: actor.name,
+      },
+    }),
+    // Resolving always clears any "Ação necessária" flag too — it belongs
+    // to this alert's lifetime, not the next one.
+    prisma.studentAlertActionFlag.deleteMany({ where: { studentId } }),
+  ]);
 
   await recordAudit({
     entityType: "StudentProfile",
@@ -43,5 +48,26 @@ export async function resolveStudentAlert(
   revalidatePath("/admin");
   revalidatePath("/admin/alerts");
   revalidatePath("/coordinator");
+  revalidatePath("/coordinator/alerts");
+}
+
+// Pendente <-> Ação necessária — the board's other column. true creates
+// the flag, false removes it; resolveStudentAlert above also removes it
+// since resolving ends this alert's lifetime regardless of which column
+// it was sitting in.
+export async function setAlertActionNeeded(studentId: string, actionNeeded: boolean) {
+  const actor = await requireRole("ADMIN", "COORDINATOR");
+
+  if (actionNeeded) {
+    await prisma.studentAlertActionFlag.upsert({
+      where: { studentId },
+      create: { studentId, markedBy: actor.name },
+      update: { markedBy: actor.name, markedAt: new Date() },
+    });
+  } else {
+    await prisma.studentAlertActionFlag.deleteMany({ where: { studentId } });
+  }
+
+  revalidatePath("/admin/alerts");
   revalidatePath("/coordinator/alerts");
 }

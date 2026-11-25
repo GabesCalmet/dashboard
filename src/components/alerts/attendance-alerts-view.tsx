@@ -51,15 +51,19 @@ export function AttendanceAlertsView({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {alerts.map((alert) => (
-            <AttendanceAlertRow
-              key={alert.studentId}
-              alert={alert}
-              studentHref={`${studentsBasePath}/${alert.studentId}`}
-              historyHref={`${historyBasePath}?studentId=${alert.studentId}`}
-            />
-          ))}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <AlertColumn
+            title="Pendente"
+            alerts={alerts.filter((a) => !a.actionNeeded)}
+            studentsBasePath={studentsBasePath}
+            historyBasePath={historyBasePath}
+          />
+          <AlertColumn
+            title="Ação necessária"
+            alerts={alerts.filter((a) => a.actionNeeded)}
+            studentsBasePath={studentsBasePath}
+            historyBasePath={historyBasePath}
+          />
         </div>
       )}
 
@@ -98,6 +102,41 @@ export function AttendanceAlertsView({
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function AlertColumn({
+  title,
+  alerts,
+  studentsBasePath,
+  historyBasePath,
+}: {
+  title: string;
+  alerts: AttendanceAlert[];
+  studentsBasePath: string;
+  historyBasePath: string;
+}) {
+  return (
+    <div>
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+        {title}
+        <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">{alerts.length}</span>
+      </h2>
+      {alerts.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted-foreground">Nenhum alerta aqui.</p>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {alerts.map((alert) => (
+            <AttendanceAlertRow
+              key={alert.studentId}
+              alert={alert}
+              studentHref={`${studentsBasePath}/${alert.studentId}`}
+              historyHref={`${historyBasePath}?studentId=${alert.studentId}`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
