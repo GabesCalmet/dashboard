@@ -70,11 +70,14 @@ export function AlertHistoryView({
                       <p className="text-sm">{entry.reason ?? "Detalhes não registrados."}</p>
 
                       {entry.lessons.length > 0 && (
-                        <ul className="space-y-0.5 text-xs text-muted-foreground">
+                        <ul className="space-y-1 text-xs text-muted-foreground">
                           {entry.lessons.map((l, i) => (
                             <li key={l.id || i}>
-                              {l.scheduledAt ? formatDateTime(l.scheduledAt) : "—"} —{" "}
-                              {lessonStatusLabel[l.status] ?? l.status}
+                              <p>
+                                {l.scheduledAt ? formatDateTime(l.scheduledAt) : "—"} —{" "}
+                                {lessonStatusLabel[l.status] ?? l.status}
+                              </p>
+                              {l.observations && <p className="pl-2 italic">&quot;{l.observations}&quot;</p>}
                             </li>
                           ))}
                         </ul>

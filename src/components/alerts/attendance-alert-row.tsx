@@ -64,10 +64,13 @@ export function AttendanceAlertRow({
 
         <p className="text-xs">{alert.reason}</p>
 
-        <ul className="space-y-0.5 text-xs text-muted-foreground">
+        <ul className="space-y-1 text-xs text-muted-foreground">
           {alert.lessons.map((l) => (
             <li key={l.id}>
-              {formatDateTime(l.scheduledAt)} — {lessonStatusLabel[l.status]}
+              <p>
+                {formatDateTime(l.scheduledAt)} — {lessonStatusLabel[l.status]}
+              </p>
+              {l.observations && <p className="pl-2 italic">&quot;{l.observations}&quot;</p>}
             </li>
           ))}
         </ul>

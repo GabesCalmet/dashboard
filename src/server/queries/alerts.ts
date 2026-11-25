@@ -45,7 +45,7 @@ export type AttendanceAlert = {
   teacherName: string | null;
   severity: "YELLOW" | "RED";
   reason: string;
-  lessons: { id: string; scheduledAt: string; status: LessonStatus }[];
+  lessons: { id: string; scheduledAt: string; status: LessonStatus; observations: string | null }[];
 };
 
 // A student is flagged when, among lessons reported since their last
@@ -138,6 +138,7 @@ export async function getAttendanceAlerts(): Promise<AttendanceAlert[]> {
         id: l.id,
         scheduledAt: l.scheduledAt.toISOString(),
         status: l.status,
+        observations: l.observations,
       })),
     });
   }
@@ -281,7 +282,7 @@ export type AlertHistoryEntry = {
   note: string | null;
   severity: "YELLOW" | "RED" | null;
   reason: string | null;
-  lessons: { id: string; scheduledAt: string; status: LessonStatus }[];
+  lessons: { id: string; scheduledAt: string; status: LessonStatus; observations: string | null }[];
   dismissedBy: string;
   dismissedAt: string;
 };
@@ -300,6 +301,7 @@ function parseSnapshotLessons(value: unknown): AlertHistoryEntry["lessons"] {
       id: typeof e.id === "string" ? e.id : "",
       scheduledAt: typeof e.scheduledAt === "string" ? e.scheduledAt : "",
       status: e.status as LessonStatus,
+      observations: typeof e.observations === "string" ? e.observations : null,
     }));
 }
 
