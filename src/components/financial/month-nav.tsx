@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { MonthInput } from "@/components/ui/month-input";
 import { monthParam } from "@/lib/month-param";
 
 export function MonthNav({
@@ -39,15 +39,9 @@ export function MonthNav({
       {/* Jumps straight to any month instead of clicking through one at a
           time — same "pick a month" convenience the Histórico de aulas
           table already has. */}
-      <Input
-        type="month"
+      <MonthInput
         value={monthParam(year, month)}
-        onChange={(e) => e.target.value && router.push(`${basePath}?month=${e.target.value}`)}
-        // w-40 clipped the native calendar icon on some browsers/devices —
-        // a long localized month name like "novembro de 2026" plus the
-        // icon needs more room than that.
-        className="w-48"
-        aria-label="Ir para o mês"
+        onChange={(value) => router.push(`${basePath}?month=${value}`)}
       />
     </div>
   );

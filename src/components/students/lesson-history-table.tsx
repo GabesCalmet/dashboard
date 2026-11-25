@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { MonthInput } from "@/components/ui/month-input";
 import {
   formatDateTime,
   formatWeekday,
@@ -159,16 +159,7 @@ export function LessonHistoryTable({
         <Button variant="outline" size="icon" onClick={() => shiftMonth(1)} aria-label="Próximo mês">
           <ChevronRight className="size-4" />
         </Button>
-        <Input
-          type="month"
-          value={monthValue}
-          onChange={(e) => e.target.value && setMonthValue(e.target.value)}
-          // w-40 clipped the native calendar icon on some browsers/devices —
-          // a long localized month name like "novembro de 2026" plus the
-          // icon needs more room than that.
-          className="w-48"
-          aria-label="Ir para o mês"
-        />
+        <MonthInput value={monthValue} onChange={setMonthValue} />
       </div>
 
       {/* Mobile: one card per lesson — the 7/8-column table needed
