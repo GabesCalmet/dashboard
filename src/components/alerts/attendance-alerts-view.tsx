@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AttendanceAlertRow } from "@/components/alerts/attendance-alert-row";
 import { TeacherCountBarChart } from "@/components/alerts/teacher-count-bar-chart";
-import { stripTeacherWord } from "@/lib/teacher-order";
+import { stripTeacherWord, teacherOrderIndex } from "@/lib/teacher-order";
 import type { AttendanceAlert } from "@/server/queries/alerts";
 import type { getTeacherCancellationBreakdown } from "@/server/queries/teachers";
 
@@ -24,6 +24,16 @@ export function AttendanceAlertsView({
     ...r,
     teacherName: stripTeacherWord(r.teacherName),
   }));
+  // Grouped by teacher (same fixed order as the Professores pages) rather
+  // than just by severity — talking to one teacher about all of their
+  // flagged students at once is easier than hunting them out of a list
+  // shuffled between everyone's.
+  const byTeacher = [...alerts].sort(
+    (a, b) =>
+      teacherOrderIndex(a.teacherName ?? "") - teacherOrderIndex(b.teacherName ?? "") ||
+      (a.severity === b.severity ? 0 : a.severity === "RED" ? -1 : 1)
+  );
+
   const noShowData = breakdown.map((r) => ({ name: r.teacherName, value: r.noShow }));
   const canceledLateData = breakdown.map((r) => ({ name: r.teacherName, value: r.canceledLate }));
   const canceledByStudentData = breakdown.map((r) => ({ name: r.teacherName, value: r.canceledByStudent }));
@@ -54,13 +64,13 @@ export function AttendanceAlertsView({
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <AlertColumn
             title="Pendente"
-            alerts={alerts.filter((a) => !a.actionNeeded)}
+            alerts={byTeacher.filter((a) => !a.actionNeeded)}
             studentsBasePath={studentsBasePath}
             historyBasePath={historyBasePath}
           />
           <AlertColumn
             title="Ação necessária"
-            alerts={alerts.filter((a) => a.actionNeeded)}
+            alerts={byTeacher.filter((a) => a.actionNeeded)}
             studentsBasePath={studentsBasePath}
             historyBasePath={historyBasePath}
           />
