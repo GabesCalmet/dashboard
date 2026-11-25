@@ -15,12 +15,15 @@ import { formatDateTime, lessonStatusLabel } from "@/lib/labels";
 import { stripTeacherWord } from "@/lib/teacher-order";
 import type { AttendanceAlert } from "@/server/queries/alerts";
 
-// A live alert is always Pendente or Ação necessária — Resolvido isn't a
-// value this select ever actually sits on, it's a one-way trigger that
-// removes the card from the board entirely (see resolveStudentAlert),
-// so the card disappears the moment it's chosen rather than updating in
-// place like the other two.
-type BoardStatus = "PENDENTE" | "ACAO_NECESSARIA" | "RESOLVIDO";
+// A live alert is always Pendente or Ação necessária — Resolvido and Ação
+// não necessária aren't values this select ever actually sits on, they're
+// one-way triggers that remove the card from the board entirely (see
+// resolveStudentAlert), so the card disappears the moment either is
+// chosen rather than updating in place like the other two. The only
+// difference between them: Resolvido carries whatever note is in the box
+// below, Ação não necessária always resolves with its own fixed note
+// instead — there's nothing to explain, so nothing to type first.
+type BoardStatus = "PENDENTE" | "ACAO_NECESSARIA" | "RESOLVIDO" | "ACAO_NAO_NECESSARIA";
 
 export function AttendanceAlertRow({
   alert,
@@ -38,12 +41,16 @@ export function AttendanceAlertRow({
   function handleStatusChange(value: BoardStatus) {
     startTransition(async () => {
       try {
-        if (value === "RESOLVIDO") {
-          await resolveStudentAlert(alert.studentId, note, {
-            severity: alert.severity,
-            reason: alert.reason,
-            lessons: alert.lessons,
-          });
+        if (value === "RESOLVIDO" || value === "ACAO_NAO_NECESSARIA") {
+          await resolveStudentAlert(
+            alert.studentId,
+            value === "ACAO_NAO_NECESSARIA" ? "Ação não necessária" : note,
+            {
+              severity: alert.severity,
+              reason: alert.reason,
+              lessons: alert.lessons,
+            }
+          );
           toast.success("Alerta resolvido.");
         } else {
           await setAlertActionNeeded(alert.studentId, value === "ACAO_NECESSARIA");
@@ -109,6 +116,7 @@ export function AttendanceAlertRow({
               <SelectItem value="PENDENTE">Pendente</SelectItem>
               <SelectItem value="ACAO_NECESSARIA">Ação necessária</SelectItem>
               <SelectItem value="RESOLVIDO">Resolvido</SelectItem>
+              <SelectItem value="ACAO_NAO_NECESSARIA">Ação não necessária</SelectItem>
             </SelectContent>
           </Select>
           <Button size="sm" variant="ghost" asChild>
