@@ -4,6 +4,15 @@ import type { LessonStatus } from "@prisma/client";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
 import { brazilToday } from "@/lib/timezone";
 
+// A group cadastro's own name, not the primary member's personal name —
+// every alert below is about the shared cadastro (lessons, billing, ...)
+// regardless of which member's name happens to sit on the StudentProfile's
+// own User row, so "Gabi" (the primary) showing up instead of "Grupo 253"
+// for a group's alert is exactly the bug this exists to avoid.
+function resolveStudentDisplayName(student: { groupName: string | null; user: { name: string } }): string {
+  return student.groupName ?? student.user.name;
+}
+
 // Statuses that flag a student for the attendance alert.
 const FLAG_STATUSES: LessonStatus[] = [
   "CANCELED_BY_STUDENT",
@@ -121,7 +130,7 @@ export async function getAttendanceAlerts(): Promise<AttendanceAlert[]> {
 
     alerts.push({
       studentId: student.id,
-      studentName: student.user.name,
+      studentName: resolveStudentDisplayName(student),
       teacherName: student.teacher?.user.name ?? null,
       severity,
       reason,
@@ -172,7 +181,7 @@ export async function getTeacherRescheduleAlerts(teacherId: string): Promise<Tea
   for (const l of lessons) {
     const entry = byStudent.get(l.studentId) ?? {
       studentId: l.studentId,
-      studentName: l.student.user.name,
+      studentName: resolveStudentDisplayName(l.student),
       lessons: [],
     };
     entry.lessons.push({ id: l.id, scheduledAt: l.scheduledAt.toISOString(), status: l.status });
@@ -204,7 +213,7 @@ export async function getTeacherRescheduleAlertForStudent(
 
   return {
     studentId,
-    studentName: lessons[0].student.user.name,
+    studentName: resolveStudentDisplayName(lessons[0].student),
     lessons: lessons.map((l) => ({ id: l.id, scheduledAt: l.scheduledAt.toISOString(), status: l.status })),
   };
 }
@@ -257,7 +266,7 @@ export async function getTeacherMonthClosingAlert(teacherId: string): Promise<Te
     const entry = byStudent.get(l.studentId) ?? {
       monthLabel,
       studentId: l.studentId,
-      studentName: l.student.user.name,
+      studentName: resolveStudentDisplayName(l.student),
       lessons: [],
     };
     entry.lessons.push({ id: l.id, scheduledAt: l.scheduledAt.toISOString() });
@@ -320,7 +329,7 @@ export async function getAlertHistory(): Promise<StudentAlertHistory[]> {
     } else {
       byStudent.set(d.studentId, {
         studentId: d.studentId,
-        studentName: d.student.user.name,
+        studentName: resolveStudentDisplayName(d.student),
         entries: [entry],
       });
     }
