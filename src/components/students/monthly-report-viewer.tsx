@@ -46,7 +46,11 @@ export function MonthlyReportViewer({
         </Button>
       </div>
 
-      <iframe src={pdfUrl} title={`Relatório mensal — ${monthLabel}`} className="h-[80vh] w-full rounded-lg border" />
+      <iframe
+        src={`${pdfUrl}#view=Fit`}
+        title={`Relatório mensal — ${monthLabel}`}
+        className="h-[80vh] w-full rounded-lg border"
+      />
     </div>
   );
 }
