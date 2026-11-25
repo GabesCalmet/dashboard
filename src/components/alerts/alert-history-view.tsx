@@ -1,8 +1,12 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { formatDateTime, lessonStatusLabel } from "@/lib/labels";
 import type { StudentAlertHistory } from "@/server/queries/alerts";
 
@@ -17,7 +21,11 @@ export function AlertHistoryView({
   historyBasePath: string;
   filterStudentId?: string;
 }) {
-  const filtered = filterStudentId ? history.filter((h) => h.studentId === filterStudentId) : history;
+  const [query, setQuery] = useState("");
+  const byId = filterStudentId ? history.filter((h) => h.studentId === filterStudentId) : history;
+  const filtered = query.trim()
+    ? byId.filter((h) => h.studentName.toLowerCase().includes(query.trim().toLowerCase()))
+    : byId;
 
   return (
     <div>
@@ -26,12 +34,22 @@ export function AlertHistoryView({
         description="Alertas de frequência já resolvidos, para comparar com os alertas atuais."
       />
 
+      <div className="relative mb-4 max-w-sm">
+        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Buscar aluno..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       {filterStudentId && (
         <Link
           href={historyBasePath}
           className="mb-4 inline-flex items-center gap-1.5 rounded-full border bg-secondary px-3 py-1 text-xs text-muted-foreground hover:text-foreground"
         >
-          Filtrando por {filtered[0]?.studentName ?? "aluno"}
+          Filtrando por {byId[0]?.studentName ?? "aluno"}
           <X className="size-3" />
         </Link>
       )}
