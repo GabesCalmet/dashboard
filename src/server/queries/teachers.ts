@@ -5,7 +5,7 @@ import { resolveHistoricalAmount, pickLatestOverlap } from "@/server/billing";
 import { getOwnChargeAmountsForMonth } from "@/server/student-charges";
 import { reschedulableStatuses } from "@/lib/validation/lesson";
 import { teacherOrderIndex } from "@/lib/teacher-order";
-import type { TeacherPayMode, LessonStatus } from "@prisma/client";
+import type { TeacherPayMode, LessonStatus, StudentStatus } from "@prisma/client";
 
 type TeacherHistoryEntry = {
   id: string;
@@ -1322,6 +1322,11 @@ export async function listTeachers() {
   );
 }
 
+// Ativos first, then Pausados, then Cancelados — a mix sorted only by
+// name (or insertion order) buries the students a teacher actually
+// teaches among ones long gone.
+const STUDENT_STATUS_ORDER: Record<StudentStatus, number> = { ACTIVE: 0, PAUSED: 1, CANCELED: 2 };
+
 export async function getTeacherDetail(teacherId: string) {
   const teacher = await prisma.teacherProfile.findUnique({
     where: { id: teacherId },
@@ -1332,6 +1337,12 @@ export async function getTeacherDetail(teacherId: string) {
     },
   });
   if (!teacher) return null;
+
+  teacher.students.sort(
+    (a, b) =>
+      STUDENT_STATUS_ORDER[a.status] - STUDENT_STATUS_ORDER[b.status] ||
+      a.user.name.localeCompare(b.user.name)
+  );
 
   // Brazil's current month, not the server's own UTC month — see
   // listTeachers for why startOfMonth(new Date()) miscounts.
