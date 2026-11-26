@@ -50,6 +50,9 @@ export type AttendanceAlert = {
   // board's three columns. Resolvido isn't a value here: resolving
   // removes the alert from this list entirely (see resolveStudentAlert).
   boardStatus: "PENDENTE" | "AGUARDANDO_RESPOSTA_PROFESSOR" | "ACAO_NECESSARIA";
+  // The working note typed while the alert was on the board — carries
+  // forward across status changes instead of resetting at each column.
+  actionNote: string | null;
 };
 
 // A student is flagged when, among lessons reported since their last
@@ -146,6 +149,7 @@ export async function getAttendanceAlerts(): Promise<AttendanceAlert[]> {
         observations: l.observations,
       })),
       boardStatus: student.alertActionFlag?.status ?? "PENDENTE",
+      actionNote: student.alertActionFlag?.note ?? null,
     });
   }
 

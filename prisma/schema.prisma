@@ -39,10 +39,14 @@ enum StudentStatus {
   CANCELED
 }
 
-// The two "live" states a flagged attendance alert can sit in, between
-// Pendente (no flag row at all) and being resolved off the board
-// entirely — see StudentAlertActionFlag.
+// The three "live" states a flagged attendance alert can sit in, before
+// being resolved off the board entirely — see StudentAlertActionFlag.
+// A row's absence also reads as PENDENTE (an alert nobody has ever
+// touched never got a row at all), but a row can now explicitly hold
+// PENDENTE too, so a note typed while still in that column has
+// somewhere to live.
 enum AlertBoardStatus {
+  PENDENTE
   AGUARDANDO_RESPOSTA_PROFESSOR
   ACAO_NECESSARIA
 }
@@ -441,17 +445,21 @@ model StudentAlertDismissal {
   @@map("student_alert_dismissals")
 }
 
-// Marks a live (not yet resolved) attendance alert as "Ação necessária"
-// instead of the default "Pendente" — the Alertas de frequência board's
-// second column. One row per student while it's flagged; deleted the
-// moment it's either reset back to Pendente or the alert itself is
-// resolved (see resolveStudentAlert), so it never outlives the alert it
-// was set on.
+// Tracks a live (not yet resolved) attendance alert's working note and
+// its place on the Alertas de frequência board, past the default
+// Pendente-with-no-note state. One row per student while there's
+// anything to keep — a note, or a status other than the implicit
+// default; deleted once the alert itself is resolved (see
+// resolveStudentAlert), so it never outlives the alert it was set on.
+// The note carries forward across every status change instead of being
+// lost each time, since the point of the board is for context to
+// accumulate as an alert moves through it, not reset at each column.
 model StudentAlertActionFlag {
   id        String           @id @default(uuid())
   studentId String           @unique
   student   StudentProfile   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   status    AlertBoardStatus @default(ACAO_NECESSARIA)
+  note      String?
   markedBy  String // actor name snapshot
   markedAt  DateTime         @default(now())
 
