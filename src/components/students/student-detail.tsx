@@ -98,6 +98,7 @@ export function StudentDetailView({
     teachers: { id: string; label: string }[];
     courses: { id: string; label: string }[];
     plans: { id: string; label: string }[];
+    affiliates: { id: string; label: string }[];
   };
   // "Aulas sem reposição" note for this one student — passed by the
   // teacher route (see getTeacherRescheduleAlertForStudent) and the admin
@@ -294,6 +295,7 @@ export function StudentDetailView({
               <StudentFormDialog
                 courses={editOptions.courses}
                 plans={editOptions.plans}
+                affiliates={editOptions.affiliates}
                 student={{
                   id: student.id,
                   name: student.user.name,
@@ -319,6 +321,7 @@ export function StudentDetailView({
                   courseHistory: parseSelectHistory(student.courseHistory),
                   planId: student.planId,
                   planHistory: parseSelectHistory(student.planHistory),
+                  referredByAffiliateId: student.referredByAffiliateId,
                   level: student.level,
                   objective: student.objective,
                   notes: student.notes,

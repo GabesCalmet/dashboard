@@ -17,7 +17,7 @@ export const getCurrentUser = cache(async () => {
 
   const dbUser = await prisma.user.findUnique({
     where: { id: userId },
-    include: { teacherProfile: true, studentProfile: true },
+    include: { teacherProfile: true, studentProfile: true, affiliateProfile: true },
   });
   if (!dbUser) return null;
 
@@ -63,5 +63,7 @@ export function roleHome(role: Role) {
       return "/teacher";
     case "STUDENT":
       return "/student";
+    case "AFFILIATE":
+      return "/affiliate";
   }
 }

@@ -6,6 +6,7 @@ import {
   listCoursesForSelect,
   listPlansForSelect,
 } from "@/server/queries/students";
+import { listActiveAffiliatesForSelect } from "@/server/queries/affiliates";
 import { parseMonthParam } from "@/lib/month-param";
 
 export default async function CoordinatorStudentDetailPage({
@@ -18,11 +19,12 @@ export default async function CoordinatorStudentDetailPage({
   const { id } = await params;
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
-  const [student, teachers, courses, plans] = await Promise.all([
+  const [student, teachers, courses, plans, affiliates] = await Promise.all([
     getStudentDetail(id),
     listActiveTeachersForSelect(),
     listCoursesForSelect(),
     listPlansForSelect(),
+    listActiveAffiliatesForSelect(),
   ]);
 
   if (!student) notFound();
@@ -44,6 +46,7 @@ export default async function CoordinatorStudentDetailPage({
         teachers: teachers.map((t) => ({ id: t.id, label: t.user.name })),
         courses: courses.map((c) => ({ id: c.id, label: c.name })),
         plans: plans.map((p) => ({ id: p.id, label: p.name })),
+        affiliates,
       }}
     />
   );

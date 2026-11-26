@@ -12,6 +12,7 @@ import {
   History,
   Library,
   ScrollText,
+  Handshake,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,6 +28,7 @@ export const navByRole: Record<Role, NavItem[]> = {
     { label: "Financeiro", href: "/admin/financial", icon: Wallet },
     { label: "Alunos", href: "/admin/students", icon: GraduationCap },
     { label: "Professores", href: "/admin/teachers", icon: Users },
+    { label: "Afiliados", href: "/admin/affiliates", icon: Handshake },
     { label: "Agenda", href: "/admin/agenda", icon: CalendarDays },
     { label: "Cursos & Planos", href: "/admin/catalog", icon: Library },
     { label: "Usuários & Permissões", href: "/admin/users", icon: ShieldCheck },
@@ -53,6 +55,7 @@ export const navByRole: Record<Role, NavItem[]> = {
     { label: "Materiais", href: "/student/materials", icon: BookOpenCheck },
     { label: "Configurações", href: "/student/settings", icon: Settings },
   ],
+  AFFILIATE: [{ label: "Dashboard", href: "/affiliate", icon: LayoutDashboard }],
 };
 
 export const roleLabel: Record<Role, string> = {
@@ -60,4 +63,5 @@ export const roleLabel: Record<Role, string> = {
   COORDINATOR: "Coordenador",
   TEACHER: "Professor",
   STUDENT: "Aluno",
+  AFFILIATE: "Afiliado",
 };

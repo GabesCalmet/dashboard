@@ -294,6 +294,13 @@ export const studentFormSchema = z.object({
   courseHistory: selectHistoryField,
   planId: z.string().optional(),
   planHistory: selectHistoryField,
+  // Set once at cadastro — no history array, see the matching field on
+  // the Prisma model. "none" is the Select's own sentinel for "no
+  // affiliate" (Radix Select can't use an empty-string item value).
+  referredByAffiliateId: z
+    .string()
+    .optional()
+    .transform((v) => (v === "none" ? undefined : v)),
   level: z.enum(["A1", "A2", "B1", "B2", "C1", "C2"]),
   // No "Data de início das aulas"/"Início da cobrança" fields anymore —
   // those dates now live where they're actually meaningful: a schedule

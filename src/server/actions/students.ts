@@ -54,6 +54,7 @@ export async function createStudent(
         courseHistory: data.courseHistory,
         planId: data.planId || undefined,
         planHistory: data.planHistory,
+        referredByAffiliateId: data.referredByAffiliateId || undefined,
         // Billing lives entirely in StudentCharge now (see the Financeiro
         // tab) — monthlyValue has no DB default (NOT NULL), so it still
         // needs an explicit value here; dueDay/bankAccount/thirdParty* all
@@ -180,6 +181,7 @@ export async function updateStudent(
         courseHistory: data.courseHistory,
         planId: data.planId || null,
         planHistory: data.planHistory,
+        referredByAffiliateId: data.referredByAffiliateId || null,
         // Billing (monthlyValue/bankAccount/dueDay/thirdParty*) is no
         // longer part of this form at all — deliberately omitted here so
         // whatever's already in those columns stays untouched, exactly

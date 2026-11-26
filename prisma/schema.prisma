@@ -22,6 +22,7 @@ enum Role {
   COORDINATOR
   TEACHER
   STUDENT
+  AFFILIATE
 }
 
 enum CourseLevel {
@@ -150,6 +151,7 @@ model User {
 
   teacherProfile   TeacherProfile?
   studentProfile   StudentProfile?
+  affiliateProfile AffiliateProfile?
   // Set only for an additional login belonging to a "grupo" student — see
   // StudentGroupMember. Null for every ordinary (individual) student,
   // teacher, and staff account.
@@ -297,6 +299,11 @@ model StudentProfile {
   // Record of past plans, same shape as teacherHistory — informational
   // only, doesn't drive any generation logic.
   planHistory            Json            @default("[]")
+  // Set once at cadastro, unlike teacherId/courseId/planId — who referred
+  // this student never changes after the fact, so there's no history
+  // array to go with it.
+  referredByAffiliateId  String?
+  referredByAffiliate    AffiliateProfile? @relation(fields: [referredByAffiliateId], references: [id])
   monthlyValue           Decimal         @db.Decimal(10, 2)
   // History of monthlyValue changes over time —
   // [{ "amount": 141.02, "from": "2026-01-01", "until": "2026-06-30" }, ...].
@@ -477,6 +484,26 @@ model LevelHistory {
   createdAt  DateTime       @default(now())
 
   @@map("level_history")
+}
+
+// An affiliate: an outside person who refers students to the school,
+// identified here the same way a student/teacher is (their own login,
+// provisioned via provisionUsernameAccount with role AFFILIATE) rather
+// than just a contact record. commissionPercent is deliberately nullable
+// — the commission model itself isn't decided yet, so an affiliate can
+// exist and already have students linked (StudentProfile.
+// referredByAffiliateId) before a percentage is ever set.
+model AffiliateProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  commissionPercent Decimal? @db.Decimal(5, 2)
+  notes             String?
+  createdAt         DateTime @default(now())
+
+  referredStudents StudentProfile[]
+
+  @@map("affiliate_profiles")
 }
 
 // ---------------------------------------------------------------------------

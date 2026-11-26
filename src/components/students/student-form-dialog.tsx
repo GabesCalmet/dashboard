@@ -57,6 +57,7 @@ type StudentDefaults = {
   courseHistory?: SelectHistoryEntry[];
   planId?: string | null;
   planHistory?: SelectHistoryEntry[];
+  referredByAffiliateId?: string | null;
   level: CourseLevel;
   objective?: string | null;
   notes?: string | null;
@@ -65,11 +66,13 @@ type StudentDefaults = {
 export function StudentFormDialog({
   courses,
   plans,
+  affiliates,
   student,
   nextStudentNumber,
 }: {
   courses: Option[];
   plans: Option[];
+  affiliates: Option[];
   student?: StudentDefaults;
   // Suggested next sequence number (see lib/student-number) for a brand
   // new cadastro — just the plain number, no assumed label like "VIP-" in
@@ -267,6 +270,26 @@ export function StudentFormDialog({
             defaultValue={student?.planId}
             defaultHistory={student?.planHistory ?? []}
           />
+
+          <div className="space-y-1.5">
+            <Label>Indicado por (afiliado)</Label>
+            <Select
+              name="referredByAffiliateId"
+              defaultValue={student?.referredByAffiliateId ?? "none"}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhum</SelectItem>
+                {affiliates.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="space-y-1.5">
             <Label>Nível</Label>

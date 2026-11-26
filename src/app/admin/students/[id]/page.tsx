@@ -6,6 +6,7 @@ import {
   listCoursesForSelect,
   listPlansForSelect,
 } from "@/server/queries/students";
+import { listActiveAffiliatesForSelect } from "@/server/queries/affiliates";
 import { getAuditTrail } from "@/server/audit";
 import { getStudentPaymentHistory, listStudentCharges } from "@/server/queries/financial";
 import { getRescheduleAlertForStudent } from "@/server/queries/alerts";
@@ -21,16 +22,18 @@ export default async function AdminStudentDetailPage({
   const { id } = await params;
   const { month: monthParamValue, tab } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);
-  const [student, teachers, courses, plans, audit, paymentHistory, charges, rescheduleAlert] = await Promise.all([
-    getStudentDetail(id),
-    listActiveTeachersForSelect(),
-    listCoursesForSelect(),
-    listPlansForSelect(),
-    getAuditTrail("StudentProfile", id),
-    getStudentPaymentHistory(id),
-    listStudentCharges(id),
-    getRescheduleAlertForStudent(id),
-  ]);
+  const [student, teachers, courses, plans, affiliates, audit, paymentHistory, charges, rescheduleAlert] =
+    await Promise.all([
+      getStudentDetail(id),
+      listActiveTeachersForSelect(),
+      listCoursesForSelect(),
+      listPlansForSelect(),
+      listActiveAffiliatesForSelect(),
+      getAuditTrail("StudentProfile", id),
+      getStudentPaymentHistory(id),
+      listStudentCharges(id),
+      getRescheduleAlertForStudent(id),
+    ]);
 
   if (!student) notFound();
 
@@ -68,6 +71,7 @@ export default async function AdminStudentDetailPage({
         teachers: teachers.map((t) => ({ id: t.id, label: t.user.name })),
         courses: courses.map((c) => ({ id: c.id, label: c.name })),
         plans: plans.map((p) => ({ id: p.id, label: p.name })),
+        affiliates,
       }}
       auditEntries={audit}
     />

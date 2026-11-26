@@ -2,14 +2,16 @@ import { PageHeader } from "@/components/shared/page-header";
 import { StudentsTable } from "@/components/students/students-table";
 import { StudentFormDialog } from "@/components/students/student-form-dialog";
 import { listStudents, listCoursesForSelect, listPlansForSelect } from "@/server/queries/students";
+import { listActiveAffiliatesForSelect } from "@/server/queries/affiliates";
 import { nextStudentNumber } from "@/lib/student-number";
 import { brazilToday } from "@/lib/timezone";
 
 export default async function CoordinatorStudentsPage() {
-  const [students, courses, plans] = await Promise.all([
+  const [students, courses, plans, affiliates] = await Promise.all([
     listStudents(),
     listCoursesForSelect(),
     listPlansForSelect(),
+    listActiveAffiliatesForSelect(),
   ]);
 
   const today = brazilToday();
@@ -45,6 +47,7 @@ export default async function CoordinatorStudentsPage() {
           <StudentFormDialog
             courses={courses.map((c) => ({ id: c.id, label: c.name }))}
             plans={plans.map((p) => ({ id: p.id, label: p.name }))}
+            affiliates={affiliates}
             nextStudentNumber={nextStudentNumber(rows.flatMap((r) => r.searchNames))}
           />
         }
