@@ -39,6 +39,14 @@ enum StudentStatus {
   CANCELED
 }
 
+// The two "live" states a flagged attendance alert can sit in, between
+// Pendente (no flag row at all) and being resolved off the board
+// entirely — see StudentAlertActionFlag.
+enum AlertBoardStatus {
+  AGUARDANDO_RESPOSTA_PROFESSOR
+  ACAO_NECESSARIA
+}
+
 enum TeacherPayMode {
   HOURLY
   MONTHLY
@@ -440,11 +448,12 @@ model StudentAlertDismissal {
 // resolved (see resolveStudentAlert), so it never outlives the alert it
 // was set on.
 model StudentAlertActionFlag {
-  id        String         @id @default(uuid())
-  studentId String         @unique
-  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id        String           @id @default(uuid())
+  studentId String           @unique
+  student   StudentProfile   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  status    AlertBoardStatus @default(ACAO_NECESSARIA)
   markedBy  String // actor name snapshot
-  markedAt  DateTime       @default(now())
+  markedAt  DateTime         @default(now())
 
   @@map("student_alert_action_flags")
 }

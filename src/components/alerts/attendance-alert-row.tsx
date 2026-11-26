@@ -10,20 +10,26 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { resolveStudentAlert, setAlertActionNeeded } from "@/server/actions/alerts";
+import { resolveStudentAlert, setAlertBoardStatus } from "@/server/actions/alerts";
 import { formatDateTime, lessonStatusLabel } from "@/lib/labels";
 import { stripTeacherWord } from "@/lib/teacher-order";
 import type { AttendanceAlert } from "@/server/queries/alerts";
 
-// A live alert is always Pendente or Ação necessária — Resolvido and Ação
-// não necessária aren't values this select ever actually sits on, they're
-// one-way triggers that remove the card from the board entirely (see
-// resolveStudentAlert), so the card disappears the moment either is
-// chosen rather than updating in place like the other two. The only
-// difference between them: Resolvido carries whatever note is in the box
-// below, Ação não necessária always resolves with its own fixed note
-// instead — there's nothing to explain, so nothing to type first.
-type BoardStatus = "PENDENTE" | "ACAO_NECESSARIA" | "RESOLVIDO" | "ACAO_NAO_NECESSARIA";
+// A live alert always sits on Pendente, Aguardando resposta do professor,
+// or Ação necessária — Resolvido and Ação não necessária aren't values
+// this select ever actually sits on, they're one-way triggers that remove
+// the card from the board entirely (see resolveStudentAlert), so the card
+// disappears the moment either is chosen rather than updating in place
+// like the other three. The only difference between them: Resolvido
+// carries whatever note is in the box below, Ação não necessária always
+// resolves with its own fixed note instead — there's nothing to explain,
+// so nothing to type first.
+type SelectableStatus =
+  | "PENDENTE"
+  | "AGUARDANDO_RESPOSTA_PROFESSOR"
+  | "ACAO_NECESSARIA"
+  | "RESOLVIDO"
+  | "ACAO_NAO_NECESSARIA";
 
 export function AttendanceAlertRow({
   alert,
@@ -38,7 +44,7 @@ export function AttendanceAlertRow({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  function handleStatusChange(value: BoardStatus) {
+  function handleStatusChange(value: SelectableStatus) {
     startTransition(async () => {
       try {
         if (value === "RESOLVIDO" || value === "ACAO_NAO_NECESSARIA") {
@@ -53,7 +59,7 @@ export function AttendanceAlertRow({
           );
           toast.success("Alerta resolvido.");
         } else {
-          await setAlertActionNeeded(alert.studentId, value === "ACAO_NECESSARIA");
+          await setAlertBoardStatus(alert.studentId, value);
           toast.success("Status do alerta atualizado.");
         }
         router.refresh();
@@ -105,15 +111,16 @@ export function AttendanceAlertRow({
 
         <div className="flex flex-wrap items-center gap-1.5">
           <Select
-            value={alert.actionNeeded ? "ACAO_NECESSARIA" : "PENDENTE"}
+            value={alert.boardStatus}
             disabled={isPending}
-            onValueChange={(value) => handleStatusChange(value as BoardStatus)}
+            onValueChange={(value) => handleStatusChange(value as SelectableStatus)}
           >
-            <SelectTrigger size="sm" className="w-[150px]">
+            <SelectTrigger size="sm" className="w-[220px]">
               {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <SelectValue />}
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="PENDENTE">Pendente</SelectItem>
+              <SelectItem value="AGUARDANDO_RESPOSTA_PROFESSOR">Aguardando resposta do professor</SelectItem>
               <SelectItem value="ACAO_NECESSARIA">Ação necessária</SelectItem>
               <SelectItem value="RESOLVIDO">Resolvido</SelectItem>
               <SelectItem value="ACAO_NAO_NECESSARIA">Ação não necessária</SelectItem>

@@ -61,16 +61,22 @@ export function AttendanceAlertsView({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <AlertColumn
             title="Pendente"
-            alerts={byTeacher.filter((a) => !a.actionNeeded)}
+            alerts={byTeacher.filter((a) => a.boardStatus === "PENDENTE")}
+            studentsBasePath={studentsBasePath}
+            historyBasePath={historyBasePath}
+          />
+          <AlertColumn
+            title="Aguardando resposta do professor"
+            alerts={byTeacher.filter((a) => a.boardStatus === "AGUARDANDO_RESPOSTA_PROFESSOR")}
             studentsBasePath={studentsBasePath}
             historyBasePath={historyBasePath}
           />
           <AlertColumn
             title="Ação necessária"
-            alerts={byTeacher.filter((a) => a.actionNeeded)}
+            alerts={byTeacher.filter((a) => a.boardStatus === "ACAO_NECESSARIA")}
             studentsBasePath={studentsBasePath}
             historyBasePath={historyBasePath}
           />

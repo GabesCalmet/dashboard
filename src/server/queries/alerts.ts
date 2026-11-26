@@ -46,10 +46,10 @@ export type AttendanceAlert = {
   severity: "YELLOW" | "RED";
   reason: string;
   lessons: { id: string; scheduledAt: string; status: LessonStatus; observations: string | null }[];
-  // Pendente (false) vs. Ação necessária (true) — the board's two
-  // columns. Resolvido isn't a third value here: resolving removes the
-  // alert from this list entirely (see resolveStudentAlert).
-  actionNeeded: boolean;
+  // Pendente/Aguardando resposta do professor/Ação necessária — the
+  // board's three columns. Resolvido isn't a value here: resolving
+  // removes the alert from this list entirely (see resolveStudentAlert).
+  boardStatus: "PENDENTE" | "AGUARDANDO_RESPOSTA_PROFESSOR" | "ACAO_NECESSARIA";
 };
 
 // A student is flagged when, among lessons reported since their last
@@ -145,7 +145,7 @@ export async function getAttendanceAlerts(): Promise<AttendanceAlert[]> {
         status: l.status,
         observations: l.observations,
       })),
-      actionNeeded: Boolean(student.alertActionFlag),
+      boardStatus: student.alertActionFlag?.status ?? "PENDENTE",
     });
   }
 

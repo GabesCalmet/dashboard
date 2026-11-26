@@ -51,21 +51,25 @@ export async function resolveStudentAlert(
   revalidatePath("/coordinator/alerts");
 }
 
-// Pendente <-> Ação necessária — the board's other column. true creates
-// the flag, false removes it; resolveStudentAlert above also removes it
-// since resolving ends this alert's lifetime regardless of which column
-// it was sitting in.
-export async function setAlertActionNeeded(studentId: string, actionNeeded: boolean) {
+// Pendente <-> Aguardando resposta do professor <-> Ação necessária — the
+// board's three non-terminal columns. "PENDENTE" removes the flag row
+// entirely; the other two upsert it with that status. resolveStudentAlert
+// above also removes it since resolving ends this alert's lifetime
+// regardless of which column it was sitting in.
+export async function setAlertBoardStatus(
+  studentId: string,
+  status: "PENDENTE" | "AGUARDANDO_RESPOSTA_PROFESSOR" | "ACAO_NECESSARIA"
+) {
   const actor = await requireRole("ADMIN", "COORDINATOR");
 
-  if (actionNeeded) {
+  if (status === "PENDENTE") {
+    await prisma.studentAlertActionFlag.deleteMany({ where: { studentId } });
+  } else {
     await prisma.studentAlertActionFlag.upsert({
       where: { studentId },
-      create: { studentId, markedBy: actor.name },
-      update: { markedBy: actor.name, markedAt: new Date() },
+      create: { studentId, status, markedBy: actor.name },
+      update: { status, markedBy: actor.name, markedAt: new Date() },
     });
-  } else {
-    await prisma.studentAlertActionFlag.deleteMany({ where: { studentId } });
   }
 
   revalidatePath("/admin/alerts");
