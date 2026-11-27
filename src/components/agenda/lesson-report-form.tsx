@@ -108,13 +108,13 @@ export function LessonReportForm({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="durationMin">Duração (min)</Label>
-          <Input
-            id="durationMin"
-            name="durationMin"
-            type="number"
-            defaultValue={lesson.durationMin}
-            required
-          />
+          {/* Read-only for teachers — only an admin/coordinator can change
+              how long a class counted as (see canEditLessonDetails on the
+              student's own lesson table). A disabled input isn't included
+              in FormData at all, so the actual value still goes through
+              via this hidden field alongside it. */}
+          <Input id="durationMin" type="number" defaultValue={lesson.durationMin} disabled />
+          <input type="hidden" name="durationMin" value={lesson.durationMin} />
         </div>
         {!lesson.isMakeup && (
           <div className="space-y-1.5">
