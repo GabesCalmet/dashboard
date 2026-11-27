@@ -2,15 +2,16 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { CalendarView } from "@/components/agenda/calendar-view";
+import { AgendaTabsPersistence } from "@/components/agenda/agenda-tabs-persistence";
 import { listActiveTeachersForSelect } from "@/server/queries/students";
 import { cn } from "@/lib/utils";
 
 export default async function CoordinatorAgendaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ teacherIds?: string; active?: string }>;
+  searchParams: Promise<{ teacherIds?: string; active?: string; closed?: string }>;
 }) {
-  const { teacherIds: teacherIdsParam, active } = await searchParams;
+  const { teacherIds: teacherIdsParam, active, closed } = await searchParams;
   const teacherIds = teacherIdsParam ? teacherIdsParam.split(",").filter(Boolean) : [];
   const teachers = await listActiveTeachersForSelect();
   const filteredTeachers = teacherIds
@@ -23,6 +24,12 @@ export default async function CoordinatorAgendaPage({
 
   return (
     <div>
+      <AgendaTabsPersistence
+        basePath="/coordinator/agenda"
+        teacherIds={teacherIds}
+        active={activeTeacher?.id}
+        explicitlyClosed={closed === "1"}
+      />
       <PageHeader
         title="Agenda"
         description={activeTeacher ? `Aulas de ${activeTeacher.user.name}.` : "Todas as aulas da escola."}
@@ -37,7 +44,7 @@ export default async function CoordinatorAgendaPage({
             const removeHref =
               remaining.length > 0
                 ? `/coordinator/agenda?teacherIds=${remaining.join(",")}&active=${nextActive}`
-                : "/coordinator/agenda";
+                : "/coordinator/agenda?closed=1";
             return (
               <div
                 key={t.id}
